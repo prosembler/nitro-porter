@@ -101,6 +101,8 @@ class Migration
     /**
      * Provide the input database connection.
      *
+     * @internal For `Source` packages.
+     *
      * @return Connection
      */
     public function dbInput(): Connection
@@ -110,6 +112,8 @@ class Migration
 
     /**
      * Provide the porter database connection.
+     *
+     * @internal For `Target` packages.
      *
      * @return Connection
      */
@@ -121,6 +125,8 @@ class Migration
     /**
      * Provide the output database connection.
      *
+     * @internal For `Target` & `Postscript` packages.
+     *
      * @return Connection
      */
     public function dbOutput(): Connection
@@ -130,6 +136,8 @@ class Migration
 
     /**
      * Provide the postscript database connection.
+     *
+     * @internal For `Postscript` packages.
      *
      * @return Connection
      */
@@ -141,7 +149,7 @@ class Migration
     /**
      * Provide a query builder for the input database.
      *
-     * Named for where it should be used (Source packages).
+     * @internal For `Source` packages.
      *
      * @return Builder
      */
@@ -153,7 +161,7 @@ class Migration
     /**
      * Provide a query builder for the porter database.
      *
-     * Named for where it should be used (Target packages).
+     * @internal For `Target` packages.
      *
      * @return Builder
      */
@@ -165,7 +173,7 @@ class Migration
     /**
      * Provide a query builder for the input database.
      *
-     * Named for where it should be used (Postscript packages).
+     * @internal For `Postscript` packages.
      *
      * @return Builder
      */

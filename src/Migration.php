@@ -504,6 +504,7 @@ class Migration
 
     /**
      * Determine if an index exists in a table
+     * @deprecated Builder::hasIndex()
      *
      * @param string $indexName
      * @param string $table

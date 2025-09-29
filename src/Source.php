@@ -2,9 +2,6 @@
 
 namespace Porter;
 
-use Illuminate\Database\Connection;
-use Illuminate\Database\Query\Builder;
-
 abstract class Source
 {
     public const SUPPORTED = [
@@ -13,7 +10,11 @@ abstract class Source
         'charsetTable' => '',
         'passwordHashMethod' => '',
         'avatarsPrefix' => '',
-        'avatarThumbnailsPrefix' => '',
+        'avatarThumbPrefix' => '',
+        'avatarPath' => '',
+        'avatarThumbPath' => '',
+        'attachmentPath' => '',
+        'attachmentThumbPath' => '',
         'features' => [],
     ];
 
@@ -115,13 +116,18 @@ abstract class Source
     }
 
     /**
-     * Query builder that selects values `sourcename` & `targetname`.
+     * Return the requested path (without a trailing slash).
      *
-     * @param Connection $c
-     * @return ?Builder
+     * @param string $type
+     * @param bool $addFullPath
+     * @return string
      */
-    public function attachmentsData(Connection $c): ?Builder
+    public function getPath(string $type, bool $addFullPath = false): string
     {
-        return null;
+        $folder = rtrim(static::SUPPORTED[$type . 'Path'] ?? '', '/');
+        if ($addFullPath && Config::getInstance()->get('source_root')) {
+            $folder = rtrim(Config::getInstance()->get('source_root'), '/') . '/' . trim($folder, '/');
+        }
+        return $folder;
     }
 }

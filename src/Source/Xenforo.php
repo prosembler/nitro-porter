@@ -3,16 +3,21 @@
 /**
  * Xenforo source package.
  *
+ * Avatar sizes from sample (Sep 2025, v2.3):
+ *  data/avatars/s = 48x48 (96x96 res)
+ *  data/avatars/m = 96x96 (96x96 res)
+ *  data/avatars/l = 192x192 (96x96 res)
+ *  data/avatars/h = 384x384 (mixed res)
+ *
  * @author Lincoln Russell, code@lincolnwebs.com
  */
 
 namespace Porter\Source;
 
 use Porter\Config;
-use Porter\ConnectionManager;
-use Porter\FileTransfer;
 use Porter\Source;
 use Porter\Migration;
+use Staudenmeir\LaravelCte\Query\Builder;
 
 class Xenforo extends Source
 {
@@ -21,8 +26,12 @@ class Xenforo extends Source
         'defaultTablePrefix' => 'xf_',
         'charsetTable' => 'post',
         'passwordHashMethod' => 'xenforo',
-        'avatarsPrefix' => '1',
-        'avatarThumbnailsPrefix' => 'm',
+        'avatarsPrefix' => '',
+        'avatarThumbPrefix' => '',
+        'avatarPath' => 'data/avatars/h/',
+        'avatarThumbPath' => 'data/avatars/m/',
+        'attachmentPath' => 'internal_data/attachments/0/',
+        'attachmentThumbPath' => 'data/attachments/0/',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -84,31 +93,43 @@ class Xenforo extends Source
      */
     protected function users(Migration $port): void
     {
-        $user_Map = array(
+        $map = [
             'user_id' => 'UserID',
             'username' => 'Name',
             'email' => 'Email',
             'custom_title' => 'Title',
-            'register_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => 'timestampToDate'),
+            'register_date' => 'DateInserted',
+            'last_activity' => 'DateLastActive',
             'is_admin' => 'Admin',
             'is_banned' => 'Banned',
             'password' => 'Password',
             'hash_method' => 'HashMethod',
-            'avatar' => 'Photo'
-        );
-        $port->export(
-            'User',
-            "select u.*,
-                    ua.data as password,
-                    'xenforo' as hash_method,
-                    case when u.avatar_date > 0 then concat('xf/', u.user_id div 1000, '/', u.user_id, '.jpg')
-                        else null end as avatar
-                from :_user u
-                left join :_user_authenticate ua
-                    on u.user_id = ua.user_id",
-            $user_Map
-        );
+            'avatar' => 'Photo',
+            'avatarFullPath' => 'SourceAvatarFullPath',
+            'avatarThumbFullPath' => 'SourceAvatarThumbFullPath',
+        ];
+        $filter = [
+            'register_date' => 'timestampToDate',
+            'last_activity' => 'timestampToDate',
+        ];
+        $prx = $port->dbInput()->getTablePrefix();
+        $query = $port->sourceQB()->from('user', 'u')->select()
+            ->selectRaw("'xenforo' as hash_method")
+            ->selectRaw("data as password")
+            ->selectRaw("case when avatar_date > 0
+                then concat('/', {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
+                else null end as avatar")
+            ->selectRaw("case when avatar_date > 0
+                then concat('{$this->getPath('avatar', true)}', '/',
+                    {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
+                else null end as avatarFullPath")
+            ->selectRaw("case when avatar_date > 0
+                then concat('{$this->getPath('avatarThumb', true)}', '/',
+                    {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
+                else null end as avatarThumbFullPath")
+            ->join('user_authenticate as ua', 'u.user_id', '=', 'ua.user_id');
+
+        $port->export('User', $query, $map, $filter);
     }
 
     /**
@@ -252,9 +273,9 @@ class Xenforo extends Source
      *
      * Xenforo faithfully reimplemented vBulletin's worst ideas here, probably a misguided security effort.
      * Most other platforms don't jank filenames like this, so rebuild Path as {id}-{filename} to avoid conflicts.
-     * @see self::attachmentsData() for the `FileTransfer` data to complete the file renaming.
-     *
      * @param Migration $port
+     *@see self::attachmentsMap() for the `FileTransfer` data to complete the file renaming.
+     *
      */
     protected function attachments(Migration $port): void
     {
@@ -267,22 +288,33 @@ class Xenforo extends Source
             'width' => 'ImageWidth',
             'height' => 'ImageHeight',
         ];
-        $filters = [];
+        $filters = [
+            'Type' => 'mimeTypeFromExtension',
+        ];
         $prx = $port->dbInput()->getTablePrefix();
-        $wrt = Config::getInstance()->get('option_attachments_webroot') ?? '';
 
         $query = $port->sourceQB()
             ->from('attachment', 'a')
+            ->join('attachment_data as ad', 'ad.data_id', '=', 'a.data_id')
             ->select(['a.attachment_id',
                 'ad.filename', 'ad.file_size', 'ad.user_id', 'ad.width', 'ad.height',
                 'ap.ForeignID', 'ap.ForeignTable',
             ])
-            ->selectRaw("concat('($wrt}', {$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as Path")
-            ->selectRaw("concat('($wrt}', {$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as ThumbPath")
+            ->selectRaw("{$prx}ad.filename as Type")
             ->selectRaw("from_unixtime({$prx}ad.upload_date) as DateInserted")
-            ->join('attachment_data as ad', 'ad.data_id', '=', 'a.data_id')
+
+            // Paths for platform relative to uploads root (flat, in this case).
+            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as Path")
+            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as ThumbPath")
+
+            // Paths for FileTransfer.
+            ->selectRaw("concat('{$this->getPath('attachment', true)}', '/',
+                {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceFullPath")
+            ->selectRaw("concat('{$this->getPath('attachmentThumb', true)}', '/',
+                {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceThumbFullPath")
+
             // Build a CET of attached post data & join it.
-            ->withExpression('ap', function (\Staudenmeir\LaravelCte\Query\Builder $query) {
+            ->withExpression('ap', function (Builder $query) {
                 $prx = $query->connection->getTablePrefix(); // @phpstan-ignore method.notFound
                 $query->from('post', 'p')
                     ->select(['post_id'])
@@ -355,24 +387,5 @@ class Xenforo extends Source
                 from :_conversation_user cu",
             $userConversation_Map
         );
-    }
-
-    /**
-     * Query builder that selects values `sourcename` & `targetname`.
-     *
-     * @throws \Exception
-     */
-    public function attachmentsData(\Illuminate\Database\Connection $c): \Illuminate\Database\Query\Builder
-    {
-        return $c->table('attachment', 'a')
-            ->selectRaw("CONCAT(ad.data_id, '-', ad.file_hash, '.data') as sourcename")
-            ->selectRaw("CONTACT(ad.data_id, '-', ad.filename) as targetname")
-            ->join(
-                'attachment_data as ad',
-                'attachment.data_id',
-                '=',
-                'ad.data_id',
-                'left'
-            )->where('a.content_type', '=', 'post');
     }
 }

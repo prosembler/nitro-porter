@@ -4,6 +4,8 @@
  * Utility functions.
  */
 
+use Porter\Log;
+
 /**
  * Retrieve the config.
  *
@@ -182,5 +184,20 @@ function generateThumbnail($path, $thumbPath, $height = 50, $width = 50): void
         }
     } catch (\Exception $e) {
         echo "Could not generate a thumbnail for " . $targetImage;
+    }
+}
+
+/**
+ * Create folder if it doesn't exit.
+ *
+ * @param string $path Full path of the folder to be created.
+ */
+function touchFolder(string $path): void
+{
+    if (is_dir($path)) {
+        return;
+    }
+    if (!mkdir($path, 0777, true)) {
+        Log::comment("Folder '{$path}' could not be created.");
     }
 }

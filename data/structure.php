@@ -409,10 +409,10 @@ return array(
         'Data' => 'mediumtext',
         'CountGroup' => 'int'
     ),
-    'Media' => array(
+    'Media' => array( // Attachments
         'MediaID' => 'int',
-        'Name' => 'text',
-        'Path' => 'text',
+        'Name' => 'text', // "download as" / original filename
+        'Path' => 'text', // relative path from 'uploads' root
         'Type' => 'text',
         'Size' => 'int',
         'InsertUserID' => 'int',
@@ -423,7 +423,13 @@ return array(
         'ImageHeight' => 'smallint',
         'ThumbWidth' => 'smallint',
         'ThumbHeight' => 'smallint',
-        'ThumbPath' => 'text'
+        'ThumbPath' => 'text',
+        // Optionally calculated by Source to enable FileTransfer.
+        'SourceFullPath' => 'varchar(255)',
+        'SourceThumbFullPath' => 'varchar(255)',
+        // Optionally calculated by Target to enable FileTransfer.
+        'TargetFullPath' => 'varchar(255)',
+        'TargetThumbFullPath' => 'varchar(255)',
     ),
     /*'Message' => array( // Static text boxes, not what you think.
         'MessageID' => 'int',
@@ -652,7 +658,13 @@ return array(
         'CountComments' => 'int',
         'CountDrafts' => 'int',
         'CountBookmarks' => 'int',
-        'RankID' => 'int'
+        'RankID' => 'int',
+        // Optionally calculated by Source to enable FileTransfer
+        'SourceAvatarFullPath' => 'varchar(255)',
+        'SourceAvatarThumbFullPath' => 'varchar(255)',
+        // Optionally calculated by Target to enable FileTransfer
+        'TargetAvatarFullPath' => 'varchar(255)',
+        'TargetAvatarThumbFullPath' => 'varchar(255)',
     ),
     /*'UserAuthentication' => array(
         'ForeignUserKey' => 'varchar(255)',
@@ -796,5 +808,5 @@ return array(
         'UserID' => 'int',
         'DateInserted' => 'datetime',
         'Total' => 'int'
-    )
+    ),
 );

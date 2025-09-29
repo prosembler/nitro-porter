@@ -16,15 +16,14 @@ use Porter\Storage;
 /**
  * @param Source $source
  * @param Target $target
- * @param string $inputName
- * @param string $sourcePrefix
+ * @param string $outputName
  * @return FileTransfer
  * @throws Exception
  */
-function fileTransferFactory(Source $source, Target $target, string $inputName, string $sourcePrefix = ''): FileTransfer
+function fileTransferFactory(Source $source, Target $target, string $outputName): FileTransfer
 {
-    $inputStorage = new Storage\Database(new ConnectionManager($inputName, $sourcePrefix));
-    return new FileTransfer($source, $target, $inputStorage);
+    $porterStorage = new Storage\Database(new ConnectionManager($outputName, 'PORT_'));
+    return new FileTransfer($source, $target, $porterStorage);
 }
 
 /**

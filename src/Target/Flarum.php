@@ -22,6 +22,8 @@ class Flarum extends Target
     public const SUPPORTED = [
         'name' => 'Flarum',
         'defaultTablePrefix' => 'FLA_',
+        'avatarPath' => 'assets/avatars',
+        'attachmentPath' => 'assets/files/imported',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -189,6 +191,9 @@ class Flarum extends Target
     {
         // Ignore constraints on tables that block import.
         $port->ignoreOutputDuplicates('users');
+
+        // Map a file transfer.
+        $this->mapFileTransfer($port);
 
         $this->users($port);
         $this->roles($port); // 'Groups' in Flarum
@@ -543,7 +548,7 @@ class Flarum extends Target
             'actor_id' => 'int',
             'discussion_id' => 'int',
             'post_id' => 'int',
-            'base_name' => 'varchar(255)',
+            'base_name' => 'varchar(255)', // "download as"
             'path' => 'varchar(255)', // from /forumroot/assets/files
             'url' => 'varchar(255)',
             'type' => 'varchar(255)', // MIME
@@ -562,9 +567,9 @@ class Flarum extends Target
         $query = $port->targetQB()->from('Media')
             ->select()
             ->selectRaw('0 as discussion_id')
-            ->selectRaw('trim(leading "/" from Path) as path')
-            // @todo Not a URL yet.
-            ->selectRaw('concat("/assets/files/", trim(leading "/" from Path)) as url')
+            ->selectRaw("concat('imported/', Path) as path")
+            ->selectRaw("concat('/" . self::SUPPORTED['attachmentPath'] . "/',
+                trim(leading '/' from Path)) as url") // @todo Only a relative URL so far.
             // Untangle the Media.ForeignID & Media.ForeignTable [comment, discussion, message]
             ->selectRaw("case
                 when ForeignID is null then 0
@@ -898,5 +903,77 @@ class Flarum extends Target
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as discussion_id');
 
         $port->import('recipients', $query, $structure, $map);
+    }
+
+    /**
+     * Setup the destination values for FileTransfer.
+     *
+     * Set PORT_Media.TargetFullPath and PORT_User.TargetAvatarFullPath
+     * @todo Skip if !FileTransfer::isSupported()
+     *
+     * @param Migration $port
+     */
+    public function mapFileTransfer(Migration $port): void
+    {
+        $prx = $port->dbPorter()->getTablePrefix();
+
+        // Start timer.
+        $start = microtime(true);
+        $rows = 0;
+        $port->comment("Mapping attachments...");
+
+        // Media.Path
+        if ($fileTarget = $this->getPath('attachment', 'full')) {
+            $attachments = $port->targetQB()->from('Media')
+                ->select(['MediaID'])
+                // Reuse the filename in `Path` (not `Name`) in case it's been made guaranteed-unique.
+                ->selectRaw("concat('{$fileTarget}/', Path) as TargetFullPath")
+                // Assume we want the final Path if we got this far, so fix it.
+                ->whereNotNull("Path")
+                ->get();
+            $memory = memory_get_usage();
+            foreach ($attachments as $attachment) {
+                $rows += $port->dbPostscript()->affectingStatement("update `PORT_Media`
+                    set TargetFullPath = " . $port->dbPostscript()->escape($attachment->TargetFullPath) . "
+                    where MediaID = {$attachment->MediaID}");  // @todo index needed?
+            }
+            // Report.
+            $port->reportStorage(
+                'map',
+                'Media.TargetFullPath',
+                microtime(true) - $start,
+                $rows,
+                $memory
+            );
+        }
+
+        // Start timer.
+        $start = microtime(true);
+        $rows = 0;
+        $port->comment("Mapping avatars...");
+
+        // User.Photo
+        if ($fileTarget = $this->getPath('avatar', 'full')) {
+            $avatars = $port->targetQB()->from('User')
+                ->select(['UserID'])
+                ->selectRaw("concat('{$fileTarget}', Photo) as TargetAvatarFullPath")
+                    // Local-file Photo should begin with a slash.
+                ->whereNotNull("SourceAvatarFullPath") // 'Photo' could be a URL otherwise.
+                ->get();
+            $memory = memory_get_usage();
+            foreach ($avatars as $avatar) {
+                $rows += $port->dbPostscript()->affectingStatement("update `PORT_User`
+                    set TargetAvatarFullPath = " . $port->dbPostscript()->escape($avatar->TargetAvatarFullPath) . "
+                    where UserID = {$avatar->UserID}"); // @todo index needed?
+            }
+            // Report.
+            $port->reportStorage(
+                'map',
+                'User.TargetAvatarFullPath',
+                microtime(true) - $start,
+                $rows,
+                $memory
+            );
+        }
     }
 }

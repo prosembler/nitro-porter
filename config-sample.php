@@ -9,20 +9,17 @@ return [
     'source_prefix' => '',
     'target_prefix' => '',
 
-    // Paths to local folders (optional, for if files need renaming).
-    // If the platform uses subfolders for thumbnails, the package should figure that out.
-    'source_attachments' => '~/source/files',
-    'target_attachments' => '~/target/files',
-    'source_avatars' => '~/source/avatars',
-    'target_avatars' => '~/target/avatars',
+    // Paths to local install folders (optional, for if files need renaming).
+    // Even if it's not actually installed locally, just mirror its file structure for media files.
+    // If the platform uses subfolders for thumbnails etc, the package should figure that out.
+    'source_root' => '', // Example: '/source/folder'
+    'target_root' => '', // Example: '/target/folder'
 
-    // Relative web path prefixed to attachments / files in the database (for links).
-    // Ex: if your imported attachments will be at https://example.com/uploads/imported/{filename},
-    //  then your target_webroot is 'uploads/imported/'.
-    // With these default settings, you would copy the entire folders `~/target/avatars`
-    //  and `~/target/attachments` into your forum's `uploads` folder after migrating.
-    'option_attachments_webroot' => '', // Flarum: 'uploads/files/',
-    'option_avatars_webroot' => '', // Flarum: 'uploads/avatars/',
+    // Relative web path to the new platform install (for links).
+    // If your platform is installed in the root (e.g. https://example.com is 'home'), leave this blank.
+    // If your platform is in a subfolder, note it here.
+    //  (e.g. https://example.com/community would make this value 'community').
+    'target_webroot' => '',
 
     // Aliases of connections.
     // (If you're just editing the 2 default connections below, don't change these.)

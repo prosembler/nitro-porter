@@ -9,7 +9,11 @@ abstract class Target
         'defaultTablePrefix' => '',
         'passwordHashMethod' => '',
         'avatarsPrefix' => '',
-        'avatarThumbnailsPrefix' => '',
+        'avatarThumbPrefix' => '',
+        'avatarPath' => '',
+        'avatarThumbPath' => '',
+        'attachmentPath' => '',
+        'attachmentThumbPath' => '',
         'features' => [],
     ];
 
@@ -160,5 +164,23 @@ abstract class Target
         $duplicates = $db->table($table)
             ->whereNotIn($column, $db->table($fnTable)->pluck($fnColumn))
             ->delete();
+    }
+
+    /**
+     * Return the requested path (without a trailing slash).
+     *
+     * @param string $type
+     * @param string $addPath 'none', 'full', or 'web'
+     * @return string
+     */
+    public function getPath(string $type, string $addPath = 'none'): string
+    {
+        $folder = trim(static::SUPPORTED[$type . 'Path']  ?? '', '/');
+        if ($addPath === 'full' && Config::getInstance()->get('target_root')) {
+            $folder = rtrim(Config::getInstance()->get('target_root'), '/') . '/' . trim($folder, '/');
+        } elseif ($addPath === 'web' && Config::getInstance()->get('target_webroot')) {
+            $folder = rtrim(Config::getInstance()->get('target_webroot'), '/') . '/' . trim($folder, '/');
+        }
+        return $folder;
     }
 }

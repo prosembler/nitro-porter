@@ -98,7 +98,7 @@ class Controller
         $source = sourceFactory($sourceName);
         $target = targetFactory($targetName);
         $postscript = postscriptFactory($targetName);
-        $fileTransfer = fileTransferFactory($source, $target, $inputName, $sourcePrefix);
+        $fileTransfer = fileTransferFactory($source, $target, $outputName);
 
         // Report on request.
         $port->comment("NITRO PORTER RUNNING...");
@@ -136,7 +136,11 @@ class Controller
         }
 
         // File transfer.
-        //$fileTransfer->run();
+        if ($fileTransfer->isSupported()) {
+            $port->comment('File Transfer started...');
+            $fileTransfer->run();
+            $port->comment('File Transfer completed.');
+        }
 
         // Report finished.
         $port->comment("\n" . sprintf(

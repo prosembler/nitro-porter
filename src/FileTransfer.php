@@ -2,28 +2,64 @@
 
 namespace Porter;
 
+use Staudenmeir\LaravelCte\Query\Builder;
+
 class FileTransfer
 {
-    protected string $avatarsSourceFolder;
-    protected string $avatarsTargetFolder;
-    protected string $avatarsSourcePrefix = '';
-    protected string $avatarsTargetPrefix = '';
-    protected string $avatarThumbnailsSourceFolder;
-    protected string $avatarThumbnailsTargetFolder;
-    protected string $avatarThumbnailsSourcePrefix = '';
-    protected string $avatarThumbnailsTargetPrefix = '';
-    protected string $attachmentsSourceFolder;
-    protected string $attachmentsTargetFolder;
+    protected bool $supported = false;
 
-    protected Source $source;
-    protected Target $target;
-    protected Storage $inputStorage;
-    public function __construct(Source $source, Target $target, Storage $inputStorage)
+    /**
+     * @param Source $source
+     * @param Target $target
+     * @param Storage $porterStorage
+     */
+    public function __construct(protected Source $source, protected Target $target, protected Storage $porterStorage)
     {
-        $this->source = $source;
-        $this->target = $target;
-        $this->inputStorage = $inputStorage;
-        // @todo Determine support.
+        $this->supported = $this->evaluateSupport();
+    }
+
+    private function getBuilder(): Builder
+    {
+        return new Builder($this->porterStorage->getConnection());
+    }
+
+    /**
+     * Determine whether we can initiate a file transfer.
+     *
+     * @return bool
+     */
+    protected function evaluateSupport(): bool
+    {
+        $support = true;
+
+        // Valid source root.
+        $sourceRoot = Config::getInstance()->get('source_root');
+        if (empty($sourceRoot)) {
+            Log::comment("Skipping file transfer: source_root not set in config.");
+            $support = false;
+        } elseif (!file_exists($sourceRoot)) {
+            Log::comment("Skipping file transfer: source_root '{$sourceRoot}' does not exist.");
+            $support = false;
+        }
+
+        // Valid target root.
+        $targetRoot = Config::getInstance()->get('target_root');
+        if (empty($targetRoot)) {
+            Log::comment("Skipping file transfer: target_root not set in config.");
+            $support = false;
+        } elseif (!file_exists($targetRoot)) {
+            Log::comment("Skipping file transfer: target_root '{$targetRoot}' does not exist.");
+            $support = false;
+        }
+
+        // @todo
+
+        return $support;
+    }
+
+    public function isSupported(): bool
+    {
+        return $this->supported;
     }
 
     /**
@@ -33,38 +69,8 @@ class FileTransfer
     {
         $this->avatars();
         $this->avatarThumbnails();
-
-        $data = null;
-        if (is_a($this->inputStorage, '\Porter\Storage\Database')) {
-            $data = $this->source->attachmentsData($this->inputStorage->getConnection());
-        }
-        $this->attachments($data);
-    }
-
-    /**
-     * Create folder if it doesn't exit.
-     *
-     * @param string $path
-     */
-    protected function touchFolder(string $path): void
-    {
-        if (!is_dir($path)) {
-            if (!mkdir($path, 0665, true)) {
-                trigger_error("Folder '{$path}' could not be created."); // @todo Log, not abort.
-            }
-        }
-    }
-
-    /**
-     * Throw an error if the folder doesn't exist.
-     *
-     * @param string $path
-     */
-    protected function verifyFolder(string $path): void
-    {
-        if (!is_dir($path)) {
-            trigger_error("Folder '{$path}' does not exist."); // @todo Log, not abort.
-        }
+        $this->attachments();
+        $this->attachmentThumbnails();
     }
 
     /**
@@ -81,14 +87,20 @@ class FileTransfer
         return $i['dirname'] . '/' .  $newPrefix . substr($i['basename'], strlen($oldPrefix));
     }
 
+    /**
+     * @param string $inputFolder
+     * @param string $outputFolder
+     * @param callable|null $callback
+     * @param array $params
+     */
     protected function copyFiles(
         string $inputFolder,
         string $outputFolder,
         ?callable $callback = null,
         array $params = []
     ): void {
-        $this->verifyFolder($inputFolder);
-        $this->touchFolder($outputFolder);
+        //$this->verifyFolder($inputFolder);
+        //$this->touchFolder($outputFolder);
         $resourceFolder = opendir($inputFolder);
 
         while (($file = readdir($resourceFolder)) !== false) {
@@ -114,49 +126,64 @@ class FileTransfer
     /**
      * Export avatars.
      */
-    public function avatars(): void
+    protected function avatars(): void
     {
-        if (empty($this->avatarsSourceFolder)) {
-            Log::comment('Skipping file transfer: No avatars source folder set.');
+        $map = $this->getBuilder()->from('User')
+            ->select(['SourceAvatarFullPath', 'TargetAvatarFullPath'])
+            ->get();
+        $found = 0;
+        $missed = 0;
+        foreach ($map as $row) {
+            if (!empty($row->SourceAvatarFullPath) && !empty($row->TargetAvatarFullPath)) {
+                touchFolder(dirname($row->TargetAvatarFullPath));
+                copy($row->SourceAvatarFullPath, $row->TargetAvatarFullPath); // @todo TouchDir
+                $found++;
+            } else {
+                $missed++;
+            }
         }
-        $this->copyFiles(
-            $this->avatarsSourceFolder . '/' . $this->avatarsSourcePrefix,
-            $this->avatarsTargetFolder,
-            [$this, 'rePrefixFiles'],
-            [$this->avatarsSourcePrefix, $this->avatarsTargetPrefix]
-        );
+        Log::comment("xfer: Copied {$found} avatars.");
+        Log::comment("xfer: Missed {$missed} avatars.");
+        // @todo time report
     }
 
     /**
      * Export avatar thumbnails.
      */
-    public function avatarThumbnails(): void
+    protected function avatarThumbnails(): void
     {
-        $this->copyFiles(
-            $this->avatarThumbnailsSourceFolder . '/' . $this->avatarThumbnailsSourcePrefix,
-            $this->avatarThumbnailsTargetFolder,
-            [$this, 'rePrefixFiles'],
-            [$this->avatarThumbnailsSourcePrefix, $this->avatarThumbnailsTargetPrefix]
-        );
+        // @todo
     }
 
     /**
      * Export attachments.
      */
-    public function attachments(?\Illuminate\Database\Query\Builder $query = null): void
+    protected function attachments(): void
     {
-        if (is_a($query, '\Illuminate\Database\Query\Builder')) {
-            $query->get()->map(function ($file) {
-                copy(
-                    $this->attachmentsSourceFolder . '/' . $file->sourcename,
-                    $this->attachmentsTargetFolder . '/' . $file->targetname
-                ); // @todo Reporting.
-            });
-        } else {
-            $this->copyFiles(
-                $this->attachmentsSourceFolder,
-                $this->attachmentsTargetFolder
-            );
+        $map = $this->getBuilder()->from('Media')
+            ->select(['SourceFullPath', 'TargetFullPath'])
+            ->get();
+        $found = 0;
+        $missed = 0;
+        foreach ($map as $row) {
+            if (!empty($row->SourceFullPath) && !empty($row->TargetFullPath)) {
+                touchFolder(dirname($row->TargetFullPath));
+                copy($row->SourceFullPath, $row->TargetFullPath);
+                $found++;
+            } else {
+                $missed++;
+            }
         }
+        Log::comment("xfer: Copied {$found} attachments.");
+        Log::comment("xfer: Missed {$missed} attachments.");
+        // @todo time report
+    }
+
+    /**
+     * Export attachments.
+     */
+    protected function attachmentThumbnails(): void
+    {
+        // @todo
     }
 }

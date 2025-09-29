@@ -130,6 +130,7 @@ class FileTransfer
     {
         $map = $this->getBuilder()->from('User')
             ->select(['SourceAvatarFullPath', 'TargetAvatarFullPath'])
+            ->whereNotNull('SourceAvatarFullPath')
             ->get();
         $found = 0;
         $missed = 0;
@@ -162,6 +163,7 @@ class FileTransfer
     {
         $map = $this->getBuilder()->from('Media')
             ->select(['SourceFullPath', 'TargetFullPath'])
+            ->whereNotNull('SourceFullPath')
             ->get();
         $found = 0;
         $missed = 0;

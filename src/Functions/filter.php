@@ -493,17 +493,14 @@ function guessFormat(mixed $value): string
  */
 function mimeTypeFromExtension(string $value): string
 {
-
-    if (strpos($value, '.') === 0) {
-        $value = substr($value, 1);
-    }
-
+    $value = pathinfo($value, PATHINFO_EXTENSION);
     switch ($value) {
         case 'png':
         case 'jpg':
         case 'jpeg':
         case 'gif':
         case 'bmp':
+        case 'webp':
             return 'image/' . $value;
         case 'zip':
         case 'doc':

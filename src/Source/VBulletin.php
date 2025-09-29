@@ -31,6 +31,7 @@
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Source;
 use Porter\Migration;
 
@@ -353,7 +354,7 @@ class VBulletin extends Source
      */
     public function exportBlobs(Migration $port, $sql, $blobColumn, $pathColumn, $thumbnail = false): void
     {
-        $port->comment('Exporting blobs...');
+        Log::comment('Exporting blobs...');
         $result = $port->query($sql);
         $count = 0;
         while ($row = $result->nextResultRow()) {
@@ -407,7 +408,7 @@ class VBulletin extends Source
             }
             $count++;
         }
-        $port->comment("$count Blobs.", false);
+        Log::comment("$count Blobs.", false);
     }
 
     /**

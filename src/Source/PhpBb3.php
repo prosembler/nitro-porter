@@ -8,6 +8,7 @@
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Source;
 use Porter\Migration;
 
@@ -153,8 +154,8 @@ class PhpBb3 extends Source
         );
 
         if (count($corruptedRecords) > 0) {
-            $port->Comment("Corrupted records found in \"_log\" table while exporting to UserNote\n"
-                 . print_r($corruptedRecords, true));
+            Log::Comment("Corrupted records found in \"_log\" table while exporting to UserNote\n"
+                . print_r($corruptedRecords, true));
         }
     }
 
@@ -755,6 +756,6 @@ class PhpBb3 extends Source
                 $failed++;
             }
         }
-        $port->comment('Renamed ' . $renamed . ' files. ' . $failed . 'failures.');
+        Log::comment('Renamed ' . $renamed . ' files. ' . $failed . 'failures.');
     }
 }

@@ -8,6 +8,7 @@
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Source;
 use Porter\Migration;
 
@@ -72,7 +73,7 @@ class UserVoice extends Source
     public function exportHexAvatars(Migration $port): void
     {
         $thumbnail = true;
-        $port->comment("Exporting hex encoded columns...");
+        Log::comment("Exporting hex encoded columns...");
 
         $result = $port->query("select UserID, Length, ContentType, Content from :_UserAvatar");
         $path = '/www/porter/userpics';
@@ -100,7 +101,7 @@ class UserVoice extends Source
             $count++;
         }
         //$port->status("$count Hex Encoded.\n");
-        $port->comment("$count Hex Encoded.", false);
+        Log::comment("$count Hex Encoded.", false);
     }
 
     /**
@@ -108,7 +109,7 @@ class UserVoice extends Source
      */
     public function exportHexAttachments(Migration $port): void
     {
-        $port->comment("Exporting hex encoded columns...");
+        Log::comment("Exporting hex encoded columns...");
 
         $result = $port->query(
             "select a.*, p.PostID
@@ -132,7 +133,7 @@ class UserVoice extends Source
             $count++;
         }
         //$port->status("$count Hex Encoded.\n");
-        $port->comment("$count Hex Encoded.", false);
+        Log::comment("$count Hex Encoded.", false);
     }
 
     /**

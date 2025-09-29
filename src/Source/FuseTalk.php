@@ -13,6 +13,7 @@
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Source;
 use Porter\Migration;
 
@@ -93,7 +94,7 @@ class FuseTalk extends Source
      */
     protected function createIndices(Migration $port): void
     {
-        $port->comment("Creating indexes... ");
+        Log::comment("Creating indexes... ");
 
         if (!$port->indexExists('ix_users_userid', ':_users')) {
             $port->query('create index ix_users_userid on :_users (iuserid)');
@@ -117,7 +118,7 @@ class FuseTalk extends Source
             $port->query('create index ix_threads_poll on :_threads (vchpollflag)');
         }
 
-        $port->comment("Indexes done!");
+        Log::comment("Indexes done!");
     }
 
     /**

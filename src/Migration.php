@@ -225,18 +225,6 @@ class Migration
     }
 
     /**
-     * Write a comment to the export file.
-     *
-     * @param string $message The message to write.
-     * @param bool $echo Whether or not to echo the message in addition to writing it to the file.
-     */
-    public function comment($message, $echo = true): void
-    {
-        Log::comment($message);
-        echo "\n" . $message;
-    }
-
-    /**
      * Export a collection of data, usually a table.
      *
      * @param string $tableName Name of table to export. This must correspond to one of the accepted map tables.
@@ -253,7 +241,7 @@ class Migration
     public function export(string $tableName, string|Builder $query, array $map = [], array $filters = []): void
     {
         if (!empty($this->limitedTables) && !in_array(strtolower($tableName), $this->limitedTables)) {
-            $this->comment("Skipping table: $tableName");
+            Log::comment("Skipping table: $tableName");
             return;
         }
 
@@ -262,7 +250,7 @@ class Migration
 
         // Validate table for export.
         if (!array_key_exists($tableName, $this->porterStructure)) {
-            $this->comment("Error: $tableName is not a valid export.");
+            Log::comment("Error: $tableName is not a valid export.");
             return;
         }
 
@@ -270,7 +258,7 @@ class Migration
         if (is_string($query)) {
             $data = $this->query($query);
             if (empty($data)) {
-                $this->comment("Error: No data found in $tableName.");
+                Log::comment("Error: No data found in $tableName.");
                 return;
             }
         }
@@ -288,7 +276,7 @@ class Migration
         $info = $this->porterStorage->store($tableName, $map, $structure, $data ?? $query, $filters, $this);
 
         // Report.
-        $this->reportStorage('export', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
+        Log::storage('export', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
     }
 
     /**
@@ -310,7 +298,7 @@ class Migration
         $info = $this->outputStorage->store($tableName, $map, $struct, $exp, $filters, $this);
 
         // Report.
-        $this->reportStorage('import', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
+        Log::storage('import', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
     }
 
     /**
@@ -322,29 +310,6 @@ class Migration
     public function importEmpty(string $tableName, array $structure): void
     {
         $this->outputStorage->prepare($tableName, $structure);
-    }
-
-    /**
-     * Add log with results of a table storage action.
-     *
-     * @param string $action
-     * @param string $table
-     * @param float $timeElapsed
-     * @param int $rowCount
-     * @param int $memPeak
-     */
-    public function reportStorage(string $action, string $table, float $timeElapsed, int $rowCount, int $memPeak): void
-    {
-        // Format output.
-        $report = sprintf(
-            '%s: %s — %d rows, %s (%s)',
-            $action,
-            $table,
-            $rowCount,
-            formatElapsed($timeElapsed),
-            formatBytes($memPeak)
-        );
-        $this->comment($report);
     }
 
     /**
@@ -399,7 +364,7 @@ class Migration
     {
         // Manually add table prefix.
         if (!$this->hasInputSchema($table)) {
-            $this->comment('ERROR: Missing collation table ' . $this->dbInput()->getDatabaseName() .
+            Log::comment('ERROR: Missing collation table ' . $this->dbInput()->getDatabaseName() .
                 '.' . $this->dbInput()->getTablePrefix() . $table);
             return 'UTF-8';
         }
@@ -411,7 +376,7 @@ class Migration
         $charset = $this->dbInput()
             ->select("show collation like '{$collation}'")[0]->Charset ?? 'utf8mb4';
         if (\Porter\Config::getInstance()->debugEnabled()) {
-            $this->comment('? Found charset: ' . $charset);
+            Log::comment('? Found charset: ' . $charset);
         }
 
         return match ($charset) {

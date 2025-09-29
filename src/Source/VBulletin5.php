@@ -12,6 +12,7 @@
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Migration;
 
 class VBulletin5 extends VBulletin
@@ -352,7 +353,7 @@ class VBulletin5 extends VBulletin
             $pollCount++;
         }
         //$ex->writeEndTable($fp);
-        $port->comment("Exported Table: PollOption (" . $pollCount . " rows)");
+        Log::comment("Exported Table: PollOption (" . $pollCount . " rows)");
 
         $pollVote_Map = array(
             'userid' => 'UserID',

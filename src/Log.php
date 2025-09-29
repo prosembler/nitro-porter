@@ -40,12 +40,37 @@ class Log
     }
 
     /**
-     * Temporary 1:1 replacement for old inline logger.
+     * Write a comment to the log & console.
      *
-     * @param string $message
+     * @param string $message The message to write.
+     * @param bool $echo Whether or not to echo the message in addition to writing it to the file.
      */
     public static function comment(string $message): void
     {
         self::getInstance()->info($message);
+        echo "\n" . $message;
+    }
+
+    /**
+     * Add log with results of a table storage action.
+     *
+     * @param string $action
+     * @param string $table
+     * @param float $timeElapsed
+     * @param int $rowCount
+     * @param int $memPeak
+     */
+    public static function storage(string $action, string $table, float $timeElapsed, int $rowCount, int $memPeak): void
+    {
+        // Format output.
+        $report = sprintf(
+            '%s: %s — %d rows, %s (%s)',
+            $action,
+            $table,
+            $rowCount,
+            formatElapsed($timeElapsed),
+            formatBytes($memPeak)
+        );
+        Log::comment($report);
     }
 }

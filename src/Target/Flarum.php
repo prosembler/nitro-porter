@@ -7,6 +7,7 @@
 
 namespace Porter\Target;
 
+use Porter\Log;
 use Porter\Migration;
 use Porter\Formatter;
 use Porter\Target;
@@ -164,7 +165,7 @@ class Flarum extends Target
         ]; // @see fixDuplicateDeletedNames()
         $dupes = array_diff($this->findDuplicates('User', 'Name', $port), $allowlist);
         if (!empty($dupes)) {
-            $port->comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+            Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
     }
 
@@ -180,7 +181,7 @@ class Flarum extends Target
     {
         $dupes = $this->findDuplicates('User', 'Email', $port);
         if (!empty($dupes)) {
-            $port->comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+            Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
     }
 
@@ -278,7 +279,7 @@ class Flarum extends Target
 
         // Verify support.
         if (!$port->hasPortSchema('UserRole')) {
-            $port->comment('Skipping import: Roles (Source lacks support)');
+            Log::comment('Skipping import: Roles (Source lacks support)');
             $port->importEmpty('groups', $structure);
             $port->importEmpty('group_user', $structure);
             return;
@@ -433,7 +434,7 @@ class Flarum extends Target
     {
         // Verify support.
         if (!$port->hasPortSchema('UserDiscussion')) {
-            $port->comment('Skipping import: Bookmarks (Source lacks support)');
+            Log::comment('Skipping import: Bookmarks (Source lacks support)');
             return;
         }
 
@@ -539,7 +540,7 @@ class Flarum extends Target
     {
         // Verify support.
         if (!$port->hasPortSchema('Media')) {
-            $port->comment('Skipping import: Attachments (Source lacks support)');
+            Log::comment('Skipping import: Attachments (Source lacks support)');
             return;
         }
 
@@ -598,7 +599,7 @@ class Flarum extends Target
     {
         // Verify support.
         if (!$port->hasPortSchema('Badge')) {
-            $port->comment('Skipping import: Badges (Source lacks support)');
+            Log::comment('Skipping import: Badges (Source lacks support)');
             return;
         }
 
@@ -658,7 +659,7 @@ class Flarum extends Target
     {
         // Verify support.
         if (!$port->hasPortSchema('Poll')) {
-            $port->comment('Skipping import: Polls (Source lacks support)');
+            Log::comment('Skipping import: Polls (Source lacks support)');
             return;
         }
 
@@ -742,7 +743,7 @@ class Flarum extends Target
     {
         // Verify support.
         if (!$port->hasPortSchema('ReactionType')) {
-            $port->comment('Skipping import: Reactions (Source lacks support)');
+            Log::comment('Skipping import: Reactions (Source lacks support)');
             return;
         }
 
@@ -822,19 +823,19 @@ class Flarum extends Target
     {
         // Verify source support.
         if (!$port->hasPortSchema('Conversation')) {
-            $port->comment('Skipping import: Private messages (Source lacks support)');
+            Log::comment('Skipping import: Private messages (Source lacks support)');
             return;
         }
 
         // Verify target support.
         if (!$port->hasOutputSchema('recipients')) {
-            $port->comment('Skipping import: Private messages (Target lacks support - Enable the plugin first)');
+            Log::comment('Skipping import: Private messages (Target lacks support - Enable the plugin first)');
             return;
         }
 
         // Messages — Discussions
         $MaxDiscussionID = $this->messageDiscussionOffset = $this->getMaxValue('id', 'discussions', $port);
-        $port->comment('Discussions offset for PMs is ' . $MaxDiscussionID);
+        Log::comment('Discussions offset for PMs is ' . $MaxDiscussionID);
         $structure = $this->getStructureDiscussions($port);
         $map = [
             'InsertUserID' => 'user_id',
@@ -866,7 +867,7 @@ class Flarum extends Target
 
         // Messages — Comments
         $MaxCommentID = $this->messagePostOffset = $this->getMaxValue('id', 'posts', $port);
-        $port->comment('Posts offset for PMs is ' . $MaxCommentID);
+        Log::comment('Posts offset for PMs is ' . $MaxCommentID);
         $map = [
             'Body' => 'content',
             'InsertUserID' => 'user_id',
@@ -920,7 +921,7 @@ class Flarum extends Target
         // Start timer.
         $start = microtime(true);
         $rows = 0;
-        $port->comment("Mapping attachments...");
+        Log::comment("Mapping attachments...");
 
         // Media.Path
         if ($fileTarget = $this->getPath('attachment', 'full')) {
@@ -938,7 +939,7 @@ class Flarum extends Target
                     where MediaID = {$attachment->MediaID}");  // @todo index needed?
             }
             // Report.
-            $port->reportStorage(
+            Log::storage(
                 'map',
                 'Media.TargetFullPath',
                 microtime(true) - $start,
@@ -950,7 +951,7 @@ class Flarum extends Target
         // Start timer.
         $start = microtime(true);
         $rows = 0;
-        $port->comment("Mapping avatars...");
+        Log::comment("Mapping avatars...");
 
         // User.Photo
         if ($fileTarget = $this->getPath('avatar', 'full')) {
@@ -967,7 +968,7 @@ class Flarum extends Target
                     where UserID = {$avatar->UserID}"); // @todo index needed?
             }
             // Report.
-            $port->reportStorage(
+            Log::storage(
                 'map',
                 'User.TargetAvatarFullPath',
                 microtime(true) - $start,

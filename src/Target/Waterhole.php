@@ -8,6 +8,7 @@
 
 namespace Porter\Target;
 
+use Porter\Log;
 use Porter\Migration;
 use Porter\Target;
 
@@ -114,7 +115,7 @@ class Waterhole extends Target
         ]; // @see fixDuplicateDeletedNames()
         $dupes = array_diff($this->findDuplicates('User', 'Name', $port), $allowlist);
         if (!empty($dupes)) {
-            $port->comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+            Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
     }
 
@@ -129,7 +130,7 @@ class Waterhole extends Target
     {
         $dupes = $this->findDuplicates('User', 'Email', $port);
         if (!empty($dupes)) {
-            $port->comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+            Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
     }
 
@@ -205,7 +206,7 @@ class Waterhole extends Target
 
         // Verify support.
         if (!$port->hasOutputSchema('UserRole')) {
-            $port->comment('Skipping import: Roles (Source lacks support)');
+            Log::comment('Skipping import: Roles (Source lacks support)');
             $port->importEmpty('groups', $structure);
             $port->importEmpty('group_user', $structure);
             return;

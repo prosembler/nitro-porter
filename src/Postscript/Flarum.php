@@ -3,6 +3,7 @@
 namespace Porter\Postscript;
 
 use Porter\ConnectionManager;
+use Porter\Log;
 use Porter\Migration;
 use Porter\Parser\Flarum\QuoteEmbed;
 use Porter\Postscript;
@@ -82,7 +83,7 @@ class Flarum extends Postscript
         $port->outputStorage()->endStream();
 
         // Report.
-        $port->reportStorage('build', 'mentions_user', microtime(true) - $start, $rows, $memory);
+        Log::storage('build', 'mentions_user', microtime(true) - $start, $rows, $memory);
     }
 
     /**
@@ -100,7 +101,7 @@ class Flarum extends Postscript
         // Start timer.
         $start = microtime(true);
         $rows = 0;
-        $port->comment("Building 'post number' info for discussions...");
+        Log::comment("Building 'post number' info for discussions...");
 
         // Get discussion id list (avoiding empty discussions) from output.
         $posts = $port->postQB()->from('posts')
@@ -124,7 +125,7 @@ class Flarum extends Postscript
         }
 
         // Report.
-        $port->reportStorage('build', 'discussions.post_number_index', microtime(true) - $start, $rows, $memory);
+        Log::storage('build', 'discussions.post_number_index', microtime(true) - $start, $rows, $memory);
     }
 
     /**
@@ -204,11 +205,11 @@ class Flarum extends Postscript
 
         // Log failures.
         if ($failures) {
-            $port->comment('Failed to find ' . $failures . ' quoted posts (perhaps deleted).');
+            Log::comment('Failed to find ' . $failures . ' quoted posts (perhaps deleted).');
         }
 
         // Report.
-        $port->reportStorage('build', 'mentions_post', microtime(true) - $start, $rows, $memory);
+        Log::storage('build', 'mentions_post', microtime(true) - $start, $rows, $memory);
     }
 
     /**
@@ -285,7 +286,7 @@ class Flarum extends Postscript
         // Start timer.
         $start = microtime(true);
         $rows = 0;
-        $port->comment("Building 'last read' info for user bookmarks...");
+        Log::comment("Building 'last read' info for user bookmarks...");
 
         // Calculate & set discussion_user.last_read_post_number.
         $bookmarks = $port->postQB()
@@ -311,7 +312,7 @@ class Flarum extends Postscript
         }
 
         // Report.
-        $port->reportStorage(
+        Log::storage(
             'build',
             'discussion_user.last_read_post_number',
             microtime(true) - $start,
@@ -350,7 +351,7 @@ class Flarum extends Postscript
             $port->dbPostscript()
                 ->table('badge_category')
                 ->insertOrIgnore(['id' => 1, 'name' => 'Imported Badges', 'created_at' => date('Y-m-d h:m:s')]);
-            $port->comment('Added  badge category "Imported Badges".');
+            Log::comment('Added  badge category "Imported Badges".');
         }
     }
 
@@ -374,10 +375,10 @@ class Flarum extends Postscript
                 ->insert(['group_id' => 1, 'user_id' => $result->UserID]);
 
             // Report promotion.
-            $port->comment('Promoted to Admin: ' . $result->Name . ' (' . $result->Email . ')');
+            Log::comment('Promoted to Admin: ' . $result->Name . ' (' . $result->Email . ')');
         } else {
             // Report failure.
-            $port->comment('No user found to promote to Admin. (Searching for Admin=1 flag on PORT_User.)');
+            Log::comment('No user found to promote to Admin. (Searching for Admin=1 flag on PORT_User.)');
         }
     }
 }

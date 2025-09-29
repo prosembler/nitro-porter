@@ -8,6 +8,7 @@
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Source;
 use Porter\Migration;
 
@@ -370,8 +371,8 @@ class JForum extends Source
                 from z_conversation"
         );
 
-        $port->comment('Run the following query after the import: ');
-        $port->comment('update GDN_UserConversation
+        Log::comment('Run the following query after the import: ');
+        Log::comment('update GDN_UserConversation
             set CountReadMessages = (select count(MessageID)
             from GDN_ConversationMessage
             where GDN_ConversationMessage.ConversationID = GDN_UserConversation.ConversationID)');

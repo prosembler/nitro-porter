@@ -101,16 +101,16 @@ class Controller
         $fileTransfer = fileTransferFactory($source, $target, $outputName);
 
         // Report on request.
-        $port->comment("NITRO PORTER RUNNING...");
-        $port->comment("Porting " . $sourceName . " to " . $targetName);
-        $port->comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
-        $port->comment("Porter: " . $outputName . ' (PORT_)');
-        $port->comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
+        Log::comment("NITRO PORTER RUNNING...");
+        Log::comment("Porting " . $sourceName . " to " . $targetName);
+        Log::comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
+        Log::comment("Porter: " . $outputName . ' (PORT_)');
+        Log::comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
 
         // Setup & log flags.
         if ($target) {
             $this->setFlags($source, $target);
-            $port->comment("? 'Use Discussion Body' = " .
+            Log::comment("? 'Use Discussion Body' = " .
                 ($target->getDiscussionBodyMode() ? 'Enabled' : 'Disabled'));
         }
         set_time_limit(0);
@@ -118,10 +118,10 @@ class Controller
 
         // Report start.
         $start = microtime(true);
-        $port->comment("\n" . sprintf(
-            '[ STARTED at %s ]',
-            date('H:i:s e')
-        ) . "\n");
+        Log::comment("\n" . sprintf(
+                '[ STARTED at %s ]',
+                date('H:i:s e')
+            ) . "\n");
 
         // Export (Source -> `PORT_`).
         $this->doExport($source, $port);
@@ -137,18 +137,18 @@ class Controller
 
         // File transfer.
         if ($fileTransfer->isSupported()) {
-            $port->comment('File Transfer started...');
+            Log::comment('File Transfer started...');
             $fileTransfer->run();
-            $port->comment('File Transfer completed.');
+            Log::comment('File Transfer completed.');
         }
 
         // Report finished.
-        $port->comment("\n" . sprintf(
-            '[ FINISHED at %s after running for %s ]',
-            date('H:i:s e'),
-            formatElapsed(microtime(true) - $start)
-        ));
-        $port->comment("[ After testing, you may delete any `PORT_` database tables. ]");
-        $port->comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
+        Log::comment("\n" . sprintf(
+                '[ FINISHED at %s after running for %s ]',
+                date('H:i:s e'),
+                formatElapsed(microtime(true) - $start)
+            ));
+        Log::comment("[ After testing, you may delete any `PORT_` database tables. ]");
+        Log::comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
     }
 }

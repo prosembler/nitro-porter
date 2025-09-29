@@ -60,7 +60,7 @@ class Formatter
         }
 
         // Record memory usage from user map.
-        $port->comment('Mentions map memory usage at ' . formatBytes(memory_get_usage()));
+        Log::comment('Mentions map memory usage at ' . formatBytes(memory_get_usage()));
 
         return $users;
     }

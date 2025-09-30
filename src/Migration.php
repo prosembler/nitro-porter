@@ -22,17 +22,6 @@ class Migration
     public bool $captureOnly = false;
 
     /**
-     * @var array Any comments that have been written during the export.
-     */
-    public array $comments = [];
-
-    /**
-     * @var string DB prefix of source. Queries passed to export() will replace `:_` with this.
-     * @see Migration::export()
-     */
-    protected string $srcPrefix = '';
-
-    /**
      * @var array Table names to limit the export to. Full export is an empty array.
      */
     public array $limitedTables = [];
@@ -189,6 +178,7 @@ class Migration
      * 2. Trim off the whitespace
      * 3. Normalize case to lower
      * 4. Save to the Migration instance
+     * @todo move to Source
      *
      * @param ?string $tables
      */
@@ -237,6 +227,7 @@ class Migration
      *      Column (the new column name)
      *      Filter (the callable function name to process the data with)
      *      Type (the MySQL type)
+     * @todo move to Source
      */
     public function export(string $tableName, string|Builder $query, array $map = [], array $filters = []): void
     {
@@ -285,6 +276,7 @@ class Migration
      * @param array $struct
      * @param array $map
      * @param array $filters
+     * @todo move to Target
      */
     public function import(string $tableName, Builder $exp, array $struct, array $map = [], array $filters = []): void
     {
@@ -306,6 +298,7 @@ class Migration
      *
      * @param string $tableName
      * @param mixed[] $structure
+     * @todo move to Target
      */
     public function importEmpty(string $tableName, array $structure): void
     {
@@ -338,6 +331,7 @@ class Migration
      * Ignore duplicates for a SQL storage target table. Adds prefix for you.
      *
      * @param string $tableName
+     * @todo move to Target
      */
     public function ignoreOutputDuplicates(string $tableName): void
     {
@@ -358,7 +352,7 @@ class Migration
      * @param string $table Name of the database table to derive the encoding from.
      * @return string Encoding found.
      * @see HTMLDecoder()
-     * @todo integration test
+     * @todo move to Source
      */
     public function getInputEncoding(string $table): string
     {
@@ -408,6 +402,7 @@ class Migration
      * @param string $table
      * @param array $columns
      * @return bool
+     * @todo move to Target
      */
     public function hasOutputSchema(string $table, array $columns = []): bool
     {
@@ -420,6 +415,7 @@ class Migration
      * @param string $table
      * @param array $columns
      * @return bool
+     * @todo move to Target
      */
     public function hasPortSchema(string $table, array $columns = []): bool
     {
@@ -432,6 +428,7 @@ class Migration
      * @param string $table The name of the table to check.
      * @param array|string $columns Column names to check.
      * @return bool Whether the table and all columns exist.
+     * @todo move to Source
      */
     public function hasInputSchema(string $table, array|string $columns = []): bool
     {
@@ -442,6 +439,7 @@ class Migration
      * Throws error if required source tables & columns are not present.
      *
      * @param array $requiredSchema Table => Columns
+     * @todo move to Source
      */
     public function verifySource(array $requiredSchema): void
     {

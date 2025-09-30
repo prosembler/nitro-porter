@@ -4,6 +4,17 @@
 All notable changes to this project will be documented in this file.
 <!--- END HEADER -->
 
+## [4.0.1](https://github.com/prosembler/nitro-porter/compare/v4.0...v4.0.1) (2025-09-30)
+
+### Bug Fixes
+
+* Flarum postscript table prefix missing on post numbering ([8201f1](https://github.com/prosembler/nitro-porter/commit/8201f123c0661af7df5579775e7d52408e7eb4ac))
+* Restore ability to log without echo ([870044f](https://github.com/prosembler/nitro-porter/commit/870044f38e1ee2bb3c5cebb2f2555c641a6e2180))
+
+Also adds a few docs and lint fixes.
+
+---
+
 ## [4.0](https://github.com/prosembler/nitro-porter/compare/v3.7.3...v4.0) (2025-09-30)
 
 ### Features

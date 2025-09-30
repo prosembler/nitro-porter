@@ -45,10 +45,12 @@ class Log
      * @param string $message The message to write.
      * @param bool $echo Whether or not to echo the message in addition to writing it to the file.
      */
-    public static function comment(string $message): void
+    public static function comment(string $message, bool $echo = true): void
     {
         self::getInstance()->info($message);
-        echo "\n" . $message;
+        if ($echo) {
+            echo "\n" . $message;
+        }
     }
 
     /**

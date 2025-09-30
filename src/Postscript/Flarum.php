@@ -111,8 +111,9 @@ class Flarum extends Postscript
 
         foreach ($posts as $post) {
             // Update posts with their number, per discussion.
+            $prx = $port->dbPostscript()->getTablePrefix();
             $port->dbPostscript()->statement("set @num := 0");
-            $count = $port->dbPostscript()->affectingStatement("update `" . "posts`
+            $count = $port->dbPostscript()->affectingStatement("update `" . "{$prx}posts`
                     set `number` = (@num := @num + 1)
                     where `discussion_id` = " . $post->discussion_id . "
                     order by `created_at` asc");

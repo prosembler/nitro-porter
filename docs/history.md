@@ -27,3 +27,9 @@ Source support for Vanilla's Advanced Editor (Quill-based WYSIWYG) was added.
 
 From 2023-24, Waterhole was added as a target. Source support for IPB4 was added. Nitro Porter got enhanced CLI support and went CLI-only
 (removing the Web GUI). And, the [maintainer guide](/maintain) was created.
+
+In Aug-Sep 2025, the [4.0 release](https://github.com/prosembler/nitro-porter/releases/tag/v4.0) brought 
+testability through Phinx & dependency injection, file transfer support (beginning with Xenforo -> Flarum),
+improved config & CLI options, improved logging, and completed integration of Laravel's database library.
+It also advanced work on the [Domain Model](https://nitroporter.org/domain.html#domain-diagram) & architecture
+to make connection handling & the overall workflow clearer.

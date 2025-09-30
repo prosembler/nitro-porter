@@ -71,6 +71,18 @@ porter run --source=Vanilla --input=example_db --target=Flarum --output=test_db
 porter run -s Xenforo -i example_db -t Flarum
 ```
 
+## Advanced Usage
+
+The File Transfer tool (new in 4.0) enables moving files (like attachments & avatars) between platforms by renaming & copying them.
+To use it, set the following fields in your `config.php`:
+
+* `source_root` is installation folder of the platform you're migrating away from.
+* `target_root` is the local installation folder to copy files into.
+* `target_webroot` is the folder under the webroot the platform is installed under when live (if any).
+
+If `source_root` & `target_root` are set, Nitro Porter will evaluate whether the source & target support file transfer.
+As of 4.0, only Xenforo -> Flarum is supported as a proof of concept.
+
 ## Troubleshooting
 
 ### Command 'porter' not found

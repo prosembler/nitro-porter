@@ -4,6 +4,33 @@
 All notable changes to this project will be documented in this file.
 <!--- END HEADER -->
 
+## [4.0](https://github.com/prosembler/nitro-porter/compare/v3.7.3...v4.0) (2025-09-30)
+
+### Features
+
+* File transfer (avatars & attachments) between Xenforo & Flarum ([6ddb77](https://github.com/prosembler/nitro-porter/commit/6ddb7750914c9b41e74b7f6bd185f3daca2b3ad2))
+* Add 2-tier tag support to Flarum target ([e9bde7](https://github.com/prosembler/nitro-porter/commit/e9bde7573ecee04f82f6aa9a20f7bddaea89192a))
+* Improve Flarum target logging for long steps ([e538de](https://github.com/prosembler/nitro-porter/commit/e538de1a3c6a4c540c476503e9cc43f321f0a689))
+* Add a real usage example for the RUN command ([6683b8](https://github.com/prosembler/nitro-porter/commit/6683b8c1517a9d62c247c6b83105c08bd2c12c25))
+* Add support for CETs in queries ([0fbbe2](https://github.com/prosembler/nitro-porter/commit/0fbbe208976b367d0105f01082aacef947bf8842))
+* Allow config fallbacks for run command ([31d32b](https://github.com/prosembler/nitro-porter/commit/31d32b07b9ba6dcb16dc6799e7f412bf63c80959))
+* Allow Sources to use the query builder ([89683c](https://github.com/prosembler/nitro-porter/commit/89683c19f708a07748ee63f51c8acb64fbecf132))
+* Better MIME support ([00db6c](https://github.com/prosembler/nitro-porter/commit/00db6cbc710a6773db41da3c41bbdab2811f886a))
+* Improve default config to display more options ([9ffc66](https://github.com/prosembler/nitro-porter/commit/9ffc660e1992995480b6bce976f0feee22c44a80))
+* Phinx-based automated database tests ([aaf562](https://github.com/prosembler/nitro-porter/commit/aaf562d1cc6736eabe34a0bc22701e76a986c72e))
+* Remove support for custom package options ([3b8eea](https://github.com/prosembler/nitro-porter/commit/3b8eea8282363c91575cee59406e4275330099fa))
+* Require PHP 8.3 ([87f0b9](https://github.com/prosembler/nitro-porter/commit/87f0b980d0c34b7c3b9f506ef1706a05a8123557))
+* Revise the example Source for modern standards ([68d49d](https://github.com/prosembler/nitro-porter/commit/68d49d33c58f055647e9060fd35435a35e1a6a9d))
+
+### Bug Fixes
+
+* Flarum target default role duplication on repeat run ([30849b](https://github.com/prosembler/nitro-porter/commit/30849b0e859baa2a8f74a394d2039367dc2f33a1))
+* Set options to null so that an empty string is valid input ([c7b378](https://github.com/prosembler/nitro-porter/commit/c7b3788aa48df018b97e56cd22eef0be55763f34))
+* Source charset table access ([51d8f9](https://github.com/prosembler/nitro-porter/commit/51d8f9e4fa6f3e93607d348431284da9c38de0eb))
+* Xenforo charset table name ([ce2033](https://github.com/prosembler/nitro-porter/commit/ce20337eea5f7e1d81bf6ab1fea68fb86e2938b1))
+
+---
+
 ## [3.7.3](https://github.com/linc/nitro-porter/compare/v3.7.2...v3.7.3) (2025-09-02)
 
 ### Bug Fixes

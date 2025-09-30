@@ -119,9 +119,9 @@ class Controller
         // Report start.
         $start = microtime(true);
         Log::comment("\n" . sprintf(
-                '[ STARTED at %s ]',
-                date('H:i:s e')
-            ) . "\n");
+            '[ STARTED at %s ]',
+            date('H:i:s e')
+        ) . "\n");
 
         // Export (Source -> `PORT_`).
         $this->doExport($source, $port);
@@ -144,10 +144,10 @@ class Controller
 
         // Report finished.
         Log::comment("\n" . sprintf(
-                '[ FINISHED at %s after running for %s ]',
-                date('H:i:s e'),
-                formatElapsed(microtime(true) - $start)
-            ));
+            '[ FINISHED at %s after running for %s ]',
+            date('H:i:s e'),
+            formatElapsed(microtime(true) - $start)
+        ));
         Log::comment("[ After testing, you may delete any `PORT_` database tables. ]");
         Log::comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
     }

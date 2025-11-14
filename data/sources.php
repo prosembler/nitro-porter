@@ -13,6 +13,7 @@ return [
     'ExpressionEngine',
     'Flarum',
     'FluxBb',
+    'ForumAccess',
     'FuseTalk',
     'IpBoard3',
     'IpBoard4',

@@ -28,6 +28,7 @@ build/current
 .phpunit.cache
 seed_database.php
 .cache
+.env
 
 # git-of-theseus
 authors.json

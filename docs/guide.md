@@ -1,20 +1,39 @@
 # User Guide
 
-## Requirements
-
-You need:
-
-* PHP 8.3+
-* MariaDB (or whichever databases your platforms require)
-* PHP's PDO driver for your data sources (probably MySQL or PostgreSQL).
-* 256MB of memory allocated to PHP
-
-Nitro Porter will set PHP's memory limit to 256MB. If it's unable to do so, it may suffer performance issues or generate errors. For small forums, you may be able to safely reconfigure it to 128MB or lower.
-
-A quick way to get all of the above would be installing MAMP or XAMPP on your laptop. The longer way, if you're doing this often or have huge datasets, is to follow my [PHP localhost guide for Mac](https://lincolnwebs.com/php-localhost/).
-
-
 ## Installation
+
+'!!! warning "Localhost Development Only"
+Don't use this in Production or anywhere publicly accessible
+
+### Docker Desktop (recommended)
+
+- Install Docker Desktop on [Mac](https://docs.docker.com/desktop/setup/install/mac-install/), [Windows](https://docs.docker.com/desktop/setup/install/windows-install/), or [Linux](https://docs.docker.com/desktop/setup/install/linux/).
+- Download the [latest Nitro Porter](https://github.com/prosembler/nitro-porter/releases) & unzip it.
+- Open a terminal window and from the new folder run: `./bin/setup.sh`
+
+The containers may take a moment to build.
+If all goes well, it should **immediately connect you to the shell** in the Docker container (in `/app`).
+The copy of Nitro Porter you downloaded is mounted inside the container. It's the same files.
+
+You must be connected to the Docker container shell to continue below!
+It is safe to re-run `./bin/setup.sh` any time.
+
+You can access phpMyAdmin by visiting `localhost:8082` in your browser. Use this to import your database(s).
+
+### Manual Localhost (alternate)
+
+!!! info "Non-Docker Only"
+You don't need to complete this section if you're using Docker Desktop. Skip to "Basic Usage" below.
+
+If you're doing many migrations or have huge datasets, you may which to avoid Docker. In this case, you need:
+
+* PHP 8.4+ (CLI-only is fine)
+* MariaDB & its PDO driver for PHP (or whichever databases your platforms require)
+* 256MB `memory_limit` for PHP (Nitro Porter will attempt to do this automatically)
+
+You can optionally follow my [PHP localhost guide for Mac](https://lincolnwebs.com/php-localhost/).
+
+With a configured localhost, then:
 
 1. [Get Composer](https://getcomposer.org/doc/00-intro.md#installation-linux-unix-macos).
 1. Make sure Composer is [in your PATH](https://www.uptimia.com/questions/how-to-add-composervendorbin-to-your-path).
@@ -22,10 +41,11 @@ A quick way to get all of the above would be installing MAMP or XAMPP on your la
 1. Go to `prosembler/nitro-porter` within your Composer directory.
    1. To do this on MacOS: `cd ~/.composer/vendor/prosembler/nitro-porter`
 1. Copy `config-sample.php` as `config.php`. 
-1. Add connections for your source and output to `config.php`.
-1. See the options with `porter --help`.
 
 ## Basic Usage
+
+1. Add connections for your source and output to `config.php`.
+1. See the options with `porter --help`.
 
 It's normal for a migration to take a while. You're learning a new tool, and you might find bugs from edge cases in you content or more recent changes in the source or target software. 
 If you want free help, expect the back-and-forth to potentially take months depending on the scope of the issues and volunteer availability.

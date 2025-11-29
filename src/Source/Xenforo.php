@@ -200,6 +200,7 @@ class Xenforo extends Source
             'thread_id' => 'DiscussionID',
             'node_id' => 'CategoryID',
             'title' => 'Name',
+            'reply_count' => 'CountComments',
             'view_count' => 'CountViews',
             'user_id' => 'InsertUserID',
             'post_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),

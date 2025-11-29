@@ -252,7 +252,7 @@ class Flarum extends Target
         $query = $port->targetQB()
             ->from('User')
             ->select()
-            ->selectRaw('COALESCE(Confirmed, 0) as is_email_confirmed'); // Cannot be null.
+            ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
 
         $port->import('users', $query, $structure, $map, $filters);
     }

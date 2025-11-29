@@ -15,6 +15,8 @@ RUN pecl install xdebug \
     && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
     && echo "xdebug.discover_client_host=true" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
+ENV PATH="$PATH:/app/bin"
+
 # Setup file permissions
 ARG GID
 

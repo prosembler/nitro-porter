@@ -58,8 +58,13 @@ class Request
         $this->inputConnection = $inputConnection ?? Config::getInstance()->get('input_alias');
         $this->outputConnection = $outputConnection ?? Config::getInstance()->get('output_alias');
 
-        $this->inputTablePrefix = $inputTablePrefix ?? sourceFactory($this->sourceName)->getPrefix();
-        $this->outputTablePrefix = $outputTablePrefix ?? targetFactory($this->targetName)->getPrefix();
+        // Table prefixes: CLI > Config > Package defaults
+        $this->inputTablePrefix = $inputTablePrefix ??
+            (Config::getInstance()->get('source_prefix') ??
+            sourceFactory($this->sourceName)->getPrefix());
+        $this->outputTablePrefix = $outputTablePrefix ??
+            (Config::getInstance()->get('target_prefix') ??
+            targetFactory($this->targetName)->getPrefix());
         $this->cdnPrefix = $cdnPrefix ?? Config::getInstance()->get('option_cdn_prefix');
 
         if (!empty($dataTypes) && !count(array_diff(explode(',', $dataTypes), self::VALID_DATA_TYPES))) {

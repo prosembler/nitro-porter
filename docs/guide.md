@@ -19,6 +19,7 @@ You must be connected to the Docker container shell to continue below!
 It is safe to re-run `./bin/setup.sh` any time.
 
 You can access phpMyAdmin by visiting `localhost:8082` in your browser. Use this to import your database(s).
+Alternatively, connect a desktop app to MariaDB on `localhost:3308` with name & password `porter`. 
 
 ### Manual Localhost (alternate)
 

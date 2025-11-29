@@ -39,6 +39,7 @@ class Flarum extends Postscript
         $this->addDefaultGroups($port);
         $this->addDefaultBadgeCategory($port);
         $this->promoteAdmin($port);
+        $this->resetAccessTokens($port);
     }
 
     /**
@@ -381,5 +382,15 @@ class Flarum extends Postscript
             // Report failure.
             Log::comment('No user found to promote to Admin. (Searching for Admin=1 flag on PORT_User.)');
         }
+    }
+
+    /**
+     * Empty access tokens for a fresh forum.
+     *
+     * @param Migration $port
+     */
+    protected function resetAccessTokens(Migration $port): void
+    {
+        $port->dbPostscript()->table('access_tokens')->truncate();
     }
 }

@@ -97,7 +97,7 @@ function formatBytes(int $size): string
         return '0b';
     }
     $unit = ['b','kb','mb','gb','tb','pb'];
-    return @round($size / pow(1024, ($i = floor(log($size, 1024)))), 1) . $unit[$i];
+    return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . $unit[$i];
 }
 
 /**

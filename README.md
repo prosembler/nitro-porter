@@ -15,12 +15,15 @@ However, community software has high lock-in due to difficult data migrations, c
 Nitro Porter seeks to lower that friction and automate as much of the migration as possible.
 When everyone owns their own data and can freely choose their platform, everyone wins.
 
-This tool is designed for ease of extensibility to allow anyone with basic programming skills to add a source or target.
-Any generally available forum software (commercial or free) may be added as a source or target.
-It does not include bespoke or custom forum software, but allows creating such support easily for private use.
+### 🤔 How is this possible?
 
-Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freely available to anyone who needs it.
-That means code for **all new packages written for it must likewise be made freely available**.
+Multi-platform migrations are made maintainable by first converting data to an intermediary "porter" format.
+This constrains migration paths to (# sources) + (# targets), rather than (# sources) x (# targets).
+This allows repeatable, testable results in a central project rather than myriad low-quality, single-purpose tools.
+
+Nitro Porter allow anyone with basic programming skills to add a source or target.
+Any generally available forum software (commercial or free) may be added as a source or target.
+Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freely available to all.
 
 ## 🚥 Get started
 

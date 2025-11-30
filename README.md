@@ -3,37 +3,38 @@ Nitro Porter — free your community! 🚀
 
 Nitro Porter is the _only_ multi-platform community migration tool.
 
-## Documentation
+## 🚀 Mission
 
-### 🚥 Get started
+Every community deserves the best software for its mission while preserving its unique history.
+Nitro Porter's goal is sub-hour data migrations for most communities without developer support.
 
-* [**User Guide**](https://nitroporter.org/guide) for requirements & install steps.
-* [**Migration Guide**](https://nitroporter.org/migrations) to plan a community migration.
-* [**Sources**](https://nitroporter.org/sources) & [**Targets**](https://nitroporter.org/targets) detail what's supported.
-* [**Start a Discussion**](https://github.com/prosembler/nitro-porter/discussions) to share how it went.
+### 🔍 Why do this?
 
-### 🎟️ Get involved
-
-* [**Contribute**](docs/contribute.md) data, requests, fixes, or success stories.
-* [**Changelog**](CHANGELOG.md) has latest fixes & updates.
-* [**Roadmap**](https://github.com/orgs/prosembler/projects/1) contains informal goals, not ETAs.
-* [**History**](docs/history.md) gives more context to the project.
-
-### 🚀 Mission statement
-
-Nitro Porter exists because your community deserves to both use the best tools available and preserve its unique history.
-
-Community history is vitally important and being able to change software is important for the health of the ecosystem.
-However, community software has high lock-in due to the difficulty of data migrations, which creates stagnation in the ecosystem.
+Community history is vitally important. Being able to change platforms creates competition in the software ecosystem.
+However, community software has high lock-in due to difficult data migrations, creating stagnation.
 Nitro Porter seeks to lower that friction and automate as much of the migration as possible.
 When everyone owns their own data and can freely choose their platform, everyone wins.
 
 This tool is designed for ease of extensibility to allow anyone with basic programming skills to add a source or target.
 Any generally available forum software (commercial or free) may be added as a source or target.
-It does not include bespoke or custom forum software, but is designed to allow individuals to create such support easily for their private use.
+It does not include bespoke or custom forum software, but allows creating such support easily for private use.
 
 Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freely available to anyone who needs it.
 That means code for **all new packages written for it must likewise be made freely available**.
+
+## 🚥 Get started
+
+* [**User Guide**](https://nitroporter.org/guide) — requirements & install steps.
+* [**Migration Guide**](https://nitroporter.org/migrations) — plan a community migration.
+* [**Sources**](https://nitroporter.org/sources) & [**Targets**](https://nitroporter.org/targets) — support details.
+* [**Start a Discussion**](https://github.com/prosembler/nitro-porter/discussions) — share how it went!
+
+## 🎟️ Get involved
+
+* [**Contribute**](docs/contribute.md) — data, requests, & fixes.
+* [**Changelog**](CHANGELOG.md) — latest fixes & updates.
+* [**Roadmap**](https://github.com/orgs/prosembler/projects/1) — informal goals.
+* [**History**](docs/history.md) — how we got here.
 
 ## What's Supported?
 

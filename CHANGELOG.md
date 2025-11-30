@@ -4,6 +4,22 @@
 All notable changes to this project will be documented in this file.
 <!--- END HEADER -->
 
+## [4.1](https://github.com/prosembler/nitro-porter/compare/v4.0.1...v4.1) (2025-11-30)
+
+### Features
+
+* Add Docker containers ([b4e35f](https://github.com/prosembler/nitro-porter/commit/b4e35f396a5ab1f5a9934d50d14c86c16c9e9bd9))
+
+### Bug Fixes
+
+* Array key float in formatBytes() ([36d04e](https://github.com/prosembler/nitro-porter/commit/36d04eb265e2d29f7ae8839326d0e68792ede6ea))
+* Flarum: default user import to have confirmed emails ([9efee0](https://github.com/prosembler/nitro-porter/commit/9efee0cc83cbb31f4c2841453844454b5982ae62))
+* Flarum: truncate access_tokens after import ([966264](https://github.com/prosembler/nitro-porter/commit/966264f7add8dd8ee2874e6812eeeaf8755e357c))
+* Use config-based table prefixes if set ([4f397e](https://github.com/prosembler/nitro-porter/commit/4f397e7c94335b44e93ba14417deda4f25520223))
+* Xenforo: Export comment counts ([034782](https://github.com/prosembler/nitro-porter/commit/0347823f3ba03ee36060f17e5838e6fb5f0ce982))
+
+---
+
 ## [4.0.1](https://github.com/prosembler/nitro-porter/compare/v4.0...v4.0.1) (2025-09-30)
 
 ### Bug Fixes

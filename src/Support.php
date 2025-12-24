@@ -41,6 +41,8 @@ class Support
 
     private static ?Support $instance = null;
 
+    private array $origins = [];
+
     private array $sources = [];
 
     private array $targets = [];
@@ -57,6 +59,14 @@ class Support
     /**
      * @return array
      */
+    public function getOrigins(): array
+    {
+        return $this->origins;
+    }
+
+    /**
+     * @return array
+     */
     public function getSources(): array
     {
         return $this->sources;
@@ -68,6 +78,19 @@ class Support
     public function getTargets(): array
     {
         return $this->targets;
+    }
+
+    /**
+     * @param array $origins
+     */
+    public function setOrigins(array $origins): void
+    {
+        foreach ($origins as $name) {
+            $classname = '\Porter\Origin\\' . $name;
+            if (is_a($classname, Source::class, true)) {
+                $this->origins[$name] = $classname::getSupport();
+            }
+        }
     }
 
     /**

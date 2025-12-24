@@ -23,6 +23,15 @@ function loadConfig(): array
 /**
  * @return array
  */
+function loadOrigins(): array
+{
+    return include(ROOT_DIR . '/data/origins.php');
+}
+
+
+/**
+ * @return array
+ */
 function loadSources(): array
 {
     return include(ROOT_DIR . '/data/sources.php');
@@ -42,11 +51,6 @@ function loadTargets(): array
 function loadStructure(): array
 {
     return include(ROOT_DIR . '/data/structure.php');
-}
-
-function runPorter(\Porter\Request $request): void
-{
-    (new \Porter\Controller())->run($request);
 }
 
 /**

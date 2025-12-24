@@ -2,10 +2,10 @@
 
 namespace Porter\Command;
 
-use Porter;
 use Ahc\Cli\Input\Command;
 use Ahc\Cli\IO\Interactor;
 use Ahc\Cli\Output\Writer;
+use Porter\Support;
 
 class ListCommand extends Command
 {
@@ -13,10 +13,11 @@ class ListCommand extends Command
     {
         parent::__construct('list', 'List available packages of requested type.');
         $this
-            ->option('-n --name', 'One of "sources", "targets", or "connections"')
+            ->argument('<type>', 'One of "sources", "targets", or "connections"')
             ->usage(
-                '<bold>  list</end></end> ## Choose what to list interactively.<eol/>' .
-                '<bold>  list</end> -n=targets</end> ## List available target packages.<eol/>'
+                '<bold>  list</end> <comment>sources</end> ## List all available Source packages.<eol/>' .
+                '<bold>  list</end> <comment>targets</end> ## List all available Target packages.<eol/>' .
+                '<bold>  list</end> <comment>connections</end> ## List all Connections in config.<eol/>'
             );
     }
 
@@ -25,36 +26,35 @@ class ListCommand extends Command
      */
     public function interact(Interactor $io): void
     {
-        if (!$this->name) {
+        if (!$this->type) {
             $lists = ['s' => 'sources', 't' => 'targets', 'c' => 'connections'];
             $choice = $io->choice('Select a list', $lists, '3');
-            $this->set('name', $lists[$choice]);
+            $this->set('type', $lists[$choice]);
         }
     }
 
     /**
      * Command execution.
      */
-    public function execute()
+    public function execute(): void
     {
-        switch ($this->name) {
+        switch ($this->type) {
             case 'sources':
             case 'targets':
-                self::viewFeatureTable($this->name);
+                $this->listSupport($this->type);
                 break;
             case 'connections':
-                self::viewConnections();
+                $this->viewConnections();
                 break;
             default:
-                $io = $this->app()->io();
-                $io->write('Invalid value for <type>');
+                (new Writer())->bold->yellow->write('Invalid value for <name>');
         }
     }
 
     /**
      * Output a list of connections to shell.
      */
-    public static function viewConnections()
+    public function viewConnections(): void
     {
         $writer = new Writer();
         $writer->bold->green->write("\n" . 'Supported Connections' . "\n");
@@ -72,15 +72,12 @@ class ListCommand extends Command
      *
      * @param string $type One of 'sources' or 'targets'.
      */
-    public static function viewFeatureTable(string $type = 'sources')
+    public function listSupport(string $type): void
     {
-        if (!in_array($type, ['sources', 'targets'])) {
-            return;
-        }
         // Get the list.
-        $method = 'get' . $type;
-        $supported = \Porter\Support::getInstance()->$method();
-        $packages = array_keys($supported);
+        $info = ($type === 'sources') ?  Support::getInstance()->getSources() :
+            Support::getInstance()->getTargets();
+        $packages = array_keys($info);
 
         // Output
         $writer = new Writer();
@@ -88,7 +85,7 @@ class ListCommand extends Command
         foreach ($packages as $package) {
             $writer->write("\n");
             $writer->bold->write($package);
-            $writer->write(' (' . $supported[$package]['name'] . ')');
+            $writer->write(' (' . $info[$package]['name'] . ')');
         }
         $writer->write("\n\n");
     }

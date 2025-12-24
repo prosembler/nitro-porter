@@ -3,23 +3,20 @@
 /**
  * Q2A exporter tool.
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Eduardo Casarero
  */
 
 namespace Porter\Source;
 
-use Porter\ExportModel;
+use Porter\Migration;
 use Porter\Source;
 
 class Q2a extends Source
 {
     public const SUPPORTED = [
         'name' => 'Questions2Answers',
-        'prefix' => 'qa_',
-        'charset_table' => 'posts',
-        'options' => [
-        ],
+        'defaultTablePrefix' => 'qa_',
+        'charsetTable' => 'posts',
         'features' => [
             'Users' => 1,
             'Passwords' => 0,
@@ -34,7 +31,7 @@ class Q2a extends Source
     ];
 
     /** @var array[] List of required tables. */
-    public $sourceTables = array(
+    public array $sourceTables = array(
         'blobs' => array(),
         'categories' => array(),
         'posts' => array(),
@@ -44,22 +41,22 @@ class Q2a extends Source
     /**
      * Main export process.
      *
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run(ExportModel $ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->discussions($port);
+        $this->comments($port);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'User',
             "SELECT
                     u.userid as UserID,
@@ -76,16 +73,16 @@ class Q2a extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Role',
             "select 1 as RolesID, 'Member' as Name"
         );
 
-        $ex->export(
+        $port->export(
             'UserRole',
             "select
                     ur.userid as UserID,
@@ -96,18 +93,18 @@ class Q2a extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
-        $ex->export('Category', "select 1 as CategoryID, 'Legacy' as Name");
+        $port->export('Category', "select 1 as CategoryID, 'Legacy' as Name");
         $discussion_Map = array(
             'postid' => 'DiscussionID',
             'categoryid' => 'CategoryID',
             'userid' => 'InsertUserID',
             'Subject' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "select
                     'Question' as Type,
@@ -129,11 +126,11 @@ class Q2a extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Comment',
             "select
                     p.postid as CommentID,

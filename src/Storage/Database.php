@@ -2,11 +2,13 @@
 
 namespace Porter\Storage;
 
+use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Porter\ConnectionManager;
 use Porter\Database\ResultSet;
-use Porter\ExportModel;
+use Porter\Log;
+use Porter\Migration;
 use Porter\Postscript;
 use Porter\Storage;
 
@@ -29,7 +31,7 @@ class Database extends Storage
     /**
      * @var string Prefix for the storage database.
      */
-    public string $prefix = '';
+    protected string $prefix = '';
 
     /**
      * @var string Table name currently targeted by the batcher.
@@ -39,7 +41,7 @@ class Database extends Storage
     /**
      * @var array List of tables that have already been reset to avoid dropping multipart import data.
      */
-    public array $resetTables = [];
+    protected array $resetTables = [];
 
     /**
      * @var array List of tables to ignore errors on insert.
@@ -49,14 +51,27 @@ class Database extends Storage
     /**
      * @var ConnectionManager
      */
-    public ConnectionManager $connection;
+    protected ConnectionManager $connectionManager;
 
     /**
      * @param ConnectionManager $c
      */
     public function __construct(ConnectionManager $c)
     {
-        $this->connection = $c;
+        $this->connectionManager = $c;
+    }
+
+    /**
+     * @return Connection
+     */
+    public function getConnection(): Connection
+    {
+        return $this->connectionManager->connection();
+    }
+
+    public function getAlias(): string
+    {
+        return $this->connectionManager->getAlias();
     }
 
     /**
@@ -67,7 +82,7 @@ class Database extends Storage
      * @param array $structure
      * @param ResultSet|Builder $data
      * @param array $filters
-     * @param ExportModel $exportModel
+     * @param Migration $port
      * @return array Information about the results.
      */
     public function store(
@@ -76,14 +91,13 @@ class Database extends Storage
         array $structure,
         $data,
         array $filters,
-        ExportModel $exportModel
+        Migration $port
     ): array {
         $info = [
             'rows' => 0,
             'memory' => 0,
         ];
         $this->setBatchTable($name);
-        $this->connection->newConnection();
 
         if (is_a($data, '\Porter\Database\ResultSet')) {
             // Iterate on old ResultSet.
@@ -91,7 +105,7 @@ class Database extends Storage
                 $info['rows']++;
                 $row = $this->normalizeRow($map, $structure, $row, $filters);
                 $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows'], $exportModel);
+                $this->logBatchProgress($name, $info['rows'], $port);
                 $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
             }
         } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
@@ -100,7 +114,7 @@ class Database extends Storage
                 $info['rows']++;
                 $row = $this->normalizeRow($map, $structure, (array)$row, $filters);
                 $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows'], $exportModel);
+                $this->logBatchProgress($name, $info['rows'], $port);
                 $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
             }
         }
@@ -116,12 +130,12 @@ class Database extends Storage
      *
      * @param string $name
      * @param int $rows
-     * @param ExportModel $exportModel
+     * @param Migration $port
      */
-    public function logBatchProgress(string $name, int $rows, ExportModel $exportModel)
+    public function logBatchProgress(string $name, int $rows, Migration $port): void
     {
         if ($rows >= self::LOG_THRESHOLD && ($rows % self::LOG_INCREMENT) === 0) {
-            $exportModel->comment("inserting '" . $name . "': " . number_format($rows) . ' done...', false);
+            Log::comment("inserting '" . $name . "': " . number_format($rows) . ' done...', false);
         }
     }
 
@@ -135,21 +149,18 @@ class Database extends Storage
      *
      * @param array $row
      * @param array $structure
-     * @return int
      */
-    public function stream(array $row, array $structure): int
+    public function stream(array $row, array $structure): void
     {
-        return $this->batchInsert($row);
+        $this->batchInsert($row);
     }
 
     /**
      * Send remaining batched records for insert.
-     *
-     * @return int
      */
-    public function endStream(): int
+    public function endStream(): void
     {
-        return $this->batchInsert([], true);
+        $this->batchInsert([], true);
     }
 
     /**
@@ -182,11 +193,16 @@ class Database extends Storage
      *
      * @param array $batch
      */
-    private function sendBatch(array $batch)
+    private function sendBatch(array $batch): void
     {
         $tableName = $this->getBatchTable();
         $action = (in_array($tableName, $this->ignoreErrorsTables)) ? 'insertOrIgnore' : 'insert';
-        $this->connection->connection()->table($tableName)->$action($batch);
+        try {
+            $this->connectionManager->connection()->table($tableName)->$action($batch);
+        } catch (\Illuminate\Database\QueryException $e) {
+            echo "\n\nBatch insert error: " . substr($e->getMessage(), 0, 500);
+            echo "\n[...]\n" . substr($e->getMessage(), -300) . "\n";
+        }
     }
 
     /**
@@ -194,7 +210,7 @@ class Database extends Storage
      *
      * @param string $tableName
      */
-    public function ignoreTable(string $tableName)
+    public function ignoreTable(string $tableName): void
     {
         $this->ignoreErrorsTables[] = $tableName;
     }
@@ -204,7 +220,7 @@ class Database extends Storage
      *
      * @param string $tableName
      */
-    private function setBatchTable(string $tableName)
+    private function setBatchTable(string $tableName): void
     {
         $this->batchTable = $this->prefix . $tableName;
     }
@@ -241,9 +257,9 @@ class Database extends Storage
      * @param string $name
      * @param array $structure
      */
-    public function createOrUpdateTable(string $name, array $structure)
+    public function createOrUpdateTable(string $name, array $structure): void
     {
-        $dbm = $this->connection->dbm->getConnection($this->connection->getAlias());
+        $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
         $schema = $dbm->getSchemaBuilder();
         if ($this->exists($name)) {
             // Empty the table if it already exists.
@@ -269,14 +285,14 @@ class Database extends Storage
     /**
      * Whether the requested table & columns exist.
      *
-     * @see ExportModel::exists()
      * @param string $tableName
      * @param array $columns
      * @return bool
+     * @see Migration::hasInputSchema()
      */
     public function exists(string $tableName, array $columns = []): bool
     {
-        $schema = $this->connection->dbm->getConnection($this->connection->getAlias())->getSchemaBuilder();
+        $schema = $this->connectionManager->connection()->getSchemaBuilder();
         if (empty($columns)) {
             // No columns requested.
             return $schema->hasTable($tableName);
@@ -357,9 +373,9 @@ class Database extends Storage
      * Does not disable primary unique key enforcement (which is not possible).
      * Required by interface.
      */
-    public function begin()
+    public function begin(): void
     {
-        $dbm = $this->connection->dbm->getConnection($this->connection->getAlias());
+        $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
         $dbm->unprepared("SET foreign_key_checks = 0");
         $dbm->unprepared("SET unique_checks = 0");
     }
@@ -370,9 +386,9 @@ class Database extends Storage
      * Does not enforce constraints on existing data.
      * Required by interface.
      */
-    public function end()
+    public function end(): void
     {
-        $dbm = $this->connection->dbm->getConnection($this->connection->getAlias());
+        $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
         $dbm->unprepared("SET foreign_key_checks = 1");
         $dbm->unprepared("SET unique_checks = 1");
     }

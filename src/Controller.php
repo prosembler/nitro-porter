@@ -1,7 +1,7 @@
 <?php
 
 /**
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
+ *
  */
 
 namespace Porter;
@@ -15,38 +15,46 @@ class Controller
      * Export workflow.
      *
      * @param Source $source
-     * @param ExportModel $model
+     * @param Migration $port
      */
-    public static function doExport(Source $source, ExportModel $model)
+    protected function doExport(Source $source, Migration $port): void
     {
-        $model->verifySource($source->sourceTables);
-
-        if ($source::getCharSetTable()) {
-            $model->setCharacterSet($source::getCharSetTable());
+        $port->verifySource($source->sourceTables);
+        if (!defined('PORTER_INPUT_ENCODING')) {
+            define('PORTER_INPUT_ENCODING', $port->getInputEncoding($source::getCharsetTable()));
         }
 
-        $model->begin();
-        $source->run($model);
-        $model->end();
-
-        if ($model->testMode || $model->captureOnly) {
-            $queries = implode("\n\n", $model->queryRecord);
-            $model->comment($queries, true);
-        }
+        $port->begin();
+        $source->run($port);
+        $port->end();
     }
 
     /**
      * Import workflow.
      *
      * @param Target $target
-     * @param ExportModel $model
+     * @param Migration $port
      */
-    public static function doImport(Target $target, ExportModel $model)
+    protected function doImport(Target $target, Migration $port): void
     {
-        $model->begin();
-        $target->validate($model);
-        $target->run($model);
-        $model->end();
+        $port->begin();
+        $target->validate($port);
+        $target->run($port);
+        $port->end();
+    }
+
+    /**
+     * Finalize the import (if the optional postscript class exists).
+     *
+     * Use a separate database connection since re-querying data may be necessary.
+     *    -> "Cannot execute queries while other unbuffered queries are active."
+     *
+     * @param Postscript $postscript
+     * @param Migration $port
+     */
+    protected function doPostscript(Postscript $postscript, Migration $port): void
+    {
+        $postscript->run($port);
     }
 
     /**
@@ -55,7 +63,7 @@ class Controller
      * @param Source $source
      * @param Target $target
      */
-    public static function setModes(Source $source, Target $target)
+    protected function setFlags(Source $source, Target $target): void
     {
         // If both the source and target don't store content/body on the discussion/thread record,
         // skip the conversion on both sides so we don't do joins and renumber keys for nothing.
@@ -69,76 +77,78 @@ class Controller
     }
 
     /**
-     * Called by router to set up and run main export process.
+     * Setup & run the requested migration process.
+     *
+     * Translates `Request` into action (i.e. `Request` object should not pass beyond here).
+     * @throws \Exception
      */
-    public static function run(Request $request)
+    public function run(Request $request): void
     {
-        // Remove time limit.
+        // Break down the Request.
+        $sourceName = $request->getSource();
+        $targetName = $request->getTarget();
+        $inputName = $request->getInput();
+        $outputName = $request->getOutput();
+        $sourcePrefix = $request->getInputTablePrefix();
+        $targetPrefix = $request->getOutputTablePrefix();
+        $dataTypes = $request->getDatatypes();
+
+        // Create new migration artifacts.
+        $port = migrationFactory($inputName, $outputName, $sourcePrefix, $targetPrefix, $dataTypes);
+        $source = sourceFactory($sourceName);
+        $target = targetFactory($targetName);
+        $postscript = postscriptFactory($targetName);
+        $fileTransfer = fileTransferFactory($source, $target, $outputName);
+
+        // Report on request.
+        Log::comment("NITRO PORTER RUNNING...");
+        Log::comment("Porting " . $sourceName . " to " . $targetName);
+        Log::comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
+        Log::comment("Porter: " . $outputName . ' (PORT_)');
+        Log::comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
+
+        // Setup & log flags.
+        if ($target) {
+            $this->setFlags($source, $target);
+            Log::comment("? 'Use Discussion Body' = " .
+                ($target->getDiscussionBodyMode() ? 'Enabled' : 'Disabled'));
+        }
         set_time_limit(0);
         ini_set('memory_limit', '256M');
 
-        // Set up export storage.
-        if ($request->get('output') === 'file') { // @todo Perhaps abstract to a storageFactory
-            $storage = new Storage\File();
-        } else {
-            $targetCM = new ConnectionManager($request->get('target') ?? '');
-            $storage = new Storage\Database($targetCM);
-        }
-
-        // Setup source & model.
-        $source = sourceFactory($request->get('package'));
-        $exportSourceCM = new ConnectionManager($request->get('source'));
-        $importSourceCM = new ConnectionManager($request->get('target') ?? '');
-        // @todo Pass options not Request
-        $exportModel = exportModelFactory($request, $exportSourceCM, $storage, $importSourceCM);
-
-        // No permissions warning.
-        $exportModel->comment('Permissions are not migrated. Verify all permissions afterward.');
-
-        // Log source.
-        $exportModel->comment("Source: " . $source::SUPPORTED['name'] . " (" . $exportSourceCM->getAlias() . ")");
-
-        // Setup target & modes.
-        $target = false;
-        if ($request->get('output') !== 'file') {
-            $target = targetFactory($request->get('output'));
-            // Log target.
-            $exportModel->comment("Target: " . $target::SUPPORTED['name'] . " (" . $importSourceCM->getAlias() . ")");
-
-            self::setModes($source, $target);
-            // Log flags.
-            $exportModel->comment("Flag: Use Discussion Body: " .
-                ($target->getDiscussionBodyMode() ? 'Enabled' : 'Disabled'));
-        }
-
-        // Start timer.
+        // Report start.
         $start = microtime(true);
+        Log::comment("\n" . sprintf(
+            '[ STARTED at %s ]',
+            date('H:i:s e')
+        ) . "\n");
 
-        // Export.
-        self::doExport($source, $exportModel);
+        // Export (Source -> `PORT_`).
+        $this->doExport($source, $port);
 
-        // Import.
+        // Import (`PORT_` -> Target).
         if ($target) {
-            $exportModel->tarPrefix = $target::SUPPORTED['prefix']; // @todo Wrap these refs.
-            self::doImport($target, $exportModel);
-
-            // Finalize the import (if the optional postscript class exists).
-            // Use a separate database connection since re-querying data may be necessary.
-            // -> "Cannot execute queries while other unbuffered queries are active."
-            $postConnection = new ConnectionManager($request->get('target') ?? '');
-            $postscript = postscriptFactory($request->get('output'), $storage, $postConnection);
+            $this->doImport($target, $port);
+            // Postscript names must match target names currently.
             if ($postscript) {
-                $exportModel->comment("Postscript found and running...");
-                $postscript->run($exportModel);
-            } else {
-                $exportModel->comment("No Postscript found.");
+                $this->doPostscript($postscript, $port);
             }
         }
 
-        // End timer & report.
-        $exportModel->comment(
-            sprintf('ELAPSED — %s', formatElapsed(microtime(true) - $start)) .
-            ' (' . date('H:i:s', (int)$start) . ' - ' . date('H:i:s') . ')'
-        );
+        // File transfer.
+        if ($fileTransfer->isSupported()) {
+            Log::comment('File Transfer started...');
+            $fileTransfer->run();
+            Log::comment('File Transfer completed.');
+        }
+
+        // Report finished.
+        Log::comment("\n" . sprintf(
+            '[ FINISHED at %s after running for %s ]',
+            date('H:i:s e'),
+            formatElapsed(microtime(true) - $start)
+        ));
+        Log::comment("[ After testing, you may delete any `PORT_` database tables. ]");
+        Log::comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
     }
 }

@@ -1,13 +1,11 @@
 <?php
 
-namespace PorterTest;
-
 use nadar\quill\Lexer as Quill;
-use Porter\Formatter;
-use s9e\TextFormatter\Bundles\Fatdown as Markdown;
 use PHPUnit\Framework\TestCase;
-use Porter\Parser\Flarum\ImageEmbed;
 use Porter\Bundle\Vanilla as Vanilla;
+use Porter\Formatter;
+use Porter\Parser\Flarum\ImageEmbed;
+use s9e\TextFormatter\Bundles\Fatdown as Markdown;
 
 final class ParserTest extends TestCase
 {
@@ -53,15 +51,15 @@ final class ParserTest extends TestCase
     /**
      * @dataProvider getParseRenderTests()
      */
-    public function testParseRender($text, $expected)
+    public function testParseRender(string $text, string $expected): void
     {
-        $xml  = Vanilla::parse($text);
+        $xml = Vanilla::parse($text);
         $html = Vanilla::render($xml);
 
         $this->assertEquals($expected, $html);
     }
 
-    public function getParseRenderTests()
+    public function getParseRenderTests(): array
     {
         return [
             [   // Allow headings
@@ -78,10 +76,10 @@ final class ParserTest extends TestCase
     /**
      * @covers \Porter\Formatter::closeTags
      */
-    public function testTagClose()
+    public function testTagClose(): void
     {
         $stored = 'text <img alt="" src="https://routeur4g.fr/discussions/uploads/editor/bf/ytfu9hvmqp3u.jpg">';
-        $result  = Formatter::closeTags($stored);
+        $result = Formatter::closeTags($stored);
         $expected = 'text <img alt="" src="https://routeur4g.fr/discussions/uploads/editor/bf/ytfu9hvmqp3u.jpg" />';
         $this->assertEquals($expected, $result);
     }
@@ -89,10 +87,10 @@ final class ParserTest extends TestCase
     /**
      * @covers \Porter\Formatter::fixIllegalTags
      */
-    public function testFixIllegalTags()
+    public function testFixIllegalTags(): void
     {
         $stored = '<span><div class="post-text-align-center"><br><br>&nbsp;Administrateur<br>version </div></span>';
-        $result  = Formatter::fixIllegalTags($stored);
+        $result = Formatter::fixIllegalTags($stored);
         $expected = '<div class="post-text-align-center"><br><br>&nbsp;Administrateur<br>version </div>';
         $this->assertEquals($expected, $result);
     }

@@ -1,307 +1,76 @@
 <?php
 
 /**
- * Xenforo exporter tool.
+ * Xenforo source package.
  *
- * To export avatars, provide ?avatars=1&folder=/path/to/avatars
+ * Avatar sizes from sample (Sep 2025, v2.3):
+ *  data/avatars/s = 48x48 (96x96 res)
+ *  data/avatars/m = 96x96 (96x96 res)
+ *  data/avatars/l = 192x192 (96x96 res)
+ *  data/avatars/h = 384x384 (mixed res)
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
- * @author  Lincoln Russell, lincolnwebs.com
+ * @author Lincoln Russell, code@lincolnwebs.com
  */
 
 namespace Porter\Source;
 
+use Porter\Config;
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
+use Staudenmeir\LaravelCte\Query\Builder;
 
 class Xenforo extends Source
 {
     public const SUPPORTED = [
         'name' => 'Xenforo',
-        'prefix' => 'xf_',
-        'charset_table' => 'posts',
-        'hashmethod' => 'xenforo',
-        'options' => [
-            'avatars-source' => [
-                'Full path of source avatars to process.',
-                'Sx' => ':',
-            ],
-            'attach-source' => [
-                'Full path of source attachments to process.',
-                'Sx' => ':',
-            ],
-            'attach-rename' => [
-                'Whether to rename the attachment files.',
-                'Sx' => ':',
-            ],
-        ],
+        'defaultTablePrefix' => 'xf_',
+        'charsetTable' => 'post',
+        'passwordHashMethod' => 'xenforo',
+        'avatarsPrefix' => '',
+        'avatarThumbPrefix' => '',
+        'avatarPath' => 'data/avatars/h/',
+        'avatarThumbPath' => 'data/avatars/m/',
+        'attachmentPath' => 'internal_data/attachments/0/',
+        'attachmentThumbPath' => 'data/attachments/0/',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
             'Categories' => 1,
             'Discussions' => 1,
             'Comments' => 1,
-            'Polls' => 0,
+            'Polls' => 0, // @todo
             'Roles' => 1,
             'Avatars' => 1,
+            'AvatarThumbnails' => 1,
             'PrivateMessages' => 1,
             'Signatures' => 1,
             'Attachments' => 1,
-            'Bookmarks' => 0,
-            //'Permissions' => 1,
+            'Bookmarks' => 0, // @todo
         ]
     ];
-
-    protected $processed;
-    protected $sourceFolder;
-    protected $targetFolder;
-    protected $folders;
-    protected $types;
-
-    /**
-     * Export attachments into vanilla-compatibles names
-     */
-    public function attachmentFiles($ex)
-    {
-        // Check source folder
-        $this->sourceFolder = $this->param('attach-source');
-        if (!is_dir($this->sourceFolder)) {
-            trigger_error("Source attachment folder '{$this->sourceFolder}' does not exist.");
-        }
-
-        // Set up a target folder
-        $this->targetFolder = combinePaths(array($this->sourceFolder, 'xf_attachments'));
-        if (!is_dir($this->targetFolder)) {
-            @$made = mkdir($this->targetFolder, 0777, true);
-            if (!$made) {
-                trigger_error("Target attachment folder '{$this->targetFolder}' could not be created.");
-            }
-        }
-
-        $r = $ex->query(
-            "select
-                ad.data_id,
-                ad.filename,
-                ad.file_hash
-            from
-                :_attachment a
-            join
-                :_attachment_data ad on a.data_id = ad.data_id
-            where
-                a.content_type = 'post'"
-        );
-
-        $found = 0;
-        while ($row = $r->nextResultRow()) {
-            $dataId = $row['data_id'];
-            $filename = $row['filename'];
-            $filehash = $row['file_hash'];
-
-            $oldname = $dataId . '-' . $filehash . '.data';
-
-            if (file_exists($this->sourceFolder . $oldname)) {
-                $found++;
-                copy($this->sourceFolder . $oldname, $this->targetFolder
-                     . '/' . $dataId . '-' . str_replace(' ', '_', $filename));
-            }
-        }
-
-        $ex->comment("Attachments: " . $found . " attachment(s) were found and converted during the process.");
-    }
-
-    /**
-     * Export avatars into vanilla-compatibles names
-     */
-    public function avatars()
-    {
-        // Check source folder
-        $this->sourceFolder = $this->param('avatars-source');
-        if (!is_dir($this->sourceFolder)) {
-            trigger_error("Source avatar folder '{$this->sourceFolder}' does not exist.");
-        }
-
-        // Set up a target folder
-        $this->targetFolder = combinePaths(array($this->sourceFolder, 'xf'));
-        if (!is_dir($this->targetFolder)) {
-            @$made = mkdir($this->targetFolder, 0777, true);
-            if (!$made) {
-                trigger_error("Target avatar folder '{$this->targetFolder}' could not be created.");
-            }
-        }
-
-        // Iterate
-        $this->folders = array(
-            'Thumb' => 'm',
-            'Profile' => 'l'
-        );
-
-        $this->types = array(
-            'Thumb' => 'n',
-            'Profile' => 'p'
-        );
-
-        foreach ($this->folders as $type => $folder) {
-            $this->processed = 0;
-            $errors = array();
-
-            $typeSourceFolder = combinePaths(array($this->sourceFolder, $folder));
-            echo "Processing '{$type}' files in {$typeSourceFolder}:\n";
-            $this->avatarFolder($typeSourceFolder, $type, $errors);
-
-            $nErrors = sizeof($errors);
-            if ($nErrors) {
-                echo "{$nErrors} errors:\n";
-                foreach ($errors as $error) {
-                    echo "{$error}\n";
-                }
-            }
-        }
-    }
-
-    /**
-     * @param string $folder
-     * @param string $type
-     * @param array $errors
-     * @return void
-     */
-    protected function avatarFolder($folder, $type, &$errors)
-    {
-        if (!is_dir($folder)) {
-            trigger_error("Target avatar folder '{$folder}' does not exist.");
-        }
-        $resFolder = opendir($folder);
-
-        $errors = array();
-        while (($file = readdir($resFolder)) !== false) {
-            if ($file == '.' || $file == '..') {
-                continue;
-            }
-
-            $fullPath = combinePaths(array($folder, $file));
-
-            // Folder? Recurse
-            if (is_dir($fullPath)) {
-                $this->avatarFolder($fullPath, $type, $errors);
-                continue;
-            }
-
-            $this->processed++;
-
-            // Determine target paths and name
-            $photo = trim($file);
-            $photoSrc = combinePaths(array($folder, $photo));
-            $photoFileName = basename($photoSrc);
-            $photoPath = dirname($photoSrc);
-
-            $stubFolder = getValue($type, $this->folders);
-            $trimFolder = combinePaths(array($this->sourceFolder, $stubFolder));
-            $photoPath = str_replace($trimFolder, '', $photoPath);
-            $photoFolder = combinePaths(array($this->targetFolder, $photoPath));
-            @mkdir($photoFolder, 0777, true);
-
-            if (!file_exists($photoSrc)) {
-                $errors[] = "Missing file: {$photoSrc}";
-                continue;
-            }
-
-            $typePrefix = getValue($type, $this->types);
-            $photoDest = combinePaths(array($photoFolder, "{$typePrefix}{$photoFileName}"));
-            $copied = @copy($photoSrc, $photoDest);
-            if (!$copied) {
-                $errors[] = "! failed to copy photo '{$photoSrc}' (-> {$photoDest}).";
-            }
-
-            if (!($this->processed % 100)) {
-                echo " - processed {$this->processed}\n";
-            }
-        }
-    }
 
     /**
      * Forum-specific export format.
      *
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run(ExportModel $ex)
+    public function run(Migration $port): void
     {
-        // Export avatars
-        if ($this->param('avatars')) {
-            $this->avatars();
-        }
-        // Export attachments
-        if ($this->param('attach-rename')) {
-            $this->attachmentFiles($ex);
-        }
+        $this->users($port);
+        $this->roles($port);
+        $this->signatures($port);
 
-        $this->users($ex, $this->cdnPrefix());
-        $this->roles($ex);
-        //$this->permissions($ex);
-        $this->userMeta($ex);
-
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->attachments($ex);
-        $this->conversations($ex);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->conversations($port);
+        $this->attachments($port);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function permissions(ExportModel $ex)
-    {
-        /*
-        $permissions = array();
-
-        // Export the global permissions.
-        $r = $ex->query(
-            "select pe.*, g.title
-            from :_permission_entry pe
-            join :_user_group g
-                on pe.user_group_id = g.user_group_id"
-        );
-        $this->exportPermissionsMap($r, $permissions);
-
-        $r = $ex->query(
-            "select pe.*, g.title
-            from :_permission_entry_content pe
-            join :_user_group g
-                on pe.user_group_id = g.user_group_id"
-        );
-        $this->exportPermissionsMap($r, $permissions);
-
-        if (count($permissions) == 0) {
-            return;
-        }
-
-        $permissions = array_values($permissions);
-
-        // Now that we have all of the permission in an array let's export them.
-        $columns = $this->exportPermissionsMap(false);
-
-        foreach ($columns as $index => $column) {
-            if (strpos($column, '.') !== false) {
-                $columns[$index] = array('Column' => $column, 'Type' => 'tinyint');
-            }
-        }
-        $structure = getExportStructure($columns, $ex->mapStructure['Permission'], $columns, 'Permission');
-        $revMappings = flipMappings($columns);
-
-        $ex->writeBeginTable($ex->file, 'Permission', $structure);
-        $count = 0;
-        foreach ($permissions as $row) {
-            $ex->writeRow($ex->file, $row, $structure, $revMappings);
-            $count++;
-        }
-        $ex->writeEndTable($ex->file);
-        $ex->comment("Exported Table: Permission ($count rows)");
-        */
-    }
-
-    /**
-     * @param ExportModel $ex
-     */
-    public function userMeta(ExportModel $ex)
+    public function signatures(Migration $port): void
     {
         $sql = "select
                 user_id as UserID,
@@ -316,176 +85,63 @@ class Xenforo extends Source
                 'BBCode'
             from :_user_profile
             where nullif(signature, '') is not null";
-        $ex->export('UserMeta', $sql);
+        $port->export('UserMeta', $sql);
     }
 
     /**
-     * @param mixed $r
-     * @param mixed $perms
-     * @return string[]|void
+     * @param Migration $port
      */
-    protected function exportPermissionsMap($r, &$perms = null)
+    protected function users(Migration $port): void
     {
-        $map = array(
-            'general.viewNode' => 'Vanilla.Discussions.View',
-            'forum.deleteAnyPost' => 'Vanilla.Comments.Delete',
-            'forum.deleteAnyThread' => 'Vanilla.Discussions.Delete',
-            'forum.editAnyPost' => array('Vanilla.Discussions.Edit', 'Vanilla.Comments.Edit'),
-            'forum.lockUnlockThread' => 'Vanilla.Discussions.Close',
-            'forum.postReply' => array('Vanilla.Comments.Add'),
-            'forum.postThread' => 'Vanilla.Discussions.Add',
-            'forum.stickUnstickThread' => array('Vanilla.Discussions.Announce', 'Vanilla.Discussions.Sink'),
-            'forum.uploadAttachment' => 'Plugins.Attachments.Upload.Allow',
-            'forum.viewAttachment' => 'Plugins.Attachments.Download.Allow',
-            'general.editSignature' => 'Plugins.Signatures.Edit',
-            'general.viewProfile' => 'Garden.Profiles.View',
-            'profilePost.deleteAny' => 'Garden.Activity.Delete',
-            'profilePost.post' => array('Garden.Email.View', 'Garden.SignIn.Allow', 'Garden.Profiles.Edit')
-        );
-
-        if ($r === false) {
-            $result = array(
-                'RoleID' => 'RoleID',
-                'JunctionTable' => 'JunctionTable',
-                'JunctionColumn' => 'JunctionColumn',
-                'JunctionID' => 'JunctionID',
-                '_Permissions' => '_Permissions',
-                'Garden.Moderation.Manage' => 'Garden.Moderation.Manage'
-            );
-
-            // Return an array of fieldnames.
-            foreach ($map as $columns) {
-                $columns = (array)$columns;
-                foreach ($columns as $column) {
-                    $result[$column] = $column;
-                }
-            }
-
-            return $result;
-        }
-
-        while ($row = $r->nextResultRow()) {
-            $roleID = $row['user_group_id'];
-
-            $perm = "{$row['permission_group_id']}.{$row['permission_id']}";
-
-            if (!isset($map[$perm])) {
-                continue;
-            }
-
-            $names = (array)$map[$perm];
-
-            foreach ($names as $name) {
-                if (isset($row['content_id'])) {
-                    if ($row['content_type'] != 'node') {
-                        continue;
-                    }
-
-                    $categoryID = $row['content_id'];
-                } else {
-                    $categoryID = null;
-                }
-
-                // Is this a per-category permission?
-                if (strpos($name, 'Vanilla.Discussions.') !== false || strpos($name, 'Vanilla.Comments.') !== false) {
-                    if (!$categoryID) {
-                        $categoryID = -1;
-                    }
-                } else {
-                    $categoryID = null;
-                }
-
-
-                $key = "{$roleID}_{$categoryID}";
-
-                $perms[$key]['RoleID'] = $roleID;
-                $permRow = &$perms[$key];
-                if ($categoryID) {
-                    $permRow['JunctionTable'] = 'Category';
-                    $permRow['JunctionColumn'] = 'PermissionCategoryID';
-                    $permRow['JunctionID'] = $categoryID;
-                }
-
-                $title = $row['title'];
-                $permRow['Title'] = $title;
-                if (stripos($title, 'Admin') !== false) {
-                    $permRow['_Permissions'] = 'all';
-                }
-                if (!$categoryID && stripos($title, 'Mod') !== false) {
-                    $permRow['Garden.Moderation.Manage'] = true;
-                }
-
-                // Set all of the permissions.
-                $permValue = $row['permission_value'];
-                if ($permValue == 'deny') {
-                    $permRow[$name] = false;
-                } elseif (in_array($permValue, array('allow', 'content_allow'))) {
-                    if (!isset($permRow[$name]) || $permRow[$name] !== false) {
-                        $permRow[$name] = true;
-                    }
-                } elseif (!isset($permRow[$name])) {
-                    $permRow[$name] = null;
-                }
-            }
-        }
-    }
-
-    /**
-     * @param ExportModel $ex
-     * @param string $cdn
-     */
-    protected function users(ExportModel $ex, string $cdn): void
-    {
-        $user_Map = array(
+        $map = [
             'user_id' => 'UserID',
             'username' => 'Name',
             'email' => 'Email',
-            'gender' => array(
-                'Column' => 'Gender',
-                'Filter' => function ($value) {
-                    switch ($value) {
-                        case 'male':
-                            return 'm';
-                        case 'female':
-                            return 'f';
-                        default:
-                            return 'u';
-                    }
-                }
-            ),
             'custom_title' => 'Title',
-            'register_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => 'timestampToDate'),
+            'register_date' => 'DateInserted',
+            'last_activity' => 'DateLastActive',
             'is_admin' => 'Admin',
             'is_banned' => 'Banned',
             'password' => 'Password',
             'hash_method' => 'HashMethod',
-            'avatar' => 'Photo'
-        );
-        $ex->export(
-            'User',
-            "select u.*,
-                    ua.data as password,
-                    'xenforo' as hash_method,
-                    case when u.avatar_date > 0 then concat('{$cdn}xf/', u.user_id div 1000, '/', u.user_id, '.jpg')
-                        else null end as avatar
-                from :_user u
-                left join :_user_authenticate ua
-                    on u.user_id = ua.user_id",
-            $user_Map
-        );
+            'avatar' => 'Photo',
+            'avatarFullPath' => 'SourceAvatarFullPath',
+            'avatarThumbFullPath' => 'SourceAvatarThumbFullPath',
+        ];
+        $filter = [
+            'register_date' => 'timestampToDate',
+            'last_activity' => 'timestampToDate',
+        ];
+        $prx = $port->dbInput()->getTablePrefix();
+        $query = $port->sourceQB()->from('user', 'u')->select()
+            ->selectRaw("'xenforo' as hash_method")
+            ->selectRaw("data as password")
+            ->selectRaw("case when avatar_date > 0
+                then concat('/', {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
+                else null end as avatar")
+            ->selectRaw("case when avatar_date > 0
+                then concat('{$this->getPath('avatar', true)}', '/',
+                    {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
+                else null end as avatarFullPath")
+            ->selectRaw("case when avatar_date > 0
+                then concat('{$this->getPath('avatarThumb', true)}', '/',
+                    {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
+                else null end as avatarThumbFullPath")
+            ->join('user_authenticate as ua', 'u.user_id', '=', 'ua.user_id');
+
+        $port->export('User', $query, $map, $filter);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
         $role_Map = array(
             'user_group_id' => 'RoleID',
             'title' => 'Name'
         );
-        $ex->export(
+        $port->export(
             'Role',
             "select * from :_user_group",
             $role_Map
@@ -497,7 +153,7 @@ class Xenforo extends Source
             'user_group_id' => 'RoleID'
         );
 
-        $ex->export(
+        $port->export(
             'UserRole',
             "select user_id, user_group_id
                 from :_user
@@ -511,9 +167,9 @@ class Xenforo extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array(
             'node_id' => 'CategoryID',
@@ -528,7 +184,7 @@ class Xenforo extends Source
             'display_order' => 'Sort',
             'display_in_list' => array('Column' => 'HideAllDiscussions', 'Filter' => 'NotFilter')
         );
-        $ex->export(
+        $port->export(
             'Category',
             "select n.* from :_node n",
             $category_Map
@@ -536,14 +192,15 @@ class Xenforo extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'thread_id' => 'DiscussionID',
             'node_id' => 'CategoryID',
             'title' => 'Name',
+            'reply_count' => 'CountComments',
             'view_count' => 'CountViews',
             'user_id' => 'InsertUserID',
             'post_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
@@ -554,7 +211,7 @@ class Xenforo extends Source
             'format' => 'Format',
             'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "select t.*,
                 p.message,
@@ -570,9 +227,9 @@ class Xenforo extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
@@ -583,7 +240,7 @@ class Xenforo extends Source
             'format' => 'Format',
             'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
         );
-        $ex->export(
+        $port->export(
             'Comment',
             "select p.*,
                 'BBCode' as format,
@@ -600,42 +257,84 @@ class Xenforo extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * Export attachments.
+     *
+     * Real-world example set that consistently refers to the same upload (for real):
+     *  URL example: `/attachments/7590ax-webp.227/`
+     *  URL format: `'/attachments/' .
+     *   str_replace('.', '-', '{attachment_data.filename}') . '.{attachment.attachment_id}'`
+     *  Thumbnail path example: `/attachments/0/13-cbec5592e1d5cd9d2f783b4039c4ce6e.jpg`
+     *  Thumbnail path format: '/attachments/0/{attachment_data.data_id}-{attachment_data.file_key}.jpg'
+     *  Original path example: `/internal_data/attachments/0/13-cbec5592e1d5cd9d2f783b4039c4ce6e.data`
+     *  Original path format: `'/internal_data/attachments/0/{attachment_data.data_id}-{attachment_data.file_key}.data'`
+     *
+     * Captured in late 2025 from Xenforo v2.3.6.
+     *
+     * Schema magic values: `attachment.content_type`: `post` | `conversation_message`
+     *
+     * Xenforo faithfully reimplemented vBulletin's worst ideas here, probably a misguided security effort.
+     * Most other platforms don't jank filenames like this, so rebuild Path as {id}-{filename} to avoid conflicts.
+     * @param Migration $port
+     *@see self::attachmentsMap() for the `FileTransfer` data to complete the file renaming.
+     *
      */
-    protected function attachments(ExportModel $ex): void
+    protected function attachments(Migration $port): void
     {
-        $ex->export(
-            'Media',
-            "select
-                    a.attachment_id as MediaID,
-                    ad.filename as Name,
-                    concat('xf_attachments/', a.data_id, '-', replace(ad.filename, ' ', '_')) as Path,
-                    ad.file_size as Size,
-                    ad.user_id as InsertUserID,
-                    from_unixtime(ad.upload_date) as DateInserted,
-                    p.ForeignID,
-                    p.ForeignTable,
-                    ad.width as ImageWidth,
-                    ad.height as ImageHeight,
-                    concat('xf_attachments/', a.data_id, '-', replace(ad.filename, ' ', '_')) as ThumbPath
-                from xf_attachment a
-                join (select
-                        p.post_id,
-                        if(p.post_id = t.first_post_id,t.thread_id, p.post_id)  as ForeignID,
-                        if(p.post_id = t.first_post_id, 'discussion', 'comment') as ForeignTable
-                    from xf_post p
-                    join xf_thread t on t.thread_id = p.thread_id
-                    where p.message_state <> 'deleted'
-                    ) p on p.post_id = a.content_id
-                join xf_attachment_data ad on ad.data_id = a.data_id
-                where a.content_type = 'post'"
-        );
+        $map = [
+            'attachment_id' => 'MediaID',
+            'filename' => 'Name',
+            'file_size' => 'Size',
+            'user_id' => 'InsertUserID',
+            'upload_date' => 'DateInserted',
+            'width' => 'ImageWidth',
+            'height' => 'ImageHeight',
+        ];
+        $filters = [
+            'Type' => 'mimeTypeFromExtension',
+        ];
+        $prx = $port->dbInput()->getTablePrefix();
+
+        $query = $port->sourceQB()
+            ->from('attachment', 'a')
+            ->join('attachment_data as ad', 'ad.data_id', '=', 'a.data_id')
+            ->select(['a.attachment_id',
+                'ad.filename', 'ad.file_size', 'ad.user_id', 'ad.width', 'ad.height',
+                'ap.ForeignID', 'ap.ForeignTable',
+            ])
+            ->selectRaw("{$prx}ad.filename as Type")
+            ->selectRaw("from_unixtime({$prx}ad.upload_date) as DateInserted")
+
+            // Paths for platform relative to uploads root (flat, in this case).
+            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as Path")
+            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as ThumbPath")
+
+            // Paths for FileTransfer.
+            ->selectRaw("concat('{$this->getPath('attachment', true)}', '/',
+                {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceFullPath")
+            ->selectRaw("concat('{$this->getPath('attachmentThumb', true)}', '/',
+                {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceThumbFullPath")
+
+            // Build a CET of attached post data & join it.
+            ->withExpression('ap', function (Builder $query) {
+                $prx = $query->connection->getTablePrefix(); // @phpstan-ignore method.notFound
+                $query->from('post', 'p')
+                    ->select(['post_id'])
+                    ->selectRaw("if({$prx}p.post_id = {$prx}t.first_post_id,
+                        {$prx}t.thread_id, {$prx}p.post_id) as ForeignID")
+                    ->selectRaw("if({$prx}p.post_id = {$prx}t.first_post_id, 'discussion', 'comment') as ForeignTable")
+                    ->join('thread as t', "t.thread_id", '=', "p.thread_id")
+                    ->where("p.message_state", '<>', "deleted");
+            })
+            ->join('ap', 'post_id', '=', 'a.content_id')
+            ->where('a.content_type', '=', "post");
+
+        $port->export('Media', $query, $map, $filters);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function conversations(ExportModel $ex): void
+    protected function conversations(Migration $port): void
     {
         $conversation_Map = array(
             'conversation_id' => 'ConversationID',
@@ -643,7 +342,7 @@ class Xenforo extends Source
             'user_id' => 'InsertUserID',
             'start_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate')
         );
-        $ex->export(
+        $port->export(
             'Conversation',
             "select *, substring(title, 1, 200) as title from :_conversation_master",
             $conversation_Map
@@ -658,7 +357,7 @@ class Xenforo extends Source
             'format' => 'Format',
             'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
         );
-        $ex->export(
+        $port->export(
             'ConversationMessage',
             "select m.*,
                     'BBCode' as format,
@@ -674,7 +373,7 @@ class Xenforo extends Source
             'user_id' => 'UserID',
             'Deleted' => 'Deleted'
         );
-        $ex->export(
+        $port->export(
             'UserConversation',
             "select
                     r.conversation_id,

@@ -3,22 +3,21 @@
 /**
  * Joomla Kunena exporter tool
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Todd Burry
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class Kunena extends Source
 {
     public const SUPPORTED = [
         'name' => 'Joomla Kunena',
-        'prefix' => 'jos_',
-        'charset_table' => 'kunena_messages',
-        'hashmethod' => 'joomla',
+        'defaultTablePrefix' => 'jos_',
+        'charsetTable' => 'kunena_messages',
+        'passwordHashMethod' => 'joomla',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -36,31 +35,29 @@ class Kunena extends Source
     ];
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->bookmarks($ex);
-        $this->attachments($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->bookmarks($port);
+        $this->attachments($port);
     }
 
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
      *
-     * @access public
-     * @see    ExportModel::writeTableToFile
-     *
      * @param  string $value Current value
      * @param  string $field Current field
      * @param  array  $row   Contents of the current record.
      * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
+     * @see    Migration::writeTableToFile
      */
-    public function filterThumbnailData($value, $field, $row)
+    public function filterThumbnailData($value, $field, $row): ?string
     {
         if (strpos(strtolower($row['filetype']), 'image/') === 0) {
             return $value;
@@ -69,9 +66,9 @@ class Kunena extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array(
             'id' => 'UserID',
@@ -87,7 +84,7 @@ class Kunena extends Source
             'admin' => array('Column' => 'Admin', 'Type' => 'tinyint(1)'),
             'Photo' => 'Photo'
         );
-        $ex->export(
+        $port->export(
             'User',
             "SELECT
                     u.*,
@@ -104,22 +101,22 @@ class Kunena extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
         $role_Map = array(
             'rank_id' => 'RoleID',
             'rank_title' => 'Name',
         );
-        $ex->export('Role', "select * from :_kunena_ranks", $role_Map);
+        $port->export('Role', "select * from :_kunena_ranks", $role_Map);
 
         // UserRole.
         $userRole_Map = array(
             'id' => 'UserID',
             'rank' => 'RoleID'
         );
-        $ex->export(
+        $port->export(
             'UserRole',
             "select * from :_users u",
             $userRole_Map
@@ -127,9 +124,9 @@ class Kunena extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array(
             'id' => 'CategoryID',
@@ -139,7 +136,7 @@ class Kunena extends Source
             'description' => 'Description',
 
         );
-        $ex->export(
+        $port->export(
             'Category',
             "select * from :_kunena_categories",
             $category_Map
@@ -147,9 +144,9 @@ class Kunena extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'id' => 'DiscussionID',
@@ -165,7 +162,7 @@ class Kunena extends Source
             'message' => 'Body',
             'Format' => 'Format'
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "select t.*,
                     txt.message,
@@ -179,9 +176,9 @@ class Kunena extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array(
             'id' => 'CommentID',
@@ -194,7 +191,7 @@ class Kunena extends Source
             'message' => 'Body',
             'Format' => 'Format'
         );
-        $ex->export(
+        $port->export(
             'Comment',
             "select t.*,
                     txt.message,
@@ -208,15 +205,15 @@ class Kunena extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function bookmarks(ExportModel $ex): void
+    protected function bookmarks(Migration $port): void
     {
         $userDiscussion_Map = array(
             'thread' => 'DiscussionID',
             'userid' => 'UserID'
         );
-        $ex->export(
+        $port->export(
             'UserDiscussion',
             "select t.*, 1 as Bookmarked from :_kunena_user_topics t",
             $userDiscussion_Map
@@ -224,9 +221,9 @@ class Kunena extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function attachments(ExportModel $ex): void
+    protected function attachments(Migration $port): void
     {
         $media_Map = array(
             'id' => 'MediaID',
@@ -240,7 +237,7 @@ class Kunena extends Source
             'filename' => array('Column' => 'Name', 'Filter' => 'urlDecode'),
             'time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
         );
-        $ex->export(
+        $port->export(
             'Media',
             "select a.*,
                     concat(a.folder, '/', a.filename) as path2,

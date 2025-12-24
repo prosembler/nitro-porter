@@ -27,3 +27,16 @@ vendor
 build/current
 .phpunit.cache
 seed_database.php
+.cache
+.env
+
+# git-of-theseus
+authors.json
+cohorts.json
+dirs.json
+domains.json
+exts.json
+line_plot.png
+stack_plot.png
+survival.json
+survival_plot.png

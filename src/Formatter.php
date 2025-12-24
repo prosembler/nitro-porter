@@ -18,9 +18,9 @@ class Formatter
     /**
      * Singleton accessor.
      *
-     * @return Formatter
+     * @return self Formatter
      */
-    public static function instance($ex = null): self
+    public static function instance(?Migration $ex = null): self
     {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -32,9 +32,37 @@ class Formatter
     /**
      * @return void
      */
-    public function setup(ExportModel $ex)
+    public function setup(Migration $port)
     {
-        $this->userMap = $ex->buildUserMap();
+        $this->userMap = $this->buildUserMap($port);
+    }
+
+    /**
+     * Create an array of `strtolower(name)` => ID for doing lookups later.
+     *
+     * @todo This strategy likely won't scale past 100K users. 18K users @ +8mb memory use.
+     *
+     * @param Migration $port
+     * @return array
+     */
+    public function buildUserMap(Migration $port): array
+    {
+        $userMap = $port->dbOutput()
+            ->table('users')
+            ->get(['id', 'username']);
+
+        $users = [];
+        foreach ($userMap as $user) {
+            // Use the first found ID for each name in case of duplicates.
+            if (!isset($users[strtolower($user->username)])) {
+                $users[strtolower($user->username)] = $user->id;
+            }
+        }
+
+        // Record memory usage from user map.
+        Log::comment('Mentions map memory usage at ' . formatBytes(memory_get_usage()));
+
+        return $users;
     }
 
     /**
@@ -78,6 +106,10 @@ class Formatter
      */
     public static function closeTags(?string $text): ?string
     {
+        if (empty($text)) {
+            return $text;
+        }
+
         // <br>
         $text = str_replace('<br>', '<br/>', $text);
         // <img src="">
@@ -118,8 +150,17 @@ class Formatter
         // Fix invalid Quill Delta.
         $text = self::fixQuillHeaders($text);
 
-        // Fix the JSON.
-        $text = '{"ops":' . $text . '}';
+        // Quill data is invalid, but check first in case they fix it in a future version.
+        if (false === json_validate($text)) {
+            // Fix the JSON.
+            $text = '{"ops":' . $text . '}';
+
+            // Re-check we have valid JSON now and give up if we don't.
+            if (false === json_validate($text)) {
+                Log::comment(json_last_error_msg() . PHP_EOL);
+                return '';
+            }
+        }
 
         // Use the Quill renderer.
         $lexer = new Quill($text);

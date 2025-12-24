@@ -3,46 +3,33 @@
 /**
  * FluxBB exporter tool
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Francis Caisse
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class FluxBb extends Source
 {
     public const SUPPORTED = [
         'name' => 'FluxBB 1',
-        'prefix' => '',
-        'charset_table' => 'posts',
-        'hashmethod' => 'punbb', // FluxBB is a fork of punbb and the password works.
-        'options' => [
-            'avatars-source' => array(
-                'Full path of forum avatars.',
-                'Sx' => '::',
-            )
-        ],
+        'defaultTablePrefix' => '',
+        'charsetTable' => 'posts',
+        'passwordHashMethod' => 'punbb', // FluxBB is a fork of punbb and the password works.
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
             'Categories' => 1,
             'Discussions' => 1,
             'Comments' => 1,
-            'Polls' => 0,
             'Roles' => 1,
             'Avatars' => 1,
             'PrivateMessages' => 0,
             'Signatures' => 1,
             'Attachments' => 1,
             'Bookmarks' => 0,
-            'Permissions' => 1,
-            'Badges' => 0,
-            'UserNotes' => 0,
-            'Ranks' => 0,
-            'Groups' => 0,
             'Tags' => 1,
         ]
     ];
@@ -55,38 +42,37 @@ class FluxBb extends Source
     /**
      * @var string CDN path prefix
      */
-    protected $cdn = '';
+    protected string $cdn = '';
 
     /**
      * @var array Required tables => columns
      */
-    public $sourceTables = array();
+    public array $sourceTables = array();
 
     /**
      * Forum-specific export format
      *
-     * @param ExportModel $ex
+     * @param Migration $port
      *@todo Project file size / export time and possibly break into multiple files
      *
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->cdn = $this->param('cdn', '');
-        if ($this->avatarPath = $this->param('avatars-source')) {
+        $this->cdn = ''; //$this->param('cdn', '');
+        /*if ($this->avatarPath = '') { //$this->param('avatars-source')) {
             if (!$this->avatarPath = realpath($this->avatarPath)) {
                 exit("Unable to access path to avatars: $this->avatarPath\n");
             }
-        }
+        }*/
 
-        $this->users($ex);
-        //$this->permissions($ex);
-        $this->roles($ex);
-        $this->signatures($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->tags($ex);
-        $this->attachments($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->signatures($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->tags($port);
+        $this->attachments($port);
     }
 
     /**
@@ -97,7 +83,7 @@ class FluxBb extends Source
      * @param array $row All of the current row values.
      * @return null|string
      */
-    public function getAvatarByID($value, $field, $row)
+    public function getAvatarByID($value, $field, $row): ?string
     {
         if (!$this->avatarPath) {
             return null;
@@ -130,14 +116,14 @@ class FluxBb extends Source
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
      *
      * @access public
-     * @see    ExportModel::writeTableToFile
-     *
      * @param  string $value Current value
      * @param  string $field Current field
      * @param  array  $row   Contents of the current record.
      * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
+     *@see    Migration::writeTableToFile
+     *
      */
-    public function filterThumbnailData($value, $field, $row)
+    public function filterThumbnailData($value, $field, $row): ?string
     {
         if (strpos(strtolower($row['file_mime_type']), 'image/') === 0) {
             return $value;
@@ -147,20 +133,19 @@ class FluxBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array(
             'AvatarID' => array('Column' => 'Photo', 'Filter' => array($this, 'getAvatarByID')),
         );
-        $ex->export(
+        $port->export(
             'User',
             "select
                     u.id as UserID,
                     u.username as UserID,
                     u.email as Email,
-                    u.timezone as HourOffset,
                     u.registration_ip as InsertIPAddress,
                     u.id as AvatarID,
                     u.password as Password,
@@ -173,52 +158,27 @@ class FluxBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function permissions(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
-        $ex->export(
-            'Permission',
-            "select
-                    g_id,
-                    g_moderator as 'Garden.Moderation.Manage',
-                    g_mod_edit_users as 'Garden.Users.Edit',
-                    g_mod_rename_users as 'Garden.Users.Delete',
-                    g_read_board as 'Vanilla.Discussions.View',
-                    g_view_users as 'Garden.Profiles.View',
-                    g_post_topics as 'Vanilla.Discussions.Add',
-                    g_post_replies as 'Vanilla.Comments.Add',
-                    g_post_replies as 'Garden.SignIn.Allow',
-                    g_mod_edit_users as 'Garden.Users.Add',
-                    case
-                        when g_title = 'Administrators' then 'All' else NULL
-                    end as _Permissions
-                from :_groups"
-        );
-    }
-
-    /**
-     * @param ExportModel $ex
-     */
-    protected function roles(ExportModel $ex): void
-    {
-        $ex->export(
+        $port->export(
             'Role',
             "select g_id as RoleID, g_title as Name from :_groups"
         );
         // UserRole
-        $ex->export(
+        $port->export(
             'UserRole',
             "select u.id as UserID, u.group_id as RoleID from :_users u"
         );
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function signatures(ExportModel $ex): void
+    protected function signatures(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'UserMeta',
             "select
                     u.id as UserID,
@@ -230,11 +190,11 @@ class FluxBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Category',
             "select
                     id as CategoryID,
@@ -255,11 +215,11 @@ class FluxBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Discussion',
             "select
                     t.id as DiscussionID,
@@ -281,11 +241,11 @@ class FluxBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Comment',
             "select
                     p.*,
@@ -305,16 +265,16 @@ class FluxBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function tags(ExportModel $ex): void
+    protected function tags(Migration $port): void
     {
-        if ($ex->exists('tags')) {
-            $ex->export(
+        if ($port->hasInputSchema('tags')) {
+            $port->export(
                 'Tag',
                 "select id as TagID, tag as Name from :_tags"
             );
-            $ex->export(
+            $port->export(
                 'TagDiscussion',
                 "select topic_id as DiscussionID, tag_id as TagID from :_topic_tags"
             );
@@ -322,17 +282,17 @@ class FluxBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function attachments(ExportModel $ex): void
+    protected function attachments(Migration $port): void
     {
-        if ($ex->exists('attach_files')) {
+        if ($port->hasInputSchema('attach_files')) {
             $media_Map = array(
                 'owner_id' => 'InsertUserID',
                 'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
                 'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
             );
-            $ex->export(
+            $port->export(
                 'Media',
                 "select f.*,
                         f.id as MediaID,

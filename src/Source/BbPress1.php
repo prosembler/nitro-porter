@@ -3,21 +3,20 @@
 /**
  * bbPress exporter tool
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Todd Burry
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class BbPress1 extends Source
 {
     public const SUPPORTED = [
         'name' => 'bbPress 1',
-        'prefix' => 'bb_',
-        'charset_table' => 'posts',
+        'defaultTablePrefix' => 'bb_',
+        'charsetTable' => 'posts',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -34,7 +33,7 @@ class BbPress1 extends Source
     /**
      * @var array Required tables => columns
      */
-    public $sourceTables = array(
+    public array $sourceTables = array(
         'forums' => array(),
         'posts' => array(),
         'topics' => array(),
@@ -45,22 +44,22 @@ class BbPress1 extends Source
     /**
      * Forum-specific export format.
      *
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->conversations($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->conversations($port);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array(
             'ID' => 'UserID',
@@ -69,15 +68,15 @@ class BbPress1 extends Source
             'user_email' => 'Email',
             'user_registered' => 'DateInserted'
         );
-        $ex->export('User', "select * from :_users", $user_Map);
+        $port->export('User', "select * from :_users", $user_Map);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Role',
             "select 1 as RoleID, 'Guest' as Name
                  union select 2, 'Key Master'
@@ -92,7 +91,7 @@ class BbPress1 extends Source
         $userRole_Map = array(
             'user_id' => 'UserID'
         );
-        $ex->export(
+        $port->export(
             'UserRole',
             "select distinct user_id,
                 case when locate('keymaster', meta_value) <> 0 then 2
@@ -109,9 +108,9 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array(
             'forum_id' => 'CategoryID',
@@ -120,7 +119,7 @@ class BbPress1 extends Source
             'forum_slug' => 'UrlCode',
             'left_order' => 'Sort'
         );
-        $ex->export(
+        $port->export(
             'Category',
             "select *,
                     lower(forum_slug) as forum_slug,
@@ -131,9 +130,9 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'topic_id' => 'DiscussionID',
@@ -144,7 +143,7 @@ class BbPress1 extends Source
             'topic_start_time' => 'DateInserted',
             'topic_sticky' => 'Announce'
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "select t.*,
                     'Html' as Format,
@@ -156,9 +155,9 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
@@ -168,7 +167,7 @@ class BbPress1 extends Source
             'poster_id' => 'InsertUserID',
             'post_time' => 'DateInserted'
         );
-        $ex->export(
+        $port->export(
             'Comment',
             "select p.*,
                     'Html' as Format
@@ -179,18 +178,18 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function conversations(ExportModel $ex): void
+    protected function conversations(Migration $port): void
     {
         // The export is different depending on the table layout.
-        $PM = $ex->exists('bbpm', array('ID', 'pm_title', 'pm_from', 'pm_to', 'pm_text', 'sent_on', 'pm_thread'));
+        $PM = $port->hasInputSchema('bbpm', ['ID', 'pm_title', 'pm_from', 'pm_to', 'pm_text', 'sent_on', 'pm_thread']);
         $conversationVersion = '';
 
         if ($PM === true) {
             // This is from an old version of the plugin.
             $conversationVersion = 'old';
-        } elseif ($ex->exists('bbpm', array('ID', 'pm_from', 'pm_text', 'sent_on', 'pm_thread'))) {
+        } elseif ($port->hasInputSchema('bbpm', array('ID', 'pm_from', 'pm_text', 'sent_on', 'pm_thread'))) {
             // This is from a newer version of the plugin.
             $conversationVersion = 'new';
         }
@@ -200,7 +199,7 @@ class BbPress1 extends Source
                 'pm_thread' => 'ConversationID',
                 'pm_from' => 'InsertUserID'
             );
-            $ex->export(
+            $port->export(
                 'Conversation',
                 "select *, from_unixtime(sent_on) as DateInserted
             from :_bbpm
@@ -215,7 +214,7 @@ class BbPress1 extends Source
                 'pm_from' => 'InsertUserID',
                 'pm_text' => array('Column' => 'Body', 'Filter' => 'bbPressTrim')
             );
-            $ex->export(
+            $port->export(
                 'ConversationMessage',
                 'select *, from_unixtime(sent_on) as DateInserted
                     from :_bbpm',
@@ -223,10 +222,10 @@ class BbPress1 extends Source
             );
 
             // UserConversation.
-            $ex->query("create temporary table bbpmto (UserID int, ConversationID int)");
+            $port->query("create temporary table bbpmto (UserID int, ConversationID int)");
 
             if ($conversationVersion == 'new') {
-                $to = $ex->query(
+                $to = $port->query(
                     "select object_id, meta_value
                         from :_meta
                         where object_type = 'bbpm_thread' and meta_key = 'to'"
@@ -241,17 +240,17 @@ class BbPress1 extends Source
                         }
                         $toIns = trim($toIns, ',');
 
-                        $ex->query("insert bbpmto (UserID, ConversationID) values $toIns");
+                        $port->query("insert bbpmto (UserID, ConversationID) values $toIns");
                     }
 
-                    $ex->export('UserConversation', 'select * from bbpmto');
+                    $port->export('UserConversation', 'select * from bbpmto');
                 }
             } else {
                 $conUser_Map = array(
                     'pm_thread' => 'ConversationID',
                     'pm_from' => 'UserID'
                 );
-                $ex->export(
+                $port->export(
                     'UserConversation',
                     'select distinct
                             pm_thread,

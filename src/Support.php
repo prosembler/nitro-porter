@@ -4,11 +4,14 @@ namespace Porter;
 
 class Support
 {
-    public const SUPPORTED_META = [
+    public const SUPPORTED_INFO = [
         'name',
-        'prefix',
+        'defaultTablePrefix',
+        'passwordHashMethod',
+        'charsetTable',
+        'avatarsPrefix',
+        'avatarThumbnailsPrefix',
         'features',
-        'options',
     ];
 
     public const SUPPORTED_FEATURES = [
@@ -22,10 +25,10 @@ class Support
         'Attachments',
         'Bookmarks',
         'Avatars',
+        'AvatarThumbnails',
         'Signatures',
         'Polls',
         'Tags',
-        //'Permissions',
         'Reactions',
         'Badges',
         'UserNotes',
@@ -77,7 +80,9 @@ class Support
     {
         foreach ($sources as $name) {
             $classname = '\Porter\Source\\' . $name;
-            $this->sources[$name] = $classname::getSupport();
+            if (is_a($classname, Source::class, true)) {
+                $this->sources[$name] = $classname::getSupport();
+            }
         }
     }
 
@@ -91,14 +96,18 @@ class Support
     {
         // Hardcode Vanilla file support (all = yes).
         $this->targets['file'] = [
-            'name' => 'Vanilla',
+            'name' => 'Vanilla (file)',
+            'avatarsPrefix' => 'p',
+            'avatarThumbnailsPrefix' => 'n',
             'features' => array_fill_keys(self::SUPPORTED_FEATURES, 1),
         ];
 
         // Load the rest of the target support automatically.
         foreach ($targets as $name) {
             $classname = '\Porter\Target\\' . $name;
-            $this->targets[$name] = $classname::getSupport();
+            if (is_a($classname, Target::class, true)) {
+                $this->targets[$name] = $classname::getSupport();
+            }
         }
     }
 
@@ -108,9 +117,10 @@ class Support
      * @param array $supported
      * @param string $package
      * @param string $feature
-     * @return string HTML-wrapped Yes or No symbols.
+     * @param bool $notes
+     * @return string Yes or No.
      */
-    public function getFeatureStatusHtml(array $supported, string $package, string $feature, bool $notes = true): string
+    public function getFeatureStatus(array $supported, string $package, string $feature, bool $notes = true): string
     {
         if (!isset($supported[$package]['features'])) {
             return 'No';
@@ -134,6 +144,25 @@ class Support
         }
 
         return $status;
+    }
+
+    /**
+     * @param string $name
+     * @param array $info
+     * @return array
+     */
+    public function getFeatureTable(string $name, array $info): array
+    {
+        // Build feature list.
+        $features = array_keys($this->getAllFeatures());
+        $list = [];
+        foreach ($features as $feature) {
+            $list[] = [
+                'feature' => preg_replace('/[A-Z]/', ' $0', $feature),
+                'support' =>  $this->getFeatureStatus($info, $name, $feature)
+            ];
+        }
+        return $list;
     }
 
     /**

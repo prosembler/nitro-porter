@@ -3,23 +3,20 @@
 /**
  * ASP Playground exporter tool
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Lincoln Russell, lincolnwebs.com
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class AspPlayground extends Source
 {
     public const SUPPORTED = [
         'name' => 'ASP Playground',
-        'prefix' => 'pgd_',
-        'charset_table' => 'Threads',
-        'options' => [
-        ],
+        'defaultTablePrefix' => 'pgd_',
+        'charsetTable' => 'Threads',
         'features' => [
             'Users' => 1,
             'Categories' => 1,
@@ -36,25 +33,24 @@ class AspPlayground extends Source
     ];
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->signatures($ex);
+        $this->users($port);
+        $this->signatures($port);
 
-        $this->categories($ex);
+        $this->categories($port);
 
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->bookmarks($ex);
-        $this->polls($ex);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->bookmarks($port);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $map = [
             'Mem' => 'UserID',
@@ -67,7 +63,7 @@ class AspPlayground extends Source
             'lastLogin' => 'DateLastActive',
             'location' => 'Location',
         ];
-        $ex->export(
+        $port->export(
             'User',
             "select m.*, 'Text' as HashMethod
                 from :_Members m",
@@ -76,11 +72,11 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function signatures(ExportModel $ex): void
+    protected function signatures(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'UserMeta',
             "select Mem, 'Plugin.Signatures.Sig' as `Name`, signature as `Value`
             from :_Members
@@ -95,9 +91,9 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $map = [
             'ForumID' => 'CategoryID',
@@ -109,7 +105,7 @@ class AspPlayground extends Source
             'Topics' => 'CountDiscussions',
             'parent' => 'ParentCategoryID',
         ];
-        $ex->export(
+        $port->export(
             'Category',
             "select f.*
                 from :_Forums f
@@ -119,9 +115,9 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $map = [
             'messageID' => 'DiscussionID',
@@ -132,7 +128,7 @@ class AspPlayground extends Source
             'hits' => 'CountViews',
             'lastupdate' => 'DateLastComment',
         ];
-        $ex->export(
+        $port->export(
             'Discussion',
             "select t.*, m.Body
                 from :_Threads t
@@ -142,9 +138,9 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $map = [
             'messageID' => 'CommentID',
@@ -160,7 +156,7 @@ class AspPlayground extends Source
         if ($this->getDiscussionBodyMode()) {
             $skipOP = "where parent != 0";
         }
-        $ex->export(
+        $port->export(
             'Comment',
             "select m.*, 'BBCode' as Format
                 from :_Messages m
@@ -170,30 +166,20 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function bookmarks(ExportModel $ex): void
+    protected function bookmarks(Migration $port): void
     {
         $map = [
             'Mem' => 'UserID',
             'threadID' => 'DiscussionID',
         ];
-        $ex->export(
+        $port->export(
             'UserDiscussion',
             "select *, '1' as Bookmarked
                 from :_Subscription
                 where threadID is not null and isActive = 1",
             $map
         );
-    }
-
-    /**
-     * @param ExportModel $ex
-     */
-    protected function polls(ExportModel $ex): void
-    {
-        // Tables needed: Poll, PollDefinition, PollLog
-        // Not attached to discussions, only forums.
-        // Some allow multiple selections. Optional guest voting.
     }
 }

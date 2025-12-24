@@ -2,6 +2,7 @@
 
 namespace Porter;
 
+use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Porter\Database\ResultSet;
 
@@ -15,7 +16,7 @@ abstract class Storage
      * @param array $structure
      * @param ResultSet|Builder $data
      * @param array $filters
-     * @param ExportModel $exportModel
+     * @param Migration $port
      * @return array Information about the results.
      */
     abstract public function store(
@@ -24,7 +25,7 @@ abstract class Storage
         array $structure,
         $data,
         array $filters,
-        ExportModel $exportModel
+        Migration $port
     ): array;
 
     /**
@@ -33,17 +34,21 @@ abstract class Storage
      */
     abstract public function prepare(string $name, array $structure): void;
 
-    abstract public function begin();
+    abstract public function begin(): void;
 
-    abstract public function end();
+    abstract public function end(): void;
 
     abstract public function setPrefix(string $prefix): void;
 
     abstract public function exists(string $tableName, array $columns = []): bool;
 
-    abstract public function stream(array $row, array $structure);
+    abstract public function stream(array $row, array $structure): void;
 
-    abstract public function endStream();
+    abstract public function endStream(): void;
+
+    abstract public function getAlias(): string;
+
+    abstract public function getConnection(): ?Connection;
 
     /**
      * Prepare a row of data for storage.

@@ -2,10 +2,10 @@
 
 namespace Porter\Command;
 
-use Porter;
 use Ahc\Cli\Input\Command;
 use Ahc\Cli\IO\Interactor;
-use Porter\Support;
+use Porter\Config;
+use Porter\Request;
 
 class RunCommand extends Command
 {
@@ -13,18 +13,19 @@ class RunCommand extends Command
     {
         parent::__construct('run', 'Run a migration.');
         $this
-            ->option('-s --source', 'Name of source package')
-            ->option('-t --target', 'Name of target package')
-            ->option('-i --input', 'Source connection (defined in config)')
-            ->option('-o --output', 'Target connection (defined in config)')
-            ->option('-x --sourceprefix', 'Source prefix')
+            ->option('-s --source', 'Source package alias')
+            ->option('-t --target', 'Target package alias')
+            ->option('-i --input', 'Source connection alias (defined in config)')
+            ->option('-o --output', 'Target connection alias (defined in config), "file", or "sql"')
+            ->option('--sp', 'Source table prefix (override package default)')
+            ->option('--tp', 'Target table prefix (override package default)')
             ->option('--cdn', 'CDN prefix')
-            ->option('--dumpsql', 'Output SQL instead of migrating')
-            //->option('-y --targetprefix', 'Target prefix')
-            //->option('-l --limit', 'Limits export to specified data')
+            ->option('-d --data', 'Limit to specified data types (CSV)')
             ->usage(
-                '<bold>  run</end> <comment><source> <source-connection> <target> <target-connection></end>' .
-                ' ## Migrate data from source to target<eol/>'
+                '<bold>  run -s xenforo -t flarum -i xf25 -o test --sp xf_ </end><eol/>' .
+                    '<comment>  Migrate from Xenforo in database with alias `xf25` (in config.php) ' .
+                    'using table prefix `xf_`<eol/>  to Flarum in database with alias `test` ' .
+                    'using the default table prefix (because --tp is omitted).</end><eol/>'
             );
     }
 
@@ -33,83 +34,41 @@ class RunCommand extends Command
      */
     public function interact(Interactor $io): void
     {
-        if (!$this->source) {
-            $this->set('source', $io->prompt('Source package'));
+        if (!$this->source && !Config::getInstance()->get('source')) {
+            $this->set('source', $io->prompt('Source package alias (see `porter list -n=sources`)'));
         }
 
-        if (!$this->target) {
-            $this->set('target', $io->prompt('Target package'));
+        if (!$this->target && !Config::getInstance()->get('target')) {
+            $this->set('target', $io->prompt('Target package alias (see `porter list -n=targets`)'));
         }
 
-        if (!$this->input) {
-            $this->set('input', $io->prompt('Source connection (from config)'));
+        if (!$this->input && !Config::getInstance()->get('input_alias')) {
+            $this->set('input', $io->prompt('Input connection alias (see config.php)'));
         }
 
-        if (!$this->output && $this->source !== 'file') {
-            $this->set('output', $io->prompt('Target connection (from config)'));
+        if (!$this->output && $this->source !== 'file' && !Config::getInstance()->get('output_alias')) {
+            $this->set('output', $io->prompt('Output connection alias (see config.php)'));
         }
     }
 
     /**
      * Command execution.
+     *
+     * @throws \Exception
      */
-    public function execute()
+    public function execute(): void
     {
-        // @todo validate
-        $request = \Porter\Request::instance();
-        $request->load([
-            // @todo fix this name madness in Request object.
-            'output' => $this->target,
-            'package' => $this->source,
-            'source' => $this->input,
-            'target' => $this->output,
-            'src-prefix' => $this->sourceprefix,
-            'tables' => $this->tables,
-            'dumpsql' => $this->dumpsql,
-            'cdn' => $this->cdn,
-        ]);
+        $request = new Request(
+            $this->source,
+            $this->target,
+            $this->input,
+            $this->output,
+            $this->sp,
+            $this->tp,
+            $this->cdn,
+            $this->data
+        );
 
-        \Porter\Controller::run($request);
-    }
-
-    /**
-     * @param bool $sections
-     * @return array
-     */
-    public function getAllOptions($sections = false): array
-    {
-        $options['package']['Values'] = array_keys(Support::getInstance()->getSources());
-        $globalOptions = $options;
-        $supported = Support::getInstance()->getSources();
-        $result = [];
-
-        if ($sections) {
-            $result['Run Options'] = $globalOptions;
-        } else {
-            $result = $globalOptions;
-        }
-
-        foreach ($supported as $type => $options) {
-            $commandLine = v('options', $options);
-            if (!$commandLine) {
-                continue;
-            }
-
-            if ($sections) {
-                $result[$options['name']] = $commandLine;
-            } else {
-                // We need to add the types to each command line option for validation purposes.
-                foreach ($commandLine as $longCode => $row) {
-                    if (isset($result[$longCode])) {
-                        $result[$longCode]['Packages'][] = $type;
-                    } else {
-                        $row['Packages'] = array($type);
-                        $result[$longCode] = $row;
-                    }
-                }
-            }
-        }
-
-        return $result;
+        runPorter($request);
     }
 }

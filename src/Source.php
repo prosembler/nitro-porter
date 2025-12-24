@@ -6,10 +6,15 @@ abstract class Source
 {
     public const SUPPORTED = [
         'name' => '',
-        'prefix' => '',
-        'charset_table' => '',
-        'hashmethod' => '',
-        'options' => [],
+        'defaultTablePrefix' => '',
+        'charsetTable' => '',
+        'passwordHashMethod' => '',
+        'avatarsPrefix' => '',
+        'avatarThumbPrefix' => '',
+        'avatarPath' => '',
+        'avatarThumbPath' => '',
+        'attachmentPath' => '',
+        'attachmentThumbPath' => '',
         'features' => [],
     ];
 
@@ -29,24 +34,20 @@ abstract class Source
     protected bool $useDiscussionBody = true;
 
     /**
-     * @deprecated
-     * @var ExportModel
-     */
-    public $exportModel = null;
-
-    /**
-     * @deprecated
      * @var array Required tables, columns set per exporter
      */
-    public $sourceTables = array();
+    public array $sourceTables = [];
 
     /**
      * Forum-specific export routine
      */
-    abstract public function run(ExportModel $ex);
+    abstract public function run(Migration $port): void;
 
     /**
-     * Register supported features.
+     * Get name of the source package.
+     *
+     * @return array
+     * @see Support::setSources()
      */
     public static function getSupport(): array
     {
@@ -54,12 +55,32 @@ abstract class Source
     }
 
     /**
+     * Get name of the source package.
+     *
+     * @return string
+     */
+    public static function getName(): string
+    {
+        return static::SUPPORTED['name'];
+    }
+
+    /**
+     * Get default table prefix of the source package.
+     *
+     * @return string
+     */
+    public static function getPrefix(): string
+    {
+        return static::SUPPORTED['defaultTablePrefix'];
+    }
+
+    /**
      * Retrieve characteristics of the package.
      *
      * @param string $name
-     * @return mixed|null
+     * @return mixed
      */
-    public static function getFlag(string $name)
+    public static function getFlag(string $name): mixed
     {
         return (isset(static::FLAGS[$name])) ? static::FLAGS[$name] : null;
     }
@@ -76,10 +97,8 @@ abstract class Source
 
     /**
      * Set `useDiscussionBody` to false.
-     *
-     * @return void
      */
-    public function skipDiscussionBody()
+    public function skipDiscussionBody(): void
     {
         $this->useDiscussionBody = false;
     }
@@ -87,45 +106,28 @@ abstract class Source
     /**
      * @return string
      */
-    public static function getCharSetTable(): string
+    public static function getCharsetTable(): string
     {
         $charset = '';
-        if (isset(self::getSupport()['charset_table'])) {
-            $charset = self::getSupport()['charset_table'];
+        if (isset(static::SUPPORTED['charsetTable'])) {
+            $charset = static::SUPPORTED['charsetTable'];
         }
         return $charset;
     }
 
     /**
-     * Set CDN file prefix if one is given.
+     * Return the requested path (without a trailing slash).
      *
-     * @deprecated
+     * @param string $type
+     * @param bool $addFullPath
      * @return string
      */
-    public function cdnPrefix()
+    public function getPath(string $type, bool $addFullPath = false): string
     {
-        $cdn = rtrim(Request::instance()->get('cdn') ?? '', '/');
-        if ($cdn) {
-            $cdn .= '/';
+        $folder = rtrim(static::SUPPORTED[$type . 'Path'] ?? '', '/');
+        if ($addFullPath && Config::getInstance()->get('source_root')) {
+            $folder = rtrim(Config::getInstance()->get('source_root'), '/') . '/' . trim($folder, '/');
         }
-
-        return $cdn;
-    }
-
-    /**
-     * Retrieve a parameter passed to the export process.
-     * @deprecated
-     *
-     * @param  string $name
-     * @param  mixed  $default Fallback value.
-     * @return mixed Value of the parameter.
-     */
-    public function param($name, $default = false)
-    {
-        $value = Request::instance()->get($name);
-        if ($value === '') {
-            $value = $default;
-        }
-        return $value;
+        return $folder;
     }
 }

@@ -4,29 +4,20 @@
  * AnswerHub exporter tool.
  * Assume https://github.com/vanilla/addons/tree/master/plugins/QnA will be enabled.
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Alexandre Chouinard
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class AnswerHub extends Source
 {
     public const SUPPORTED = [
         'name' => 'answerhub',
-        'prefix' => '',
-        'charset_table' => 'nodes',
-        'options' => [
-            'noemaildomain' => [
-                'Domain to use when generating email addresses for users that does not have one.',
-                'Field' => 'noemaildomain',
-                'Sx' => '::',
-                'Default' => 'answerhub.com',
-            ],
-        ],
+        'defaultTablePrefix' => '',
+        'charsetTable' => 'nodes',
         'features' => [
             'Users' => 1,
             'Passwords' => 0,
@@ -46,18 +37,17 @@ class AnswerHub extends Source
     /**
      * Main export process.
      *
-     * @param ExportModel $ex
-     * @see   $_structures in ExportModel for allowed destination tables & columns.
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->tags($ex);
-        $this->attachments($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->tags($port);
+        $this->attachments($port);
     }
 
     /**
@@ -68,11 +58,11 @@ class AnswerHub extends Source
      * @param array $row Full data row columns
      * @return string Email
      */
-    public function generateEmail($value, $field, $row)
+    public function generateEmail($value, $field, $row): string
     {
         $email = $value;
         if (empty($email)) {
-            $domain = $this->param('noemaildomain');
+            $domain = 'example.com'; //$this->param('noemaildomain');
             $slug = preg_replace('#[^a-z0-9-_.]#i', '', $row['Name']);
 
             if (!strlen($slug)) {
@@ -84,62 +74,27 @@ class AnswerHub extends Source
         return $email;
     }
 
-    public function getFileName($value, $field, $row)
+    /**
+     * @param string $value
+     * @param string $field
+     * @param array $row
+     * @return mixed
+     */
+    public function getFileName(string $value, string $field, array $row): mixed
     {
         $arr = explode('/', $value);
         return end($arr);
     }
 
     /**
-     * Set valid MIME type for images.
-     *
-     * @access public
-     * @see    ExportModel::writeTableToFile
-     *
-     * @param  string $value Extension.
-     * @param  string $field Ignored.
-     * @param  array  $row   Ignored.
-     * @return string Extension or accurate MIME type.
+     * @param Migration $port
      */
-    public function buildMimeType($value, $field, $row)
-    {
-        if (preg_match('~.*\.(.*)~', $value, $matches) != false) {
-            switch (strtolower($matches[1])) {
-                case 'jpg':
-                case 'jpeg':
-                case 'gif':
-                case 'png':
-                    $value = 'image/' . $matches[1];
-                    break;
-                case 'pdf':
-                case 'zip':
-                    $value = 'application/' . $matches[1];
-                    break;
-                case 'doc':
-                    $value = 'application/msword';
-                    break;
-                case 'xls':
-                    $value = 'application/vnd.ms-excel';
-                    break;
-                case 'txt':
-                case 'log':
-                    $value = 'text/plain';
-                    break;
-            }
-        }
-
-        return $value;
-    }
-
-    /**
-     * @param ExportModel $ex
-     */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array(
             'c_email' => array('Column' => 'Email', 'Filter' => array($this, 'generateEmail')),
         );
-        $ex->export(
+        $port->export(
             'User',
             "select
                     user.c_id as UserID,
@@ -160,11 +115,11 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
-        $result = $ex->query("select c_reserved as lastID
+        $result = $port->query("select c_reserved as lastID
             from id_generators
             where c_identifier = 'AUTHORITABLE'");
         if ($row = $result->nextResultRow()) {
@@ -173,7 +128,7 @@ class AnswerHub extends Source
         if (!isset($lastID)) {
             die('Something went wrong :S' . PHP_EOL);
         }
-        $ex->export(
+        $port->export(
             'Role',
             "
             select
@@ -191,7 +146,7 @@ class AnswerHub extends Source
         );
 
         // User Role.
-        $ex->export(
+        $port->export(
             'UserRole',
             "select
                     user_role.c_groups as RoleID,
@@ -201,12 +156,12 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array();
-        $ex->export(
+        $port->export(
             'Category',
             "select containers.c_id as CategoryID,
                     case
@@ -223,13 +178,13 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array();
         // The query works fine but it will probably be slow for big tables
-        $ex->export(
+        $port->export(
             'Discussion',
             "select
                 questions.c_id as DiscussionID,
@@ -274,12 +229,12 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array();
-        $ex->export(
+        $port->export(
             'Comment',
             "select
                 answers.c_id as CommentID,
@@ -311,11 +266,11 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function tags(ExportModel $ex): void
+    protected function tags(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Tags',
             "select
                     c_id as TagID,
@@ -326,7 +281,7 @@ class AnswerHub extends Source
                 where n.c_type = 'topic'"
         );
 
-        $ex->export(
+        $port->export(
             'TagDiscussion',
             "select
                     c_topics as TagID,
@@ -339,15 +294,17 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function attachments(ExportModel $ex): void
+    protected function attachments(Migration $port): void
     {
         $media_Map = array(
             'Name' => array('Column' => 'Name', 'Filter' => array($this, 'getFileName')),
-            'Type' => array('Column' => 'Type', 'Filter' => array($this, 'buildMimeType')),
         );
-        $ex->export(
+        $filters = [
+            'Type' => 'mimeTypeFromExtension',
+        ];
+        $port->export(
             'Media',
             "select
                     m.c_id as `MediaID`,
@@ -375,7 +332,8 @@ class AnswerHub extends Source
                     if(n.c_type = 'question', 'discussion', 'comment') as `ForeignTable`
                 from :_sources s
                 join :_nodes n on s.c_node = n.c_id",
-            $media_Map
+            $media_Map,
+            $filters
         );
     }
 }

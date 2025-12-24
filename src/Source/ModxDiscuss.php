@@ -3,22 +3,21 @@
 /**
  * MODX Discuss exporter tool.
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Robin Jurinka
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class ModxDiscuss extends Source
 {
     public const SUPPORTED = [
         'name' => 'MODX Discuss Extension',
-        'prefix' => 'modx_discuss_',
-        'charset_table' => 'posts',
-        'hashmethod' => 'Vanilla',
+        'defaultTablePrefix' => 'modx_discuss_',
+        'charsetTable' => 'posts',
+        'passwordHashMethod' => 'Vanilla',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -41,7 +40,7 @@ class ModxDiscuss extends Source
      *
      * @var array Required tables => columns
      */
-    public $sourceTables = array(
+    public array $sourceTables = array(
         'categories' => array(), // This just requires the 'forum' table without caring about columns.
         'boards' => array(),
         'posts' => array(),
@@ -54,25 +53,24 @@ class ModxDiscuss extends Source
     /**
      * Main export process.
      *
-     * @param ExportModel $ex
-     * @see   $_Structures in ExportModel for allowed destination tables & columns.
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
-        $this->userMeta($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->userMeta($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'User',
             "select
                     u.user as UserID,
@@ -95,14 +93,12 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
         // Roles do not exist in Discuss. Really simple matchup.
-        // Note that setting Admin=1 on the User table trumps all roles & permissions with "owner" privileges.
-        // Whatever account you select during the import will get the Admin=1 flag to prevent permissions issues.
-        $ex->export(
+        $port->export(
             'UserRole',
             "select
                     u.user as UserID,
@@ -113,11 +109,11 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function userMeta(ExportModel $ex): void
+    protected function userMeta(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'UserMeta',
             "select
                     user as UserID,
@@ -150,11 +146,11 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Category',
             "select
                     id as CategoryID,
@@ -177,15 +173,15 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'title2' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
         );
         // It's easier to convert between Unix time and MySQL datestamps during the db query.
-        $ex->export(
+        $port->export(
             'Discussion',
             "select
                     t.id as `DiscussionID`,
@@ -209,11 +205,11 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Comment',
             'select
                     p.id as CommentID,

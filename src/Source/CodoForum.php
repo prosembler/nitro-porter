@@ -3,21 +3,20 @@
 /**
  * Codoforum exporter tool. Tested with CodoForum v3.7.
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Hans Adema
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class CodoForum extends Source
 {
     public const SUPPORTED = [
         'name' => 'CodoForum',
-        'prefix' => 'codo_',
-        'charset_table' => 'posts',
+        'defaultTablePrefix' => 'codo_',
+        'charsetTable' => 'posts',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -35,7 +34,7 @@ class CodoForum extends Source
     /**
      * @var array Required tables => columns
      */
-    public $sourceTables = array(
+    public array $sourceTables = array(
         'users' => array('id', 'username', 'mail', 'user_status', 'pass', 'signature'),
         'roles' => array('rid', 'rname'),
         'user_roles' => array('uid', 'rid'),
@@ -47,25 +46,24 @@ class CodoForum extends Source
     /**
      * Main export process.
      *
-     * @param ExportModel $ex
-     * @see   $_structures in ExportModel for allowed destination tables & columns.
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
-        $this->userMeta($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->userMeta($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'User',
             "select
                 u.id as UserID,
@@ -80,11 +78,11 @@ class CodoForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Role',
             "select
                     r.rid as RolesID,
@@ -93,7 +91,7 @@ class CodoForum extends Source
         );
 
         // User Role.
-        $ex->export(
+        $port->export(
             'UserRole',
             "select
                     ur.uid as UserID,
@@ -104,11 +102,11 @@ class CodoForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function userMeta(ExportModel $ex): void
+    protected function userMeta(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'UserMeta',
             "select
                     u.id as UserID,
@@ -120,11 +118,11 @@ class CodoForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Category',
             "select
                     c.cat_id as CategoryID,
@@ -134,11 +132,11 @@ class CodoForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Discussion',
             "select
                 t.topic_id as DiscussionID,
@@ -152,11 +150,11 @@ class CodoForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Comment',
             "select
                     p.post_id as CommentID,

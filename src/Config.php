@@ -2,11 +2,18 @@
 
 namespace Porter;
 
+use http\Exception;
+
 class Config
 {
-    private static $instance = null;
+    private static ?self $instance = null;
 
-    protected array $config = [];
+    /** @var mixed[] */
+    protected array $config = [
+        'debug' => false,
+        'test_alias' => 'test',
+        'connections' => [],
+    ];
 
     /**
      * Make it a singleton; there's only 1 config.
@@ -19,7 +26,10 @@ class Config
         return self::$instance;
     }
 
-    public function set(array $config)
+    /**
+     * @param mixed[] $config
+     */
+    public function set(array $config): void
     {
         $this->config = $config;
     }
@@ -27,11 +37,24 @@ class Config
     /**
      * Get all connections available.
      *
-     * @return array
+     * @return mixed[]
      */
     public function getConnections(): array
     {
         return $this->config['connections'];
+    }
+
+    /**
+     * @param string $key
+     * @return ?string
+     */
+    public function get(string $key): ?string
+    {
+        // Only allow prefixed keys to be accessed directly.
+        if (!in_array(substr($key, 0, 6), ['option', 'source', 'target', 'output', 'input_'])) {
+            trigger_error('Config access must use allowed prefix.');
+        }
+        return $this->config[$key] ?? null;
     }
 
     /**
@@ -41,13 +64,14 @@ class Config
      */
     public function debugEnabled(): bool
     {
-        return $this->config['debug'];
+        return $this->config['debug'] ?? false;
     }
 
     /**
      * Get designated test connection.
      *
-     * @return array
+     * @return mixed[]
+     * @throws \Exception
      */
     public function getTestConnection(): array
     {
@@ -61,7 +85,8 @@ class Config
      * Get config data for a connection by its alias.
      *
      * @param string $alias
-     * @return array
+     * @return mixed[]
+     * @throws \Exception
      */
     public function getConnectionAlias(string $alias): array
     {
@@ -69,8 +94,42 @@ class Config
         foreach ($this->config['connections'] as $connection) {
             if ($alias === $connection['alias']) {
                 $result = $connection;
+                break;
             }
         }
+
+        $this->validateConnectionInfo($alias, $result);
+
         return $result;
+    }
+
+    /**
+     * Validate config has required info.
+     *
+     * @param string $alias
+     * @param mixed[] $info
+     * @throws \Exception
+     */
+    protected function validateConnectionInfo(string $alias, array $info): void
+    {
+        // Alias not in config.
+        if (empty($info)) {
+            //trigger_error('Config error: Alias "' . $alias . '" not found', E_USER_ERROR);
+            throw new \Exception('Alias "' . $alias . '" not found in config');
+        }
+
+        // Type is required.
+        if (empty($info['type'])) {
+            throw new \Exception('No connection `type` for alias "' . $alias . '" in config');
+        }
+
+        // Database required fields.
+        if ($info['type'] === 'database') {
+            foreach (['adapter', 'host','name','user'] as $property) {
+                if (!array_key_exists($property, $info)) {
+                    throw new \Exception('Database `' . $property . '` missing for alias "' . $alias . '" in config');
+                }
+            }
+        }
     }
 }

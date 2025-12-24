@@ -4,7 +4,7 @@ namespace Porter\Storage;
 
 use Illuminate\Database\Query\Builder;
 use Porter\Database\ResultSet;
-use Porter\ExportModel;
+use Porter\Migration;
 use Porter\Storage;
 
 class File extends Storage
@@ -43,6 +43,14 @@ class File extends Storage
     protected bool $useCompression = true;
 
     /**
+     * @return string
+     */
+    public function getAlias(): string
+    {
+        return 'file';
+    }
+
+    /**
      * Whether or not to use compression on the output file.
      *
      * @param  bool $value The value to set or NULL to just return the value.
@@ -60,7 +68,7 @@ class File extends Storage
     /**
      * Create the export file and begin the export.
      */
-    public function begin()
+    public function begin(): void
     {
         // Build file name.
         $this->path = 'export_' . date('Y-m-d_His') . '.txt' . ($this->useCompression() ? '.gz' : '');
@@ -82,7 +90,7 @@ class File extends Storage
      *
      * This method must be called if BeginExport() has been called or else the export file will not be closed.
      */
-    public function end()
+    public function end(): void
     {
         if ($this->useCompression()) {
             gzclose($this->file);
@@ -101,9 +109,9 @@ class File extends Storage
      *
      * @param resource $fp
      * @param string $tableName
-     * @param array $exportStructure
+     * @param mixed[] $exportStructure
      */
-    public function writeBeginTable($fp, $tableName, $exportStructure)
+    public function writeBeginTable(mixed $fp, string $tableName, array $exportStructure): void
     {
         $tableHeader = '';
 
@@ -136,7 +144,7 @@ class File extends Storage
      *
      * @param resource $fp
      */
-    public function writeEndTable($fp)
+    public function writeEndTable(mixed $fp): void
     {
         fwrite($fp, self::NEWLINE . self::NEWLINE);
     }
@@ -148,7 +156,7 @@ class File extends Storage
      * @param array $row
      * @param array $structure
      */
-    public function writeRow($fp, array $row, array $structure)
+    public function writeRow($fp, array $row, array $structure): void
     {
         // Loop through the columns in the export structure and grab their values from the row.
         $exRow = array();
@@ -173,7 +181,7 @@ class File extends Storage
      * @param array $structure
      * @param ResultSet|Builder $data
      * @param array $filters
-     * @param ExportModel $exportModel
+     * @param Migration $port
      * @return array Information about the results.
      */
     public function store(
@@ -182,7 +190,7 @@ class File extends Storage
         array $structure,
         $data,
         array $filters,
-        ExportModel $exportModel
+        Migration $port
     ): array {
         $info['rows'] = 0;
         while ($row = $data->nextResultRow()) {
@@ -195,14 +203,20 @@ class File extends Storage
         return $info;
     }
 
-    public function stream(array $row, array $structure)
+    public function stream(array $row, array $structure): void
     {
         $this->writeRow($this->file, $row, $structure);
     }
 
-    public function endStream()
+    public function endStream(): void
     {
         // Required.
+    }
+
+    public function getConnection(): null
+    {
+        trigger_error('Incorrect Storage type: File object has no Connection.');
+        return null;
     }
 
     /**
@@ -233,7 +247,7 @@ class File extends Storage
      * @param mixed $value
      * @return string
      */
-    public function escapedValue($value): string
+    public function escapedValue(mixed $value): string
     {
         // Set the search and replace to escape strings.
         $escapeSearch = [
@@ -260,7 +274,7 @@ class File extends Storage
      * @param mixed $value
      * @return int|string
      */
-    public function formatValue($value)
+    public function formatValue(mixed $value): int|string
     {
         if (is_integer($value)) {
             // Do nothing, formats as is.

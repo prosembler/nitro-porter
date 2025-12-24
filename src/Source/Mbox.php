@@ -17,20 +17,19 @@
  * Import all CSVs to 1 table named ‘mbox’ with text fields:
  *    Subject, Sender, Body, Date, Folder (manually set to name of each mbox)
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Lincoln Russell, lincolnwebs.com
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class Mbox extends Source
 {
     public const SUPPORTED = [
         'name' => '.mbox files',
-        'prefix' => '',
+        'defaultTablePrefix' => '',
         'features' => [
             'Users' => 1,
             'Passwords' => 0,
@@ -43,28 +42,28 @@ class Mbox extends Source
     /**
      * @var array Required tables => columns
      */
-    public $sourceTables = array(
+    public array $sourceTables = array(
         'mbox' => array('Subject', 'Sender', 'Date', 'Body', 'Folder')
     );
 
     /**
      * Forum-specific export format.
      *
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->setup($ex); // Here be dragons.
-        $this->users($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
+        $this->setup($port); // Here be dragons.
+        $this->users($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
     }
 
     /**
      * Grab the email from the User field.
      */
-    public function parseEmail($email)
+    public function parseEmail(string $email): string
     {
         $emailBits = explode('<', $email);
         if (!isset($emailBits[1])) {
@@ -79,7 +78,7 @@ class Mbox extends Source
     /**
      * Body: strip headers, signatures, fwds.
      */
-    public function parseBody($body)
+    public function parseBody(string $body): string
     {
         $body = preg_replace(
             '#Subject:\s*(.*)\s*From:\s*(.*)\s*Date:\s*(.*)\s*To:\s*(.*)\s*(CC:\s*(.*)\s*)?#',
@@ -94,12 +93,12 @@ class Mbox extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array();
-        $ex->export(
+        $port->export(
             'User',
             "select u.*,
                     NOW() as DateInserted,
@@ -110,12 +109,12 @@ class Mbox extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array();
-        $ex->export(
+        $port->export(
             'Category',
             "select * from :_mbox_category",
             $category_Map
@@ -123,14 +122,14 @@ class Mbox extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'PostID' => 'DiscussionID'
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "select p.PostID, p.DateInserted, p.Name, p.Body, p.InsertUserID, p.CategoryID, 'Html' as Format
                 from :_mbox_post p where IsDiscussion = 1",
@@ -139,14 +138,14 @@ class Mbox extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array(
             'PostID' => 'CommentID'
         );
-        $ex->export(
+        $port->export(
             'Comment',
             "select p.*, 'Html' as Format
                 from :_mbox_post p
@@ -156,14 +155,14 @@ class Mbox extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function setup(ExportModel $ex): void
+    protected function setup(Migration $port): void
     {
-// Temporary user table
-        $ex->query('create table :_mbox_user
+        // Temporary user table
+        $port->query('create table :_mbox_user
             (UserID int AUTO_INCREMENT, Name varchar(255), Email varchar(255), PRIMARY KEY (UserID))');
-        $result = $ex->query('select Sender from :_mbox group by Sender');
+        $result = $port->query('select Sender from :_mbox group by Sender');
 
         // Users, pt 1: Build ref array; Parse name & email out - strip quotes, <, >
         $users = array();
@@ -190,12 +189,12 @@ class Mbox extends Source
 
         // Users, pt 2: loop thru unique emails
         foreach ($users as $email => $name) {
-            $ex->query(
+            $port->query(
                 'insert into :_mbox_user (Name, Email)
-                values ("' . $ex->escape($name) . '", "' . $ex->escape($email) . '")'
+                values ("' . $port->dbInput()->escape($name) . '", "' . $port->dbInput()->escape($email) . '")'
             );
             $userID = 0;
-            $maxRes = $ex->query("select max(UserID) as id from :_mbox_user");
+            $maxRes = $port->query("select max(UserID) as id from :_mbox_user");
             while ($max = $maxRes->nextResultRow()) {
                 $userID = $max['id'];
             }
@@ -203,36 +202,34 @@ class Mbox extends Source
             $users[$email] = $userID;
         }
 
-
         // Temporary category table
-        $ex->query(
+        $port->query(
             'create table :_mbox_category (CategoryID int AUTO_INCREMENT, Name varchar(255),
             PRIMARY KEY (CategoryID))'
         );
-        $result = $ex->query('select Folder from :_mbox group by Folder');
+        $result = $port->query('select Folder from :_mbox group by Folder');
         // Parse name out & build ref array
         $categories = array();
         while ($row = $result->nextResultRow()) {
-            $ex->query(
+            $port->query(
                 'insert into :_mbox_category (Name)
-                values ("' . $ex->escape($row["Folder"]) . '")'
+                values ("' . $port->dbInput()->escape($row["Folder"]) . '")'
             );
             $categoryID = 0;
-            $maxRes = $ex->query("select max(CategoryID) as id from :_mbox_category");
+            $maxRes = $port->query("select max(CategoryID) as id from :_mbox_category");
             while ($max = $maxRes->nextResultRow()) {
                 $categoryID = $max['id'];
             }
             $categories[$row["Folder"]] = $categoryID;
         }
 
-
         // Temporary post table
-        $ex->query(
+        $port->query(
             'create table :_mbox_post (PostID int AUTO_INCREMENT, DiscussionID int,
             IsDiscussion tinyint default 0, InsertUserID int, Name varchar(255), Body text, DateInserted datetime,
             CategoryID int, PRIMARY KEY (PostID))'
         );
-        $result = $ex->query('select * from :_mbox');
+        $result = $port->query('select * from :_mbox');
         // Parse name, body, date, userid, categoryid
         while ($row = $result->nextResultRow()) {
             // Assemble posts into a format we can actually export.
@@ -241,34 +238,34 @@ class Mbox extends Source
             $name = trim(preg_replace('#^\[[0-9a-zA-Z_-]*] #', '', $name));
             $email = $this->parseEmail($row['Sender']);
             $userID = (isset($users[$email])) ? $users[$email] : 0;
-            $ex->query(
+            $port->query(
                 'insert into :_mbox_post (Name, InsertUserID, CategoryID, DateInserted, Body)
-                values ("' . $ex->escape($name) . '",
+                values ("' . $port->dbInput()->escape($name) . '",
                ' . $userID . ',
                ' . $categories[$row['Folder']] . ',
                from_unixtime(' . strtotime($row['Date']) . '),
-               "' . $ex->escape($this->parseBody($row['Body'])) . '")'
+               "' . $port->dbInput()->escape($this->parseBody($row['Body'])) . '")'
             );
         }
 
         // Decide which posts are OPs
-        $result = $ex->query(
+        $result = $port->query(
             'select PostID from (select * from :_mbox_post order by DateInserted asc) x group by Name'
         );
         $discussions = array();
         while ($row = $result->nextResultRow()) {
             $discussions[] = $row['PostID'];
         }
-        $ex->query('update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')');
+        $port->query('update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')');
 
         // Thread the comments
-        $result = $ex->query(
+        $result = $port->query(
             'select c.PostID, d.PostID as DiscussionID from :_mbox_post c
             left join :_mbox_post d on c.Name like d.Name and d.IsDiscussion = 1
             where c.IsDiscussion = 0'
         );
         while ($row = $result->nextResultRow()) {
-            $ex->query('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
+            $port->query('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
                 where PostID = ' . $row['PostID']);
         }
     }

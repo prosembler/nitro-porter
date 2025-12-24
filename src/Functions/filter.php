@@ -2,14 +2,12 @@
 
 /**
  * Filter functions for passing thru values during export.
- *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  */
 
 /**
- * Available filter for ExportModel.
+ * Available filter for Migration.
  *
- * @see ExportModel::filterData()
+ * @see Migration::filterData()
  * @see \Porter\Target\Flarum::comments()
  *
  * @param ?string $value
@@ -29,10 +27,10 @@ function filterFlarumContent(?string $value, string $column, array $row): string
  * Check for '[Deleted User]' (and variants) as username and replace.
  * Violates a unique key constraint on the target db's username field.
  *
- * @param string $value
+ * @param string|null $value
  * @param string $column
  * @param array $row
- * @return string
+ * @return string|null
  */
 function fixDuplicateDeletedNames(?string $value, string $column, array $row): ?string
 {
@@ -56,7 +54,7 @@ function fixDuplicateDeletedNames(?string $value, string $column, array $row): ?
  * @param array $row
  * @return string
  */
-function fixNullEmails($value, string $column, array $row): string
+function fixNullEmails(mixed $value, string $column, array $row): string
 {
     if (empty($value)) {
         $value = 'blank_email_' . $row['UserID'];
@@ -70,7 +68,7 @@ function fixNullEmails($value, string $column, array $row): string
  * @param array $row
  * @return string
  */
-function createDiscussionSlugs($value, string $column, array $row): string
+function createDiscussionSlugs(mixed $value, string $column, array $row): string
 {
     return $value; // @todo Create a slug
 }
@@ -110,10 +108,10 @@ function forceIP4(string $ip): ?string
  * Creates URL codes containing only lowercase Roman letters, digits, and hyphens.
  * Converted from Gdn_Format::Url
  *
- * @param  string $str A string to be formatted.
+ * @param string $str A string to be formatted.
  * @return string
  */
-function formatUrl($str)
+function formatUrl(string $str): string
 {
     $urlTranslations = array(
         '–' => '-',
@@ -396,24 +394,11 @@ function formatUrl($str)
 /**
  * Decode the HTML out of a value.
  */
-function HTMLDecoder($value)
+function HTMLDecoder(string $value): string
 {
-    $characterSet = (defined('PORTER_CHARACTER_SET')) ? PORTER_CHARACTER_SET : 'UTF-8';
-
-    switch ($characterSet) {
-        case 'latin1':
-            $characterSet = 'ISO-8859-1';
-            break;
-        case 'latin9':
-            $characterSet = 'ISO-8859-15';
-            break;
-        case 'utf8':
-        case 'utf8mb4':
-            $characterSet = 'UTF-8';
-            break;
-    }
-
-    return html_entity_decode($value, ENT_QUOTES, $characterSet);
+    // Uses default flags as of PHP 8.1.
+    $encoding = defined('PORTER_INPUT_ENCODING') ? PORTER_INPUT_ENCODING : 'UTF-8';
+    return html_entity_decode($value, ENT_QUOTES | ENT_SUBSTITUTE | ENT_HTML401, $encoding);
 }
 
 /**
@@ -422,9 +407,22 @@ function HTMLDecoder($value)
  * @param mixed $value
  * @return int
  */
-function notFilter($value)
+function notFilter(mixed $value): int
 {
     return (int)(!$value);
+}
+
+/**
+ * Convert empty values to zero.
+ *
+ * Useful for 'not null' columns with default=0.
+ *
+ * @param mixed $value
+ * @return mixed Original $value or zero if empty.
+ */
+function emptyToZero(mixed $value): mixed
+{
+    return empty($value) ? 0 : $value;
 }
 
 /**
@@ -433,9 +431,9 @@ function notFilter($value)
  * Do this in MySQL with FROM_UNIXTIME() instead whenever possible.
  *
  * @param mixed $value
- * @return null|string
+ * @return ?string
  */
-function timestampToDate($value)
+function timestampToDate(mixed $value): ?string
 {
     if ($value == null) {
         return null;
@@ -448,15 +446,11 @@ function timestampToDate($value)
  * Wrapper for long2ip that nulls 'non-digit' values.
  *
  * @param mixed $value
- * @return null|string
+ * @return ?string
  */
-function long2ipf($value)
+function long2ipf(mixed $value): ?string
 {
-    if (!ctype_digit($value)) {
-        return null;
-    }
-
-    return long2ip($value);
+    return (!empty($value) && ctype_digit($value)) ? long2ip($value) : null;
 }
 
 /**
@@ -465,7 +459,7 @@ function long2ipf($value)
  * @param mixed $value
  * @return int
  */
-function YNBool($value)
+function YNBool(mixed $value): int
 {
     if ($value == 'y') {
         return 1;
@@ -480,11 +474,11 @@ function YNBool($value)
  * @param mixed $value
  * @return string
  */
-function guessFormat($value)
+function guessFormat(mixed $value): string
 {
     if (strpos($value, '[') !== false) {
         return 'BBCode';
-    } elseif (strpos($value, '<') !== false) {
+    } elseif (str_contains($value, '<')) {
         return 'Html';
     } else {
         return 'BBCode';
@@ -497,19 +491,16 @@ function guessFormat($value)
  * @param string $value
  * @return string
  */
-function mimeTypeFromExtension($value)
+function mimeTypeFromExtension(string $value): string
 {
-
-    if (strpos($value, '.') === 0) {
-        $value = substr($value, 1);
-    }
-
+    $value = pathinfo($value, PATHINFO_EXTENSION);
     switch ($value) {
         case 'png':
         case 'jpg':
         case 'jpeg':
         case 'gif':
         case 'bmp':
+        case 'webp':
             return 'image/' . $value;
         case 'zip':
         case 'doc':
@@ -535,7 +526,7 @@ function mimeTypeFromExtension($value)
  * @param mixed $value
  * @return mixed
  */
-function cleanBodyBrackets($value)
+function cleanBodyBrackets(mixed $value): mixed
 {
     if (strpos($value, '[') !== false) {
         $result = str_replace(array('<', '>'), array('[', ']'), $value);
@@ -548,7 +539,7 @@ function cleanBodyBrackets($value)
  * @param string $text
  * @return string
  */
-function bbPressTrim($text)
+function bbPressTrim(string $text): string
 {
     return rtrim(bb_Code_Trick_Reverse($text));
 }
@@ -557,7 +548,7 @@ function bbPressTrim($text)
  * @param string $text
  * @return string
  */
-function bb_Code_Trick_Reverse($text)
+function bb_Code_Trick_Reverse(string $text): string
 {
     $text = preg_replace_callback("!(<pre><code>|<code>)(.*?)(</code></pre>|</code>)!s", 'bb_decodeit', $text);
     $text = str_replace(array('<p>', '<br />'), '', $text);
@@ -573,7 +564,7 @@ function bb_Code_Trick_Reverse($text)
  * @param array $matches
  * @return string
  */
-function bb_Decodeit($matches)
+function bb_Decodeit(array $matches): string
 {
     $text = $matches[2];
     $trans_table = array_flip(get_html_translation_table(HTML_ENTITIES));
@@ -588,4 +579,56 @@ function bb_Decodeit($matches)
     }
 
     return "`$text`";
+}
+
+/**
+ * Convert Vanilla's avatar filenames to match the filesystem.
+ *
+ * In Vanilla's database, avatars are relative paths, e.g. `userpics/396/YGIC427MJADQ.jpg`
+ * In the filesystem, filenames are prepended with 'n' (thumbnail - small) or 'p' (profile - fullsize)
+ * Since we are exporting, assume db values should use the fullsize image's actual filename.
+ *
+ * This is a rare case of the intermediary PORTER database necessarily being out of sync with Vanilla's
+ * due to this one-way data transformation being required.
+ * Running the export from Vanilla to Vanilla will therefore likely cause avatars to break.
+ *
+ * Removes everything from `$path` after final '/', then re-appends the filename
+ * with 'p' now prepended (if it didn't already start with 'p' to prevent compounding it).
+ *
+ * @param string $path
+ * @return string
+ */
+function vanillaPhoto(string $path): string
+{
+    // Skip processing for blank entries.
+    if (empty($path)) {
+        return $path;
+    }
+
+    // Vanilla can have URLs in the Photo field.
+    if (strrpos($path, 'http') === 0) {
+        return $path;
+    }
+
+    // Vanilla Cloud CDN was used & you'll need a bespoke script to fix avatars.
+    if (strrpos($path, 'static:') === 0) {
+        return $path;
+    }
+
+    $filename = basename($path);
+    // Only convert Vanilla-processed avatars (skip previous imports)
+    // OR vBulletin-imported avatars (which got special post-processing in Vanilla, along with SM2 imports)
+    // @see Vanilla\FileUtils::generateUniqueUploadPath()
+    // @see \vBulletinImportModel::processAvatars()
+    if (
+        preg_match('/[A-Z0-9]{12}\.(jpg|jpeg|gif|png)/', $filename) !== 1
+        && preg_match('/avatar[0-9_]+\.(jpg|jpeg|gif)/', $filename) !== 1
+    ) {
+        return $path;
+    }
+    // Don't recursively add 'p' to filenames.
+    if (strrpos($filename, 'p') !== 0) {
+        $filename = 'p' . $filename;
+    }
+    return substr($path, 0, strrpos($path, '/') + 1) . $filename;
 }

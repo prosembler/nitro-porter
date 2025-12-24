@@ -3,58 +3,55 @@
 /**
  * Invision Powerboard 4.x exporter tool.
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Lincoln Russell, lincolnwebs.com
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class IpBoard4 extends Source
 {
     public const SUPPORTED = [
         'name' => 'IP.Board 4',
-        'prefix' => 'ibf_',
-        'charset_table' => 'forums_posts',
-        'hashmethod' => 'ipb',
+        'defaultTablePrefix' => 'ibf_',
+        'charsetTable' => 'forums_posts',
+        'passwordHashMethod' => 'ipb',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
             'Categories' => 1,
             'Discussions' => 1,
             'Comments' => 1,
-            'Polls' => 0,
             'Roles' => 1,
             'PrivateMessages' => 1,
             'Attachments' => 1,
             'Bookmarks' => 0,
-            'Badges' => 0,
             'Tags' => 0,
         ]
     ];
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run(ExportModel $ex): void
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
+        $this->users($port);
+        $this->roles($port);
 
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->attachments($ex);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->attachments($port);
 
-        $this->conversations($ex);
+        $this->conversations($port);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function conversations(ExportModel $ex): void
+    protected function conversations(Migration $port): void
     {
         // Conversations.
         $map = [
@@ -67,7 +64,7 @@ class IpBoard4 extends Source
             'mt_date' => 'timestampToDate',
         ];
         $query = "select * from :_core_message_topics where mt_is_deleted = 0";
-        $ex->export('Conversation', $query, $map, $filters);
+        $port->export('Conversation', $query, $map, $filters);
 
         // Conversation Message.
         $map = [
@@ -82,7 +79,7 @@ class IpBoard4 extends Source
             'msg_date' => 'timestampToDate',
         ];
         $query = "select m.*, 'IPB' as Format from :_core_message_posts m";
-        $ex->export('ConversationMessage', $query, $map, $filters);
+        $port->export('ConversationMessage', $query, $map, $filters);
 
         // User Conversation.
         $map = [
@@ -91,13 +88,13 @@ class IpBoard4 extends Source
         ];
         $query = "select t.*, !map_user_active as Deleted
             from :_core_message_topic_user_map t";
-        $ex->export('UserConversation', $query, $map);
+        $port->export('UserConversation', $query, $map);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $map = [
             'member_id' => 'UserID',
@@ -118,19 +115,19 @@ class IpBoard4 extends Source
         ];
         $query = "select m.*, 'ipb' as HashMethod
             from :_core_members m";
-        $ex->export('User', $query, $map, $filters);
+        $port->export('User', $query, $map, $filters);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
         $map = [
             'g_id' => 'RoleID',
             'g_title' => 'Name'
         ];
-        $ex->export('Role', "select * from :_core_groups", $map);
+        $port->export('Role', "select * from :_core_groups", $map);
 
         // User Role.
         $map = [
@@ -138,13 +135,13 @@ class IpBoard4 extends Source
             'member_group_id' => 'RoleID'
         ];
         $query = "select m.member_id, m.member_group_id from :_core_members m";
-        $ex->export('UserRole', $query, $map);
+        $port->export('UserRole', $query, $map);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $map = [
             'id' => 'CategoryID',
@@ -157,17 +154,17 @@ class IpBoard4 extends Source
         $filters = [
             'name' => 'HtmlDecoder',
         ];
-        $ex->export('Category', "select * from :_forums_forums", $map, $filters);
+        $port->export('Category', "select * from :_forums_forums", $map, $filters);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $descriptionSQL = 'p.post';
-        $hasTopicDescription = ($ex->exists('forums_topics', array('description')) === true);
-        if ($hasTopicDescription || $ex->exists('forums_posts', array('description')) === true) {
+        $hasTopicDescription = ($port->hasInputSchema('forums_topics', array('description')) === true);
+        if ($hasTopicDescription || $port->hasInputSchema('forums_posts', array('description')) === true) {
             $description = ($hasTopicDescription) ? 't.description' : 'p.description';
             $descriptionSQL = "case
                 when $description <> '' and p.post is not null
@@ -202,13 +199,13 @@ class IpBoard4 extends Source
             from :_forums_topics t
             left join :_forums_posts p
                 on t.topic_firstpost = p.pid";
-        $ex->export('Discussion', $query, $map, $filters);
+        $port->export('Discussion', $query, $map, $filters);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $map = [
             'pid' => 'CommentID',
@@ -229,13 +226,13 @@ class IpBoard4 extends Source
             join :_forums_topics t
                 on p.topic_id = t.tid
             where p.pid <> t.topic_firstpost";
-        $ex->export('Comment', $query, $map, $filters);
+        $port->export('Comment', $query, $map, $filters);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function attachments(ExportModel $ex): void
+    protected function attachments(Migration $port): void
     {
         $map = [
             'attach_id' => 'MediaID',
@@ -254,6 +251,6 @@ class IpBoard4 extends Source
         ];
         $query = "select a.*
             from :_core_attachments a";
-        $ex->export('Media', $query, $map, $filters);
+        $port->export('Media', $query, $map, $filters);
     }
 }

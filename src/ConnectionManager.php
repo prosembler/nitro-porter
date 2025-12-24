@@ -19,7 +19,7 @@ class ConnectionManager
 
     protected array $info = [];
 
-    /** @var Connection Current connection being used. */
+    /** @var Connection Connection used for reads. */
     protected Connection $connection;
 
     public Capsule $dbm;
@@ -28,14 +28,17 @@ class ConnectionManager
      * If no connect alias is give, initiate a test connection.
      *
      * @param string $alias
+     * @param string $prefix
+     * @throws \Exception
      */
-    public function __construct(string $alias = '')
+    public function __construct(string $alias = '', string $prefix = '')
     {
         if (!empty($alias)) {
-            $this->alias = $alias;
             $info = Config::getInstance()->getConnectionAlias($alias);
+            $this->alias = $alias; // Provided alias.
         } else {
             $info = Config::getInstance()->getTestConnection();
+            $this->alias = $info['alias']; // Test alias from config.
         }
 
         $this->setInfo($info);
@@ -46,18 +49,21 @@ class ConnectionManager
             $capsule = new Capsule();
             $capsule->addConnection($this->translateConfig($info), $info['alias']);
             $this->dbm = $capsule;
-            $this->newConnection();
+            $this->connection = $this->newConnection();
         }
+
+        // Set prefix after connection is generated.
+        $this->connection()->setTablePrefix($prefix);
     }
 
-    public function setType(string $type)
+    public function setType(string $type): void
     {
         if (in_array($type, self::ALLOWED_TYPES)) {
             $this->type = $type;
         }
     }
 
-    public function setInfo(array $info)
+    public function setInfo(array $info): void
     {
         $this->info = $info;
     }
@@ -98,15 +104,15 @@ class ConnectionManager
      *
      * @return Connection
      */
-    public function newConnection(): Connection
+    protected function newConnection(): Connection
     {
-        $this->connection = $this->dbm->getConnection($this->alias);
+        $connection = $this->dbm->getConnection($this->alias);
 
-        if ($this->connection->getDriverName() === 'mysql') {
-            $this->optimizeMySQL();
+        if ($connection->getDriverName() === 'mysql') {
+            $this->optimizeMySQL($connection);
         }
 
-        return $this->connection;
+        return $connection;
     }
 
     /**
@@ -128,19 +134,24 @@ class ConnectionManager
 
     /**
      * Perform MySQL-specific connection optimizations.
+     *
+     * @param Connection $connection
+     * @return Connection
      */
-    protected function optimizeMySQL(): void
+    protected function optimizeMySQL(Connection $connection): Connection
     {
         // Always disable data integrity checks.
-        $this->connection->unprepared("SET foreign_key_checks = 0");
+        $connection->unprepared("SET foreign_key_checks = 0");
 
         // Set the timezone to UTC. Avoid named timezones because they may not be loaded.
-        $this->connection->unprepared("SET time_zone = '+00:00'");
+        $connection->unprepared("SET time_zone = '+00:00'");
 
         // Log all queries if debug mode is enabled.
         if (\Porter\Config::getInstance()->debugEnabled()) {
             // See ${hostname}.log in datadir (find with `SHOW GLOBAL VARIABLES LIKE 'datadir'`)
-            $this->connection->unprepared("SET GLOBAL general_log = 1");
+            $connection->unprepared("SET GLOBAL general_log = 1");
         }
+
+        return $connection;
     }
 }

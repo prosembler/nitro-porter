@@ -3,27 +3,20 @@
 /**
  * Advanced Forum (Drupal module) exporter tool.
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Ryan Perry
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class AdvancedForum extends Source
 {
     public const SUPPORTED = [
         'name' => 'Advanced Forum 7.x-2.*',
-        'prefix' => '',
-        'charset_table' => 'Comment',
-        'options' => [
-            'avatars-prefix' => [
-                'Path to be prefixed to avatar filenames.',
-                'Sx' => '::'
-            ],
-        ],
+        'defaultTablePrefix' => '',
+        'charsetTable' => 'Comment',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -41,16 +34,15 @@ class AdvancedForum extends Source
     /**
      * Main export process.
      *
-     * @param ExportModel $ex
-     * @see   $_Structures in ExportModel for allowed destination tables & columns.
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex, $this->param('avatars-prefix', ''));
-        $this->roles($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
     }
 
     /**
@@ -73,12 +65,12 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
-     * @param string $filePath
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex, $filePath): void
+    protected function users(Migration $port): void
     {
-        $ex->export(
+        $filePath = ''; // @todo Avatar path support
+        $port->export(
             'User',
             "select `u`.`uid` as `UserID`, `u`.`name` as `Name`, `u`.`mail` as `Email`, `u`.`pass` as `Password`,
                     'drupal' as `HashMethod`, from_unixtime(`created`) as `DateInserted`,
@@ -89,11 +81,11 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Role',
             "SELECT `name` AS `Name`, `rid` AS `RoleID`
                 FROM `:_role` `r`
@@ -101,7 +93,7 @@ class AdvancedForum extends Source
         );
 
         // User Role.
-        $ex->export(
+        $port->export(
             'UserRole',
             "SELECT `rid` AS `RoleID`, `uid` AS `UserID`
                 FROM `:_users_roles` `ur`"
@@ -109,11 +101,11 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'Category',
             "SELECT `ttd`.`tid` AS `CategoryID`, `tth`.`parent` AS `ParentCategoryID`,
                     `ttd`.`name` AS `Name`, `ttd`.`weight` AS `Sort`
@@ -126,14 +118,14 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'body_format' => array('Column' => 'Format', 'Filter' => array(__CLASS__, 'translateFormatType'))
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "
             SELECT `fi`.`nid` AS `DiscussionID`, `fi`.`tid` AS `CategoryID`, `fi`.`title` AS `Name`,
@@ -150,14 +142,14 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array(
             'comment_body_format' => array('Column' => 'Format', 'Filter' => array(__CLASS__, 'translateFormatType'))
         );
-        $ex->export(
+        $port->export(
             'Comment',
             "SELECT `c`.`cid` AS `CommentID`, `c`.`nid` AS `DiscussionID`, `c`.`uid` AS `InsertUserID`,
                     from_unixtime(`c`.`created`) AS `DateInserted`,

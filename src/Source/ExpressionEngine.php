@@ -3,21 +3,20 @@
 /**
  * Expression Engine exporter tool
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Lincoln Russell, lincolnwebs.com
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class ExpressionEngine extends Source
 {
     public const SUPPORTED = [
         'name' => 'Expression Engine Discussion Forum',
-        'prefix' => 'forum_',
-        'charset_table' => 'topics',
+        'defaultTablePrefix' => 'forum_',
+        'charsetTable' => 'topics',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -31,42 +30,40 @@ class ExpressionEngine extends Source
             'Signatures' => 1,
             'Attachments' => 1,
             'Bookmarks' => 1,
-            'Permissions' => 1,
         ]
     ];
 
     /**
      *
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run(ExportModel $ex)
+    public function run(Migration $port): void
     {
-        $this->conversations($ex);
-        //$this->permissions($ex);
-        $this->users($ex);
-        $this->roles($ex);
-        $this->signatures($ex);
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->attachments($ex);
+        $this->conversations($port);
+        $this->users($port);
+        $this->roles($port);
+        $this->signatures($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->attachments($port);
     }
 
     /**
      * Private message conversion.
      */
-    public function conversations(ExportModel $ex)
+    public function conversations(Migration $port): void
     {
-        $this->exportConversationTemps($ex);
+        $this->exportConversationTemps($port);
 
         // Conversation.
         $conversation_Map = array(
             'message_id' => 'ConversationID',
             'title2' => array('Column' => 'Subject', 'Type' => 'varchar(255)'),
             'sender_id' => 'InsertUserID',
-            'message_date' => array('Column' => 'DateInserted', 'Filter' => array($ex, 'timestampToDate')),
+            'message_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
         );
-        $ex->export(
+        $port->export(
             'Conversation',
             "SELECT pm.*, g.title AS title2
                 FROM forum_message_data pm
@@ -80,7 +77,7 @@ class ExpressionEngine extends Source
             'group_id' => 'ConversationID',
             'userid' => 'UserID'
         );
-        $ex->export(
+        $port->export(
             'UserConversation',
             "SELECT g.group_id, t.userid
                 FROM z_pmto t
@@ -94,10 +91,10 @@ class ExpressionEngine extends Source
             'group_id' => 'ConversationID',
             'message_id' => 'MessageID',
             'message_body' => 'Body',
-            'message_date' => array('Column' => 'DateInserted', 'Filter' => array($ex, 'timestampToDate')),
+            'message_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
             'sender_id' => 'InsertUserID'
         );
-        $ex->export(
+        $port->export(
             'ConversationMessage',
             "SELECT pm.*, pm2.group_id,
                     'BBCode' AS Format
@@ -111,10 +108,10 @@ class ExpressionEngine extends Source
     /**
      * Create temporary tables for private message conversion.
      */
-    public function exportConversationTemps(ExportModel $ex)
+    public function exportConversationTemps(Migration $port): void
     {
-        $ex->query('DROP TABLE IF EXISTS z_pmto;');
-        $ex->query(
+        $port->query('DROP TABLE IF EXISTS z_pmto;');
+        $port->query(
             'CREATE TABLE z_pmto (
             message_id INT UNSIGNED,
             userid INT UNSIGNED,
@@ -122,7 +119,7 @@ class ExpressionEngine extends Source
             PRIMARY KEY(message_id, userid)
             );'
         );
-        $ex->query(
+        $port->query(
             "insert ignore z_pmto (
                 message_id,
                 userid,
@@ -135,17 +132,17 @@ class ExpressionEngine extends Source
             from forum_message_copies;"
         );
 
-        $ex->query(
+        $port->query(
             "UPDATE forum_message_data
             SET message_recipients = replace(message_recipients, '|', ',');"
         );
 
-        $ex->query(
+        $port->query(
             "UPDATE forum_message_data
             SET message_cc = replace(message_cc, '|', ',');"
         );
 
-        $ex->query(
+        $port->query(
             'insert ignore z_pmto (
             message_id,
             userid
@@ -156,7 +153,7 @@ class ExpressionEngine extends Source
           from forum_message_data;'
         );
 
-        $ex->query(
+        $port->query(
             "insert ignore z_pmto (
                 message_id,
                 userid
@@ -170,7 +167,7 @@ class ExpressionEngine extends Source
             where m.message_cc <> '';"
         );
 
-        $ex->query(
+        $port->query(
             "insert ignore z_pmto (
                 message_id,
                 userid
@@ -184,15 +181,15 @@ class ExpressionEngine extends Source
             where m.message_cc <> '';"
         );
 
-        $ex->query("DROP TABLE IF EXISTS z_pmto2;");
-        $ex->query(
+        $port->query("DROP TABLE IF EXISTS z_pmto2;");
+        $port->query(
             "CREATE TABLE z_pmto2 (
             message_id INT UNSIGNED,
             userids VARCHAR(250),
             PRIMARY KEY (message_id)
             );"
         );
-        $ex->query(
+        $port->query(
             "insert z_pmto2 (
             message_id,
             userids
@@ -204,8 +201,8 @@ class ExpressionEngine extends Source
             group by t.message_id;"
         );
 
-        $ex->query("DROP TABLE IF EXISTS z_pmtext;");
-        $ex->query(
+        $port->query("DROP TABLE IF EXISTS z_pmtext;");
+        $port->query(
             "CREATE TABLE z_pmtext (
             message_id INT UNSIGNED,
             title VARCHAR(250),
@@ -214,7 +211,7 @@ class ExpressionEngine extends Source
             group_id INT UNSIGNED
             );"
         );
-        $ex->query(
+        $port->query(
             "insert z_pmtext (
             message_id,
             title,
@@ -228,23 +225,23 @@ class ExpressionEngine extends Source
             from forum_message_data;"
         );
 
-        $ex->query("CREATE INDEX z_idx_pmtext ON z_pmtext (message_id);");
-        $ex->query(
+        $port->query("CREATE INDEX z_idx_pmtext ON z_pmtext (message_id);");
+        $port->query(
             "UPDATE z_pmtext pm
             JOIN z_pmto2 t
                 ON pm.message_id = t.message_id
             SET pm.userids = t.userids;"
         );
 
-        $ex->query("DROP TABLE IF EXISTS z_pmgroup;");
-        $ex->query(
+        $port->query("DROP TABLE IF EXISTS z_pmgroup;");
+        $port->query(
             "CREATE TABLE z_pmgroup (
             group_id INT UNSIGNED,
             title VARCHAR(250),
             userids VARCHAR(250)
             );"
         );
-        $ex->query(
+        $port->query(
             "insert z_pmgroup (
             group_id,
             title,
@@ -260,10 +257,10 @@ class ExpressionEngine extends Source
             group by pm.title2, t2.userids;"
         );
 
-        $ex->query("CREATE INDEX z_idx_pmgroup ON z_pmgroup (title, userids);");
-        $ex->query("CREATE INDEX z_idx_pmgroup2 ON z_pmgroup (group_id);");
+        $port->query("CREATE INDEX z_idx_pmgroup ON z_pmgroup (title, userids);");
+        $port->query("CREATE INDEX z_idx_pmgroup2 ON z_pmgroup (group_id);");
 
-        $ex->query(
+        $port->query(
             "UPDATE z_pmtext pm
             JOIN z_pmgroup g
                 ON pm.title2 = g.title AND pm.userids = g.userids
@@ -275,14 +272,14 @@ class ExpressionEngine extends Source
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
      *
      * @access public
-     * @see    ExportModel::writeTableToFile
-     *
      * @param  string $value Current value
      * @param  string $field Current field
      * @param  array  $row   Contents of the current record.
      * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
+     *@see    Migration::writeTableToFile
+     *
      */
-    public function filterThumbnailData($value, $field, $row)
+    public function filterThumbnailData($value, $field, $row): ?string
     {
         if (strpos(mimeTypeFromExtension(strtolower($row['extension'])), 'image/') === 0) {
             return $value;
@@ -291,65 +288,23 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function permissions(ExportModel $ex)
-    {
-        $permission_Map = array(
-            'group_id' => 'RoleID',
-            'can_access_cp' => 'Garden.Settings.View',
-            'can_access_edit' => 'Vanilla.Discussions.Edit',
-            'can_edit_all_comments' => 'Vanilla.Comments.Edit',
-            'can_access_admin' => 'Garden.Settings.Manage',
-            'can_admin_members' => 'Garden.Users.Edit',
-            'can_moderate_comments' => 'Garden.Moderation.Manage',
-            'can_view_profiles' => 'Garden.Profiles.View',
-            'can_post_comments' => 'Vanilla.Comments.Add',
-            'can_view_online_system' => 'Vanilla.Discussions.View',
-            'can_sign_in' => 'Garden.SignIn.Allow',
-            'can_view_profiles3' => 'Garden.Activity.View',
-            'can_post_comments2' => 'Vanilla.Discussions.Add'
-        );
-        $permission_Map = $ex->fixPermissionColumns($permission_Map);
-        foreach ($permission_Map as &$info) {
-            if (is_array($info) && isset($info['Column'])) {
-                $info['Filter'] = array($this, 'YNBool');
-            }
-        }
-
-        $ex->export(
-            'Permission',
-            "SELECT
-                    g.can_view_profiles AS can_view_profiles2,
-                    g.can_view_profiles AS can_view_profiles3,
-                    g.can_post_comments AS can_post_comments2,
-                    g.can_post_comments AS can_sign_in,
-                    CASE WHEN can_access_admin = 'y' THEN 'all'
-                        WHEN can_view_online_system = 'y' THEN 'view' END AS _Permissions,
-                    g.*
-                 FROM forum_member_groups g",
-            $permission_Map
-        );
-    }
-
-    /**
-     * @param ExportModel $ex
-     */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array(
             'member_id' => 'UserID',
             'username' => array('Column' => 'Username', 'Type' => 'varchar(50)'),
-            'screen_name' => array('Column' => 'Name', 'Filter' => array($ex, 'HTMLDecoder')),
+            'screen_name' => array('Column' => 'Name', 'Filter' => array($port, 'HTMLDecoder')),
             'Password2' => 'Password',
             'email' => 'Email',
             'ipaddress' => 'InsertIPAddress',
-            'join_date' => array('Column' => 'DateInserted', 'Filter' => array($ex, 'timestampToDate')),
-            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => array($ex, 'timestampToDate')),
-            'timezone' => 'HourOffset',
+            'join_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
+            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => array($port, 'timestampToDate')),
+            //'timezone' => 'HourOffset',
             'location' => 'Location'
         );
-        $ex->export(
+        $port->export(
             'User',
             "SELECT u.*,
                     'django' AS HashMethod,
@@ -364,16 +319,16 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
         $role_Map = array(
             'group_id' => 'RoleID',
             'group_title' => 'Name',
             'group_description' => 'Description'
         );
-        $ex->export(
+        $port->export(
             'Role',
             "SELECT * FROM forum_member_groups",
             $role_Map
@@ -384,7 +339,7 @@ class ExpressionEngine extends Source
             'member_id' => 'UserID',
             'group_id' => 'RoleID'
         );
-        $ex->export(
+        $port->export(
             'UserRole',
             "SELECT * FROM forum_members u",
             $userRole_Map
@@ -392,11 +347,11 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function signatures(ExportModel $ex): void
+    protected function signatures(Migration $port): void
     {
-        $ex->export(
+        $port->export(
             'UserMeta',
             "SELECT
                     member_id AS UserID,
@@ -408,9 +363,9 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array(
             'forum_id' => 'CategoryID',
@@ -419,7 +374,7 @@ class ExpressionEngine extends Source
             'forum_parent' => 'ParentCategoryID',
             'forum_order' => 'Sort'
         );
-        $ex->export(
+        $port->export(
             'Category',
             "SELECT * FROM forum_forums",
             $category_Map
@@ -427,23 +382,23 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'author_id' => 'InsertUserID',
-            'title' => array('Column' => 'Name', 'Filter' => array($ex, 'HTMLDecoder')),
+            'title' => array('Column' => 'Name', 'Filter' => array($port, 'HTMLDecoder')),
             'ip_address' => 'InsertIPAddress',
             'body' => array('Column' => 'Body', 'Filter' => array($this, 'cleanBodyBrackets')),
             'body2' => array('Column' => 'Format', 'Filter' => array($this, 'guessFormat')),
-            'topic_date' => array('Column' => 'DateInserted', 'Filter' => array($ex, 'timestampToDate')),
-            'topic_edit_date' => array('Column' => 'DateUpdated', 'Filter' => array($ex, 'timestampToDate')),
+            'topic_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
+            'topic_edit_date' => array('Column' => 'DateUpdated', 'Filter' => array($port, 'timestampToDate')),
             'topic_edit_author' => 'UpdateUserID'
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "SELECT t.*,
                     CASE WHEN announcement = 'y' THEN 1 WHEN sticky = 'y' THEN 2 ELSE 0 END AS Announce,
@@ -455,9 +410,9 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
@@ -466,11 +421,11 @@ class ExpressionEngine extends Source
             'ip_address' => 'InsertIPAddress',
             'body' => array('Column' => 'Body', 'Filter' => array($this, 'cleanBodyBrackets')),
             'body2' => array('Column' => 'Format', 'Filter' => array($this, 'guessFormat')),
-            'post_date' => array('Column' => 'DateInserted', 'Filter' => array($ex, 'timestampToDate')),
-            'post_edit_date' => array('Column' => 'DateUpdated', 'Filter' => array($ex, 'timestampToDate')),
+            'post_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
+            'post_edit_date' => array('Column' => 'DateUpdated', 'Filter' => array($port, 'timestampToDate')),
             'post_edit_author' => 'UpdateUserID'
         );
-        $ex->export(
+        $port->export(
             'Comment',
             "SELECT p.*,
                     'Html' AS Format,
@@ -481,9 +436,9 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function attachments(ExportModel $ex): void
+    protected function attachments(Migration $port): void
     {
         $media_Map = array(
             'filename' => 'Name',
@@ -492,10 +447,10 @@ class ExpressionEngine extends Source
             'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
             'filesize' => 'Size',
             'member_id' => 'InsertUserID',
-            'attachment_date' => array('Column' => 'DateInserted', 'Filter' => array($ex, 'timestampToDate')),
+            'attachment_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
             'filehash' => array('Column' => 'FileHash', 'Type' => 'varchar(100)')
         );
-        $ex->export(
+        $port->export(
             'Media',
             "SELECT a.*,
                 concat('imported/', filename) AS Path,

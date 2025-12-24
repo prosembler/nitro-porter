@@ -3,21 +3,21 @@
 /**
  * User Voice exporter tool
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Lincoln Russell, lincolnwebs.com
  */
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class UserVoice extends Source
 {
     public const SUPPORTED = [
         'name' => 'User Voice',
-        'prefix' => 'cs_',
-        'charset_table' => 'Threads',
+        'defaultTablePrefix' => 'cs_',
+        'charsetTable' => 'Threads',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -37,21 +37,21 @@ class UserVoice extends Source
     /**
      * Main export method.
      *
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
+        $this->users($port);
+        $this->roles($port);
 
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->bookmarks($ex);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->bookmarks($port);
 
         //$this->attachments();
         // Decode files in database.
-        $this->exportHexAvatars($ex);
+        $this->exportHexAvatars($port);
         //$this->ExportHexAttachments($ex);
     }
 
@@ -62,7 +62,7 @@ class UserVoice extends Source
      * @param  string $roleID
      * @return int
      */
-    public function roleIDConverter($roleID)
+    public function roleIDConverter($roleID): int
     {
         return hexdec(substr($roleID, 0, 4));
     }
@@ -70,12 +70,12 @@ class UserVoice extends Source
     /**
      * Avatars are hex-encoded in the database.
      */
-    public function exportHexAvatars($ex)
+    public function exportHexAvatars(Migration $port): void
     {
         $thumbnail = true;
-        $ex->comment("Exporting hex encoded columns...");
+        Log::comment("Exporting hex encoded columns...");
 
-        $result = $ex->query("select UserID, Length, ContentType, Content from :_UserAvatar");
+        $result = $port->query("select UserID, Length, ContentType, Content from :_UserAvatar");
         $path = '/www/porter/userpics';
         $count = 0;
 
@@ -90,7 +90,6 @@ class UserVoice extends Source
 
             $photoPath = $path . '/pavatar' . $row['UserID'] . '.jpg';
             file_put_contents($photoPath, hex2bin($row['Content']));
-            $ex->status('.');
 
             if ($thumbnail === true) {
                 $thumbnail = 50;
@@ -101,18 +100,18 @@ class UserVoice extends Source
             generateThumbnail($photoPath, $thumbPath, $thumbnail, $thumbnail);
             $count++;
         }
-        $ex->status("$count Hex Encoded.\n");
-        $ex->comment("$count Hex Encoded.", false);
+        //$port->status("$count Hex Encoded.\n");
+        Log::comment("$count Hex Encoded.", false);
     }
 
     /**
      *
      */
-    public function exportHexAttachments($ex)
+    public function exportHexAttachments(Migration $port): void
     {
-        $ex->comment("Exporting hex encoded columns...");
+        Log::comment("Exporting hex encoded columns...");
 
-        $result = $ex->query(
+        $result = $port->query(
             "select a.*, p.PostID
                 from :_PostAttachments a
                 left join :_Posts p on p.PostID = a.PostID
@@ -133,21 +132,21 @@ class UserVoice extends Source
             file_put_contents($path . '/' . $row['FileName'], hex2bin($row['Content']));
             $count++;
         }
-        $ex->status("$count Hex Encoded.\n");
-        $ex->comment("$count Hex Encoded.", false);
+        //$port->status("$count Hex Encoded.\n");
+        Log::comment("$count Hex Encoded.", false);
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array(
             'LastActivity' => array('Column' => 'DateLastActive'),
             'UserName' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
             'CreateDate' => array('Column' => 'DateInserted'),
         );
-        $ex->export(
+        $port->export(
             'User',
             "select u.*,
                     concat('sha1$', m.PasswordSalt, '$', m.Password) as Password,
@@ -161,15 +160,15 @@ class UserVoice extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
         $role_Map = array(
             'RoleId' => array('Column' => 'RoleID', 'Filter' => array($this, 'roleIDConverter')),
             'RoleName' => 'Name'
         );
-        $ex->export(
+        $port->export(
             'Role',
             "select * from aspnet_Roles",
             $role_Map
@@ -179,7 +178,7 @@ class UserVoice extends Source
         $userRole_Map = array(
             'RoleId' => array('Column' => 'RoleID', 'Filter' => array($this, 'roleIDConverter')),
         );
-        $ex->export(
+        $port->export(
             'UserRole',
             "select u.UserID, ur.RoleId
                 from aspnet_UsersInRoles ur
@@ -189,9 +188,9 @@ class UserVoice extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array(
             'SectionID' => 'CategoryID',
@@ -199,7 +198,7 @@ class UserVoice extends Source
             'SortOrder' => 'Sort',
             'DateCreated' => 'DateInserted'
         );
-        $ex->export(
+        $port->export(
             'Category',
             "select s.* from :_Sections s",
             $category_Map
@@ -207,9 +206,9 @@ class UserVoice extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
         $discussion_Map = array(
             'ThreadID' => 'DiscussionID',
@@ -226,7 +225,7 @@ class UserVoice extends Source
             'Body' => array('Column' => 'Body', 'Filter' => 'HTMLDecoder'),
             'IPAddress' => 'InsertIPAddress'
         );
-        $ex->export(
+        $port->export(
             'Discussion',
             "select t.*,
                     p.Subject,
@@ -242,9 +241,9 @@ class UserVoice extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
         $comment_Map = array(
             'PostID' => 'CommentID',
@@ -254,7 +253,7 @@ class UserVoice extends Source
             'Body' => array('Column' => 'Body', 'Filter' => 'HTMLDecoder'),
             'PostDate' => 'DateInserted'
         );
-        $ex->export(
+        $port->export(
             'Comment',
             "select p.* from :_Posts p where SortOrder > 1",
             $comment_Map
@@ -262,14 +261,14 @@ class UserVoice extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function bookmarks(ExportModel $ex): void
+    protected function bookmarks(Migration $port): void
     {
         $userDiscussion_Map = array(
             'ThreadID' => 'DiscussionID'
         );
-        $ex->export(
+        $port->export(
             'UserDiscussion',
             "select t.*,
                     '1' as Bookmarked,

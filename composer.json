@@ -1,12 +1,16 @@
 {
-    "name": "linc/nitro-porter",
+    "name": "prosembler/nitro-porter",
     "type": "project",
-    "description": "The only multi-platform community migration tool. Free your forum!",
-    "license": "GPL-2.0-or-later",
+    "description": "The only multi-platform community migration tool. Free your community!",
+    "license": "AGPL-3.0-only",
     "authors": [
         {
             "name": "Lincoln Russell",
-            "email": "lincoln@icrontic.com"
+            "email": "code@lincolnwebs.com"
+        },
+        {
+            "name": "Ryan Perry",
+            "email": "ryan@initvector.com"
         },
         {
             "name": "Todd Burry",
@@ -20,44 +24,49 @@
     "scripts": {
         "lint": "vendor/bin/phpcs --standard=PSR12 ./src",
         "delint": "vendor/bin/phpcbf --standard=PSR12 ./src",
-        "test": "vendor/bin/phpunit --no-coverage --no-extensions --colors=always",
+        "test": "vendor/bin/phpunit --no-coverage --no-extensions --colors=always --testsuite=unit",
+        "testall": "vendor/bin/phpunit --no-coverage --no-extensions --colors=always",
         "build": "cd build; ../vendor/bin/phing; cd ..",
         "phinx": "vendor/bin/phinx",
         "seed": "vendor/bin/phinx seed:run",
         "stan": "vendor/bin/phpstan analyse --memory-limit 1G",
-        "changelog": "php vendor/bin/conventional-changelog"
+        "changelog": "php vendor/bin/conventional-changelog",
+        "analyze": "git-of-theseus-analyze ./ --ignore 'tests/**' --ignore 'build/current/**' --ignore 'docs/**' --ignore-whitespace",
+        "graphauth": "git-of-theseus-stack-plot authors.json --max-n 15",
+        "graphcode": "git-of-theseus-survival-plot survival.json"
     },
     "bin": [
         "bin/porter"
     ],
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.3",
         "ext-gd": "*",
         "ext-json": "*",
         "ext-pdo": "*",
         "ext-zlib": "*",
-        "illuminate/database": "^8.0",
-        "monolog/monolog": "^2",
+        "illuminate/database": "^11",
+        "staudenmeir/laravel-cte": "^1",
+        "monolog/monolog": "^3",
         "adhocore/cli": "^1",
         "s9e/text-formatter": "2.15.*",
-        "nadar/quill-delta-parser": "^2"
+        "nadar/quill-delta-parser": "^3"
     },
     "require-dev": {
-        "phing/phing": "^2.0",
-        "robmorgan/phinx": "^0.12",
-        "fakerphp/faker": "^1.16",
+        "phing/phing": "^2",
+        "robmorgan/phinx": "^0",
+        "fakerphp/faker": "^1",
         "squizlabs/php_codesniffer": "^3",
         "phpunit/phpunit": "^9",
-        "phpstan/phpstan": "^1",
+        "phpstan/phpstan": "^2",
         "marcocesarato/php-conventional-changelog": "^1"
     },
     "autoload": {
         "psr-4": {
-            "Porter\\": "src/",
-            "PorterTest\\": "tests/"
+            "Porter\\": "src/"
         },
         "files": [
             "src/Functions/core.php",
+            "src/Functions/factory.php",
             "src/Functions/filter.php"
         ]
     }

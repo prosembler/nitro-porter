@@ -3,22 +3,21 @@
 /**
  * NodeBB exporter tool
  *
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
  * @author  Becky Van Bussel
  */
 
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\ExportModel;
+use Porter\Migration;
 
 class NodeBb extends Source
 {
     public const SUPPORTED = [
         'name' => 'NodeBB 0.*',
-        'prefix' => 'gdn_',
-        'charset_table' => 'post',
-        'hashmethod' => 'Vanilla',
+        'defaultTablePrefix' => 'gdn_',
+        'charsetTable' => 'post',
+        'passwordHashMethod' => 'Vanilla',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -32,40 +31,36 @@ class NodeBb extends Source
             'Signatures' => 1,
             'Attachments' => 0,
             'Bookmarks' => 1,
-            'Permissions' => 0,
-            'Badges' => 0,
             'UserNotes' => 1,
-            'Ranks' => 0,
-            'Groups' => 0,
             'Tags' => 1,
             'Reactions' => 1,
         ]
     ];
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    public function run($ex)
+    public function run(Migration $port): void
     {
-        $this->users($ex);
-        $this->roles($ex);
-        $this->signatures($ex);
+        $this->users($port);
+        $this->roles($port);
+        $this->signatures($port);
 
-        $this->categories($ex);
-        $this->discussions($ex);
-        $this->comments($ex);
-        $this->polls($ex);
-        $this->tags($ex);
-        $this->bookmarks($ex);
-        $this->conversations($ex);
-        $this->reactions($ex);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
+        $this->polls($port);
+        $this->tags($port);
+        $this->bookmarks($port);
+        $this->conversations($port);
+        $this->reactions($port);
     }
 
     /**
      * @param string $name
      * @return string
      */
-    public function nameToSlug($name)
+    public function nameToSlug($name): string
     {
         return $this->url($name);
     }
@@ -74,7 +69,7 @@ class NodeBb extends Source
      * @param mixed $mixed
      * @return string
      */
-    public function url($mixed)
+    public function url($mixed): string
     {
         // Preliminary decoding
         $mixed = strip_tags(html_entity_decode($mixed, ENT_COMPAT, 'UTF-8'));
@@ -103,7 +98,7 @@ class NodeBb extends Source
      * @param string $time
      * @return false|string|null
      */
-    public function tsToDate($time)
+    public function tsToDate($time): false|string|null
     {
         if (!$time) {
             return null;
@@ -116,7 +111,7 @@ class NodeBb extends Source
      * @param string $slug
      * @return array|string|string[]|null
      */
-    public function removeNumId($slug)
+    public function removeNumId($slug): array|string|null
     {
         $regex = '/(\d*)\//';
         return preg_replace($regex, '', $slug);
@@ -126,7 +121,7 @@ class NodeBb extends Source
      * @param string $key
      * @return mixed
      */
-    public function roleNameFromKey($key)
+    public function roleNameFromKey($key): mixed
     {
         $regex = '/\w*:([\w|\s|-]*):/';
         preg_match($regex, $key, $matches);
@@ -138,7 +133,7 @@ class NodeBb extends Source
      * @param string $key
      * @return mixed
      */
-    public function idFromKey($key)
+    public function idFromKey($key): mixed
     {
         $regex = '/\w*:(\d*):/';
         preg_match($regex, $key, $matches);
@@ -150,7 +145,7 @@ class NodeBb extends Source
      * @param mixed $value
      * @return int
      */
-    public function makeNullZero($value)
+    public function makeNullZero($value): int
     {
         if (!$value) {
             return 0;
@@ -163,7 +158,7 @@ class NodeBb extends Source
      * @param mixed $value
      * @return string|null
      */
-    public function isPoll($value)
+    public function isPoll($value): ?string
     {
         if ($value) {
             return 'poll';
@@ -176,7 +171,7 @@ class NodeBb extends Source
      * @param mixed $reactions
      * @return string|null
      */
-    public function serializeReactions($reactions)
+    public function serializeReactions($reactions): ?string
     {
         if ($reactions == '0:0') {
             return null;
@@ -199,9 +194,9 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function users(ExportModel $ex): void
+    protected function users(Migration $port): void
     {
         $user_Map = array(
             'uid' => 'UserID',
@@ -217,7 +212,7 @@ class NodeBb extends Source
             'admin' => 'Admin',
             'hm' => 'HashMethod'
         );
-        $ex->export(
+        $port->export(
             'User',
             "select uid, username, password, email, `email:confirmed` as confirmed,
                     showemail, joindate, lastonline, lastposttime, banned, 0 as admin, 'crypt' as hm
@@ -227,16 +222,16 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function roles(ExportModel $ex): void
+    protected function roles(Migration $port): void
     {
         $role_Map = array(
             '_num' => 'RoleID',
             '_key' => array('Column' => 'Name', 'Filter' => array($this, 'roleNameFromKey')),
             'description' => 'Description'
         );
-        $ex->export(
+        $port->export(
             'Role',
             "select gm._key as _key, gm._num as _num, g.description as description
                 from :_group_members gm left join :_group g
@@ -248,7 +243,7 @@ class NodeBb extends Source
             'id' => 'RoleID',
             'members' => 'UserID'
         );
-        $ex->export(
+        $port->export(
             'UserRole',
             "select *, g._num as id
                 from :_group_members g join :_group_members__members m
@@ -258,16 +253,16 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function signatures(ExportModel $ex): void
+    protected function signatures(Migration $port): void
     {
         $userMeta_Map = array(
             'uid' => 'UserID',
             'name' => 'Name',
             'signature' => 'Value'
         );
-        $ex->export(
+        $port->export(
             'UserMeta',
             "select uid, 'Plugin.Signatures.Sig' as name, signature
                 from :_user
@@ -289,9 +284,9 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function categories(ExportModel $ex): void
+    protected function categories(Migration $port): void
     {
         $category_Map = array(
             'cid' => 'CategoryID',
@@ -303,7 +298,7 @@ class NodeBb extends Source
             'image' => 'Photo',
             'disabled' => 'Archived'
         );
-        $ex->export(
+        $port->export(
             'Category',
             "select * from :_category",
             $category_Map
@@ -311,22 +306,22 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function discussions(ExportModel $ex): void
+    protected function discussions(Migration $port): void
     {
-        if (!$ex->indexExists('z_idx_topic', ':_topic')) {
-            $ex->query("create index z_idx_topic on :_topic(mainPid);");
+        if (!$port->indexExists('z_idx_topic', ':_topic')) {
+            $port->query("create index z_idx_topic on :_topic(mainPid);");
         }
-        if (!$ex->indexExists('z_idx_post', ':_post')) {
-            $ex->query("create index z_idx_post on :_post(pid);");
+        if (!$port->indexExists('z_idx_post', ':_post')) {
+            $port->query("create index z_idx_post on :_post(pid);");
         }
-        if (!$ex->indexExists('z_idx_poll', ':_poll')) {
-            $ex->query("create index z_idx_poll on :_poll(tid);");
+        if (!$port->indexExists('z_idx_poll', ':_poll')) {
+            $port->query("create index z_idx_poll on :_poll(tid);");
         }
 
-        $ex->query("drop table if exists z_discussionids;");
-        $ex->query(
+        $port->query("drop table if exists z_discussionids;");
+        $port->query(
             "
 
             create table z_discussionids (
@@ -336,7 +331,7 @@ class NodeBb extends Source
 
         "
         );
-        $ex->query(
+        $port->query(
             "insert ignore z_discussionids (
                 tid
             )
@@ -346,8 +341,8 @@ class NodeBb extends Source
             and deleted != 1;"
         );
 
-        $ex->query("drop table if exists z_reactiontotalsupvote;");
-        $ex->query(
+        $port->query("drop table if exists z_reactiontotalsupvote;");
+        $port->query(
             "create table z_reactiontotalsupvote (
                 value varchar(50),
                 total int,
@@ -355,8 +350,8 @@ class NodeBb extends Source
             );"
         );
 
-        $ex->query("drop table if exists z_reactiontotalsdownvote;");
-        $ex->query(
+        $port->query("drop table if exists z_reactiontotalsdownvote;");
+        $port->query(
             "create table z_reactiontotalsdownvote (
                 value varchar(50),
                 total int,
@@ -364,8 +359,8 @@ class NodeBb extends Source
             );"
         );
 
-        $ex->query("drop table if exists z_reactiontotals;");
-        $ex->query(
+        $port->query("drop table if exists z_reactiontotals;");
+        $port->query(
             "create table z_reactiontotals (
               value varchar(50),
               upvote int,
@@ -374,21 +369,21 @@ class NodeBb extends Source
             );"
         );
 
-        $ex->query(
+        $port->query(
             "insert z_reactiontotalsupvote
             select value, count(*) as totals
             from :_uid_upvote
             group by value;"
         );
 
-        $ex->query(
+        $port->query(
             " insert z_reactiontotalsdownvote
             select value, count(*) as totals
             from :_uid_downvote
             group by value;"
         );
 
-        $ex->query(
+        $port->query(
             "insert z_reactiontotals
             select *
             from (
@@ -423,7 +418,7 @@ class NodeBb extends Source
             'poll' => array('Column' => 'Type', 'Filter' => array($this, 'isPoll'))
         );
 
-        $ex->export(
+        $port->export(
             'Discussion',
             "select p.tid, cid, title, content, p.uid, locked, pinned, p.timestamp,
                     p.edited, p.editor, viewcount, votes, poll._id as poll, 'Markdown' as format,
@@ -443,12 +438,12 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function comments(ExportModel $ex): void
+    protected function comments(Migration $port): void
     {
-        $ex->query("drop table if exists z_comments;");
-        $ex->query(
+        $port->query("drop table if exists z_comments;");
+        $port->query(
             "create table z_comments (
                 pid int,
                 content text,
@@ -464,7 +459,7 @@ class NodeBb extends Source
             );"
         );
 
-        $ex->query(
+        $port->query(
             "insert ignore z_comments (
                 pid,
                 content,
@@ -482,7 +477,7 @@ class NodeBb extends Source
             where p.deleted != 1 and t.tid is null;"
         );
 
-        $ex->query(
+        $port->query(
             "update z_comments as c
             join z_reactiontotals r
             on r.value = c.pid
@@ -502,7 +497,7 @@ class NodeBb extends Source
             'attributes' => array('Column' => 'Attributes', 'Filter' => array($this, 'serializeReactions'))
         );
 
-        $ex->export(
+        $port->export(
             'Comment',
             "select content, uid, tid, timestamp, edited, editor, votes, 'Markdown' as format,
                     concat(ifnull(upvote, 0), ':', ifnull(downvote, 0)) as attributes
@@ -512,9 +507,9 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function polls(ExportModel $ex): void
+    protected function polls(Migration $port): void
     {
         $poll_Map = array(
             'pollid' => 'PollID',
@@ -524,7 +519,7 @@ class NodeBb extends Source
             'uid' => 'InsertUserID',
             'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate'))
         );
-        $ex->export(
+        $port->export(
             'Poll',
             "select *
                 from :_poll p left join :_poll_settings ps
@@ -540,7 +535,7 @@ class NodeBb extends Source
             'votecount' => array('Column' => 'CountVotes', 'Filter' => array($this, 'makeNullZero')),
             'format' => 'Format'
         );
-        $ex->export(
+        $port->export(
             'PollOption',
             "select _num, _key, title, id+1 as sort, votecount, 'Html' as format
                 from :_poll_options
@@ -552,7 +547,7 @@ class NodeBb extends Source
             'userid' => 'UserID',
             'poll_option_id' => 'PollOptionID'
         );
-        $ex->export(
+        $port->export(
             'PollVote',
             "select povm.members as userid, po._num as poll_option_id
                 from :_poll_options_votes__members povm
@@ -566,12 +561,12 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function tags(ExportModel $ex): void
+    protected function tags(Migration $port): void
     {
-        if (!$ex->indexExists('z_idx_topic_key', ':_topic')) {
-            $ex->query("create index z_idx_topic_key on :_topic (_key);");
+        if (!$port->indexExists('z_idx_topic_key', ':_topic')) {
+            $port->query("create index z_idx_topic_key on :_topic (_key);");
         }
 
         $tag_Map = array(
@@ -585,9 +580,9 @@ class NodeBb extends Source
             'uid' => 'InsertUserID'
         );
 
-        $ex->query("set @rownr=1000;");
+        $port->query("set @rownr=1000;");
 
-        $ex->export(
+        $port->export(
             'Tag',
             "select @rownr:=@rownr+1 as tagid, members as fullname, members as slug,
                     '' as type, count, timestamp, uid, cid
@@ -610,9 +605,9 @@ class NodeBb extends Source
             'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate'))
         );
 
-        $ex->query("set @rownr=1000;");
+        $port->query("set @rownr=1000;");
 
-        $ex->export(
+        $port->export(
             'TagDiscussion',
             "select tagid, cid, tid, timestamp
                 from :_topic_tags__members two
@@ -634,15 +629,15 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function conversations(ExportModel $ex): void
+    protected function conversations(Migration $port): void
     {
-        if (!$ex->indexExists('z_idx_message_key', ':_message')) {
-            $ex->query("create index z_idx_message_key on :_message(_key);");
+        if (!$port->indexExists('z_idx_message_key', ':_message')) {
+            $port->query("create index z_idx_message_key on :_message(_key);");
         }
-        $ex->query("drop table if exists z_pmto;");
-        $ex->query(
+        $port->query("drop table if exists z_pmto;");
+        $port->query(
             "create table z_pmto (
                 pmid int unsigned,
                 userid int,
@@ -650,7 +645,7 @@ class NodeBb extends Source
                 primary key(pmid, userid)
             );"
         );
-        $ex->query(
+        $port->query(
             "insert ignore z_pmto (
                 pmid,
                 userid
@@ -658,7 +653,7 @@ class NodeBb extends Source
             select substring_index(_key, ':', -1), fromuid
             from :_message;"
         );
-        $ex->query(
+        $port->query(
             "insert ignore z_pmto (
                 pmid,
                 userid
@@ -667,8 +662,8 @@ class NodeBb extends Source
             from :_message;"
         );
 
-        $ex->query("drop table if exists z_pmto2;");
-        $ex->query(
+        $port->query("drop table if exists z_pmto2;");
+        $port->query(
             "create table z_pmto2 (
                 pmid int unsigned,
                 userids varchar(250),
@@ -676,7 +671,7 @@ class NodeBb extends Source
                 primary key (pmid)
             );"
         );
-        $ex->query(
+        $port->query(
             "replace z_pmto2 (
                 pmid,
                 userids
@@ -686,8 +681,8 @@ class NodeBb extends Source
             group by pmid;"
         );
 
-        $ex->query("drop table if exists z_pmgroup;");
-        $ex->query(
+        $port->query("drop table if exists z_pmgroup;");
+        $port->query(
             "create table z_pmgroup (
                 userids varchar(250),
                 groupid varchar(255),
@@ -697,29 +692,29 @@ class NodeBb extends Source
                 primary key (userids, groupid)
             );"
         );
-        $ex->query(
+        $port->query(
             "insert z_pmgroup
             select userids, concat('message:', min(pmid)), min(pmid), max(pmid), count(*)
             from z_pmto2
             group by userids;"
         );
 
-        $ex->query(
+        $port->query(
             "update z_pmto2 as p
             left join z_pmgroup g
             on p.userids = g.userids
             set p.groupid = g.firstmessageid;"
         );
 
-        $ex->query(
+        $port->query(
             "update z_pmto as p
             left join z_pmto2 p2
             on p.pmid = p2.pmid
             set p.groupid = p2.groupid;"
         );
 
-        $ex->query("create index z_idx_pmto_cid on z_pmto(groupid);");
-        $ex->query("create index z_idx_pmgroup_cid on z_pmgroup(firstmessageid);");
+        $port->query("create index z_idx_pmto_cid on z_pmto(groupid);");
+        $port->query("create index z_idx_pmgroup_cid on z_pmgroup(firstmessageid);");
 
         $conversation_Map = array(
             'conversationid' => 'ConversationID',
@@ -728,7 +723,7 @@ class NodeBb extends Source
             'countparticipants' => 'CountParticipants',
             'countmessages' => 'CountMessages'
         );
-        $ex->export(
+        $port->export(
             'Conversation',
             "select *, firstmessageid as conversationid, 2 as countparticipants
             from z_pmgroup
@@ -745,7 +740,7 @@ class NodeBb extends Source
             'fromuid' => 'InsertUserID',
             'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate'))
         );
-        $ex->export(
+        $port->export(
             'ConversationMessage',
             "select groupid as conversationid, pmid as messageid, content, 'Text' as format, fromuid, timestamp
                 from z_pmto2
@@ -759,7 +754,7 @@ class NodeBb extends Source
             'userid' => 'UserID',
             'lastmessageid' => 'LastMessageID'
         );
-        $ex->export(
+        $port->export(
             'UserConversation',
             "select p.groupid as conversationid, userid, lastmessageid
                 from z_pmto p
@@ -770,9 +765,9 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function bookmarks(ExportModel $ex): void
+    protected function bookmarks(Migration $port): void
     {
         $userDiscussion_Map = array(
             'members' => 'UserID',
@@ -780,7 +775,7 @@ class NodeBb extends Source
             'bookmarked' => 'Bookmarked'
         );
 
-        $ex->export(
+        $port->export(
             'UserDiscussion',
             "select members, _key, 1 as bookmarked
                 from :_tid_followers__members
@@ -791,18 +786,18 @@ class NodeBb extends Source
     }
 
     /**
-     * @param ExportModel $ex
+     * @param Migration $port
      */
-    protected function reactions(ExportModel $ex): void
+    protected function reactions(Migration $port): void
     {
-        if (!$ex->indexExists('z_idx_topic_mainpid', ':_topic')) {
-            $ex->query("create index z_idx_topic_mainpid on :_topic(mainPid);");
+        if (!$port->indexExists('z_idx_topic_mainpid', ':_topic')) {
+            $port->query("create index z_idx_topic_mainpid on :_topic(mainPid);");
         }
-        if (!$ex->indexExists('z_idx_uid_downvote', ':_uid_downvote')) {
-            $ex->query("create index z_idx_uid_downvote on :_uid_downvote(value);");
+        if (!$port->indexExists('z_idx_uid_downvote', ':_uid_downvote')) {
+            $port->query("create index z_idx_uid_downvote on :_uid_downvote(value);");
         }
-        if (!$ex->indexExists('z_idx_uid_upvote', ':_uid_upvote')) {
-            $ex->query("create index z_idx_uid_upvote on :_uid_upvote(value);");
+        if (!$port->indexExists('z_idx_uid_upvote', ':_uid_upvote')) {
+            $port->query("create index z_idx_uid_upvote on :_uid_upvote(value);");
         }
 
         $userTag_Map = array(
@@ -813,7 +808,7 @@ class NodeBb extends Source
             'score' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate')),
             'total' => 'Total'
         );
-        $ex->export(
+        $port->export(
             'UserTag',
             "select 11 as tagid, 'Discussion' as recordtype, u._key, u.value, score, total
                 from :_uid_upvote u

@@ -3,20 +3,14 @@
 namespace Porter\Database;
 
 /**
- * Class ResultSet
- *
  * @deprecated
  */
 class ResultSet
 {
-    /**
-     * @var DbResource
-     */
-    private $dbResource;
+    /** @var DbResource */
+    private DbResource $dbResource;
 
     /**
-     * ResultSet constructor.
-     *
      * @param DbResource $dbResource
      */
     public function __construct(DbResource $dbResource)
@@ -25,12 +19,12 @@ class ResultSet
     }
 
     /**
-     * Iterate to new result row via the db resource.
+     * Iterate to new result row via dbResource.
      *
      * @param bool $assoc will return result row as an enumerated array if false.
      * @return array|bool
      */
-    public function nextResultRow($assoc = true)
+    public function nextResultRow(bool $assoc = true): bool|array
     {
         return $this->dbResource->nextRow($assoc);
     }

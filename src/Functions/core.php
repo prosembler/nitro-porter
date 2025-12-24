@@ -1,18 +1,10 @@
 <?php
 
 /**
- * @license http://opensource.org/licenses/gpl-2.0.php GNU GPL2
+ * Utility functions.
  */
 
-use Porter\ConnectionManager;
-use Porter\Database\DbFactory;
-use Porter\ExportModel;
-use Porter\ImportModel;
-use Porter\Postscript;
-use Porter\Request;
-use Porter\Source;
-use Porter\Target;
-use Porter\Storage;
+use Porter\Log;
 
 /**
  * Retrieve the config.
@@ -24,7 +16,6 @@ function loadConfig(): array
     if (file_exists(ROOT_DIR . '/config.php')) {
         return require(ROOT_DIR . '/config.php');
     } else {
-        trigger_error('Missing config.php — Make a copy of config-sample.php!');
         return require(ROOT_DIR . '/config-sample.php');
     }
 }
@@ -53,177 +44,19 @@ function loadStructure(): array
     return include(ROOT_DIR . '/data/structure.php');
 }
 
+function runPorter(\Porter\Request $request): void
+{
+    (new \Porter\Controller())->run($request);
+}
+
 /**
- * Retrieve test db creds from main config for Phinx.
+ * Build a valid path from multiple pieces.
  *
- * @return array
- */
-function getTestDatabaseCredentials(): array
-{
-    $c = new \Porter\ConnectionManager();
-    return $c->getAllInfo();
-}
-
-/**
- * Get valid source class. Exit app if invalid name is given.
- *
- * @param string $source
- * @return Source
- */
-function sourceFactory(string $source): Source
-{
-    $class = '\Porter\Source\\' . ucwords($source);
-    if (!class_exists($class)) {
-        exit('Unsupported source: ' . $source);
-    }
-
-    return new $class();
-}
-
-/**
- * Get valid target class. Exit app if invalid name is given.
- *
- * @param string $target
- * @return Target
- */
-function targetFactory(string $target): Target
-{
-    $class = '\Porter\Target\\' . ucwords($target);
-    if (!class_exists($class)) {
-        exit('Unsupported target: ' . $target);
-    }
-
-    return new $class();
-}
-
-/**
- * Get postscript class if it exists.
- *
- * @param string $target
- * @param ConnectionManager $connection
- * @return Postscript|null
- */
-function postscriptFactory(string $target, Storage $storage, ConnectionManager $connection): ?Postscript
-{
-    $postscript = null;
-    $class = '\Porter\Postscript\\' . ucwords($target);
-    if (class_exists($class)) {
-        $postscript = new $class($storage, $connection);
-    }
-
-    return $postscript;
-}
-
-/**
- * @param Request $request
- * @param ConnectionManager $exportSourceCM
- * @param Storage $storage
- * @param ConnectionManager $importSourceCM
- * @return ExportModel
- */
-function exportModelFactory(
-    Request $request,
-    ConnectionManager $exportSourceCM,
-    Storage $storage,
-    ConnectionManager $importSourceCM
-): ExportModel {
-    // Wire old database / model mess.
-    $info = $exportSourceCM->getAllInfo();
-    $db = new DbFactory($info, 'pdo');
-    $map = loadStructure();
-    $model = new ExportModel($db, $map, $storage, $importSourceCM);
-
-    // Set model properties.
-    $model->srcPrefix = $request->get('src-prefix') ?? '';
-    $model->testMode = $request->get('test') ?? false;
-    $model->limitTables((string) $request->get('tables'));
-    $model->captureOnly = $request->get('dumpsql') ?? false;
-
-    return $model;
-}
-
-/**
- * Error handler.
- *
- * @param int $level
- * @param string $msg
- * @param string $file
- * @param int $line
- * @param array $context
- */
-function errorHandler(int $level, string $msg, string $file, int $line, array $context = []): void
-{
-    $reportingLevel = error_reporting();
-    if (!$reportingLevel) {
-        return; // Error reporting is off or suppressed.
-    }
-
-    if (defined('DEBUG') || ($level !== E_DEPRECATED && $level !== E_USER_DEPRECATED)) {
-        $baseDir = realpath(__DIR__ . '/../') . '/';
-        $errFile = str_replace($baseDir, '', $file);
-        echo "Error in $errFile line $line: ($level) $msg\n";
-        die();
-    }
-}
-
-/**
- * Test filesystem permissions.
- */
-function testWrite(): bool
-{
-    $file = 'portertest.txt';
-    @touch($file);
-    if (is_writable($file)) {
-        @unlink($file);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-/**
- * @deprecated
- * @param  string $key
- * @param  array $collection
- * @param  string $default
- * @return mixed
- */
-function getValue(string $key, array $collection = [], string $default = '')
-{
-    if (!$collection) {
-        $collection = $_POST;
-    }
-    if (array_key_exists($key, $collection)) {
-        return $collection[$key];
-    }
-
-    return $default;
-}
-
-/**
- * @deprecated
- * @param string $name
- * @param array $array
- * @param mixed $default
- * @return mixed|null
- */
-function v(string $name, array $array, $default = '')
-{
-    if (isset($array[$name])) {
-        return $array[$name];
-    }
-
-    return $default;
-}
-
-/**
- *
- *
- * @param  array|string $paths
+ * @param array|string $paths
  * @param  string $delimiter
  * @return string
  */
-function combinePaths($paths, string $delimiter = '/'): string
+function combinePaths(array|string $paths, string $delimiter = '/'): string
 {
     if (is_array($paths)) {
         $mungedPath = implode($delimiter, $paths);
@@ -253,6 +86,8 @@ function formatElapsed(float $elapsed): string
 }
 
 /**
+ * Human-readable filesize output.
+ *
  * @param int $size
  * @return string
  */
@@ -262,7 +97,7 @@ function formatBytes(int $size): string
         return '0b';
     }
     $unit = ['b','kb','mb','gb','tb','pb'];
-    return @round($size / pow(1024, ($i = floor(log($size, 1024)))), 1) . $unit[$i];
+    return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . $unit[$i];
 }
 
 /**
@@ -272,14 +107,13 @@ function formatBytes(int $size): string
  * @param string $thumbPath
  * @param  int $height
  * @param  int $width
- * @return void
  */
-function generateThumbnail($path, $thumbPath, $height = 50, $width = 50)
+function generateThumbnail($path, $thumbPath, $height = 50, $width = 50): void
 {
     list($widthSource, $heightSource, $type) = getimagesize($path);
 
-    $XCoord = 0;
-    $YCoord = 0;
+    $xCoordinate = 0;
+    $yCoordinate = 0;
     $heightDiff = $heightSource - $height;
     $widthDiff = $widthSource - $width;
     if ($widthDiff > $heightDiff) {
@@ -287,14 +121,14 @@ function generateThumbnail($path, $thumbPath, $height = 50, $width = 50)
         $newWidthSource = round(($width * $heightSource) / $height);
 
         // And set the original x position to the cropped start point.
-        $XCoord = round(($widthSource - $newWidthSource) / 2);
+        $xCoordinate = round(($widthSource - $newWidthSource) / 2);
         $widthSource = $newWidthSource;
     } else {
         // Crop the original height down
         $newHeightSource = round(($height * $widthSource) / $width);
 
         // And set the original y position to the cropped start point.
-        $YCoord = round(($heightSource - $newHeightSource) / 2);
+        $yCoordinate = round(($heightSource - $newHeightSource) / 2);
         $heightSource = $newHeightSource;
     }
 
@@ -323,8 +157,8 @@ function generateThumbnail($path, $thumbPath, $height = 50, $width = 50)
             $sourceImage,
             0,
             0,
-            $XCoord,
-            $YCoord,
+            $xCoordinate,
+            $yCoordinate,
             $width,
             $height,
             $widthSource,
@@ -349,6 +183,21 @@ function generateThumbnail($path, $thumbPath, $height = 50, $width = 50)
             imagedestroy($targetImage);
         }
     } catch (\Exception $e) {
-        echo "Could not generate a thumnail for " . $targetImage;
+        echo "Could not generate a thumbnail for " . $targetImage;
+    }
+}
+
+/**
+ * Create folder if it doesn't exit.
+ *
+ * @param string $path Full path of the folder to be created.
+ */
+function touchFolder(string $path): void
+{
+    if (is_dir($path)) {
+        return;
+    }
+    if (!mkdir($path, 0777, true)) {
+        Log::comment("Folder '{$path}' could not be created.");
     }
 }

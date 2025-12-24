@@ -2,51 +2,30 @@
 
 namespace Porter\Database;
 
+use PDO;
+
 /**
- * Creating desired db instances on the go
  * @deprecated
  */
 class DbFactory
 {
-    /**
-     * @var array DB connection info
-     */
-    private $dbInfo;
+    /** @var PDO */
+    private PDO $pdo;
 
     /**
-     * @var string php database extension
+     * @param PDO $pdo
      */
-    private $extension;
-
-    /**
-     * DbFactory constructor.
-     *
-     * @param array  $args      db connection parameters
-     * @param string $extension db extension
-     */
-    public function __construct(array $args, $extension)
+    public function __construct(PDO $pdo)
     {
-        $this->dbInfo = $args;
-        $this->extension = $extension;
+        $this->pdo = $pdo;
     }
 
     /**
-     * Returns a db instance
-     *
-     * @return object db instance
+     * @return PdoDB
      */
-    public function getInstance()
+    public function getInstance(): PdoDB
     {
-        $className = '\Porter\Database\\' . ucwords($this->extension) . 'DB';
-        if (!class_exists($className)) {
-            trigger_error($this->extension . ' extension not found.');
-        }
-
-        $dbFactory = new $className($this->dbInfo);
-        if (!($dbFactory instanceof DbResource)) {
-            trigger_error($className . 'does not implement DbResource.');
-        }
-
-        return $dbFactory;
+        $className = '\Porter\Database\\PdoDB';
+        return new $className($this->pdo);
     }
 }

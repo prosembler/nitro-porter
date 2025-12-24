@@ -2,51 +2,32 @@
 
 namespace Porter\Database;
 
+use PDO;
+
 /**
  * @deprecated
  */
 interface DbResource
 {
     /**
-     * MysqlDB constructor.
-     *
-     * @param array $args
+     * @param PDO $pdo
      */
-    public function __construct(array $args);
+    public function __construct(PDO $pdo);
 
     /**
-     * Query method.
-     *
      * @param string $sql
      * @return bool|ResultSet return instance of ResultSet on success false on failure
      */
-    public function query($sql);
+    public function query(string $sql): bool|ResultSet;
 
     /**
-     * Prints the mysql error.
-     *
      * @param string $sql query
      */
-    public function error($sql);
+    public function error(string $sql): void;
 
     /**
-     * Fetch the new result row.
-     *
-     * @param  bool $assoc
+     * @param bool $assoc
      * @return array|bool returns the next row if possible false if we've reached the end of the result set.
      */
-    public function nextRow($assoc);
-
-    /**
-     * Escape string
-     *
-     * @param string $sql
-     * @return string
-     */
-    public function escape($sql);
-
-    /**
-     * Free the result and close the db resource
-     */
-    public function close();
+    public function nextRow(bool $assoc): bool|array;
 }

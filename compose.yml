@@ -1,0 +1,68 @@
+services:
+  frankenphp:
+    container_name: porter-php
+    build:
+      context: .
+      dockerfile: .docker/run/php/Dockerfile
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    environment:
+      CADDY_GLOBAL_OPTIONS: "debug" # Increase logging level
+    tty: true # Enables an interactive terminal & human-formatted logs
+    volumes:
+      - $PWD:${WORKDIR:-/app}
+      - caddy_data:/data
+      - caddy_config:/config
+    extra_hosts: # Enables Xdebug connection
+      host.docker.internal: host-gateway
+    networks:
+      - porter
+    depends_on:
+      mariadb: # Don't start container until DB is up.
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:lts # Avoid frequent DB upgrades.
+    container_name: porter-db
+    environment:
+      MYSQL_ROOT_PASSWORD: porter
+      MYSQL_DATABASE: porter
+      MYSQL_USER: porter
+      MYSQL_PASSWORD: porter
+    ports:
+      - "3308:3306"
+    networks:
+      - porter
+    healthcheck: # Verifies DB is available to avoid silent failures.
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      start_period: 5s
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: porter-pma
+    restart: always
+    ports:
+      - "8082:80"
+    environment:
+      PMA_HOST: porter-db
+      PMA_USER: root
+      PMA_PASSWORD: porter
+      UPLOAD_LIMIT: 1G
+    networks:
+      - porter
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+# Volumes required for Caddy certificates and configuration
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  porter:
+    driver: bridge

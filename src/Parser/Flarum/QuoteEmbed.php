@@ -84,7 +84,7 @@ class QuoteEmbed extends EmbedExternalListener
         // Omits 'p' tags that wrap <POSTMENTION> thru {body} normally because we don't know if the body has 'p' tags.
         $this->wrapElement('<QUOTE><i>&gt; </i>' .
             // Postscript will fill in blank attributes BUT THEY MUST BE IN THIS ORDER.
-            '<POSTMENTION id="{postid}" discussionid="{discussionid}" number="" displayname="{author}">' .
+            '<POSTMENTION discussionid="{discussionid}" displayname="{author}" id="{postid}" number="">' .
             '@"{author}"#p{postid}</POSTMENTION> {body}</QUOTE>', ['author', 'postid', 'body', 'discussionid']);
     }
 }

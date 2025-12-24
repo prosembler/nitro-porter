@@ -133,7 +133,7 @@ class Flarum extends Postscript
     /**
      * Find mentions in posts and record to database table.
      *
-     * @see QuoteEmbed — '<POSTMENTION id="{postid}" discussionid="" number="" displayname="{author}">'
+     * @see QuoteEmbed — '<POSTMENTION discussionid="" displayname="{author}" id="{postid}" number="">'
      */
     protected function buildPostMentions(Migration $port): void
     {
@@ -166,7 +166,7 @@ class Flarum extends Postscript
             // Find converted mentions and connect to userID.
             $mentions = [];
             preg_match_all(
-                '/<POSTMENTION id="(?<postids>[0-9]*)" discussionid="(?<discussionids>[0-9]*)".*\/POSTMENTION>/U',
+                '/<POSTMENTION discussionid="(?<discussionids>[0-9]*)".* id="(?<postids>[0-9]*)".*\/POSTMENTION>/U',
                 $post->content,
                 $mentions
             );
@@ -225,7 +225,7 @@ class Flarum extends Postscript
      * @param int $quoteID The post referenced in the content.
      * @param string $quoteType One of 'post' or 'discussion'.
      * @return bool Whether the post mention was repaired.
-     * @see QuoteEmbed — '<POSTMENTION id="{postid}" discussionid="" number="" displayname="{author}">'
+     * @see QuoteEmbed — '<POSTMENTION discussionid="" displayname="{author}" id="{postid}" number="">'
      */
     protected function repairPostMention(Migration $port, int $postid, string $content, int $quoteID, string $quoteType)
     {
@@ -251,16 +251,16 @@ class Flarum extends Postscript
         // Swap it into the mention markup.
         // Only one of these will match and it's easier than a logic gate.
         $body = str_replace(
-            '<POSTMENTION id="' . $quoteID . '" discussionid="" number=""',
-            '<POSTMENTION id="' . $quoteID .
-            '" discussionid="' . $quotedPost->discussion_id .
+            '<POSTMENTION discussionid="" displayname="" id="' . $quoteID . '" number=""',
+            '<POSTMENTION discussionid="' . $quotedPost->discussion_id .
+            '" displayname="" id="' . $quoteID .
             '" number="' . $quotedPost->number . '"',
             $content
         );
         $body = str_replace(
-            '<POSTMENTION id="" discussionid="' . $quoteID . '" number=""',
-            '<POSTMENTION id="' . $quotedPost->id .
-            '" discussionid="' . $quoteID .
+            '<POSTMENTION discussionid="' . $quoteID . '" displayname="" id="" number=""',
+            '<POSTMENTION discussionid="' . $quoteID .
+            '" displayname="" id="' . $quotedPost->id .
             '" number="' . $quotedPost->number . '"',
             $content
         );

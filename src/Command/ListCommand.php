@@ -13,7 +13,7 @@ class ListCommand extends Command
     {
         parent::__construct('list', 'List available packages of requested type.');
         $this
-            ->argument('<type>', 'One of "sources", "targets", or "connections"')
+            ->argument('<type>', 'One of "origins", "sources", "targets", or "connections"')
             ->usage(
                 '<bold>  list</end> <comment>sources</end> ## List all available Source packages.<eol/>' .
                 '<bold>  list</end> <comment>targets</end> ## List all available Target packages.<eol/>' .
@@ -27,7 +27,7 @@ class ListCommand extends Command
     public function interact(Interactor $io): void
     {
         if (!$this->type) {
-            $lists = ['s' => 'sources', 't' => 'targets', 'c' => 'connections'];
+            $lists = ['o' => 'origins', 's' => 'sources', 't' => 'targets', 'c' => 'connections'];
             $choice = $io->choice('Select a list', $lists, '3');
             $this->set('type', $lists[$choice]);
         }
@@ -39,6 +39,7 @@ class ListCommand extends Command
     public function execute(): void
     {
         switch ($this->type) {
+            case 'origins':
             case 'sources':
             case 'targets':
                 $this->listSupport($this->type);
@@ -75,8 +76,9 @@ class ListCommand extends Command
     public function listSupport(string $type): void
     {
         // Get the list.
-        $info = ($type === 'sources') ?  Support::getInstance()->getSources() :
-            Support::getInstance()->getTargets();
+        $info = ($type === 'sources') ? Support::getInstance()->getSources() :
+            (($type === 'targets') ? Support::getInstance()->getTargets() :
+            Support::getInstance()->getOrigins());
         $packages = array_keys($info);
 
         // Output

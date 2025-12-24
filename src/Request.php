@@ -20,6 +20,7 @@ class Request
         'badges',
     ];
 
+    private string $originName;
     private string $sourceName;
     private string $targetName;
     private string $inputConnection;
@@ -32,6 +33,7 @@ class Request
     /**
      * Build a valid Porter request.
      *
+     * @param ?string $originPackage Origin package alias
      * @param ?string $sourcePackage Source package alias (or 'port')
      * @param ?string $targetPackage Target package alias (or 'file', 'sql')
      * @param ?string $inputConnection Connection alias in config.php
@@ -43,6 +45,7 @@ class Request
      * @throws \Exception
      */
     public function __construct(
+        ?string $originPackage = null,
         ?string $sourcePackage = null,
         ?string $targetPackage = null,
         ?string $inputConnection = null,
@@ -52,6 +55,7 @@ class Request
         ?string $cdnPrefix = null,
         ?string $dataTypes = null,
     ) {
+        $this->originName = $originPackage ?? Config::getInstance()->get('origin');
         $this->sourceName = $sourcePackage ?? Config::getInstance()->get('source');
         $this->targetName = $targetPackage ?? Config::getInstance()->get('target');
 
@@ -74,6 +78,11 @@ class Request
         } else {
             $this->dataTypes = Config::getInstance()->get('option_data_types');
         }
+    }
+
+    public function getOrigin(): ?string
+    {
+        return $this->originName;
     }
 
     public function getSource(): ?string

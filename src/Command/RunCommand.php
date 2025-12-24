@@ -58,17 +58,17 @@ class RunCommand extends Command
      */
     public function execute(): void
     {
-        $request = new Request(
-            $this->source,
-            $this->target,
-            $this->input,
-            $this->output,
-            $this->sp,
-            $this->tp,
-            $this->cdn,
-            $this->data
-        );
+        $request = (new Request(
+            sourcePackage: $this->source,
+            targetPackage: $this->target,
+            inputConnection: $this->input,
+            outputConnection: $this->output,
+            inputTablePrefix: $this->sp,
+            outputTablePrefix: $this->tp,
+            cdnPrefix: $this->cdn,
+            dataTypes: $this->data,
+        ));
 
-        runPorter($request);
+        (new \Porter\Controller())->run($request);
     }
 }

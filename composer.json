@@ -39,13 +39,13 @@
         "bin/porter"
     ],
     "require": {
-        "php": ">=8.3",
+        "php": ">=8.4",
         "ext-gd": "*",
-        "ext-json": "*",
         "ext-pdo": "*",
         "ext-zlib": "*",
         "illuminate/database": "^11",
         "staudenmeir/laravel-cte": "^1",
+        "symfony/http-client": "^8",
         "monolog/monolog": "^3",
         "adhocore/cli": "^1",
         "s9e/text-formatter": "2.15.*",

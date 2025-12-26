@@ -132,7 +132,7 @@ function migrationFactory(
         $porterStorage,
         $outputStorage,
         $postscriptStorage,
-        loadStructure(),
+        loadData('structure'),
         $limitTables,
         $captureOnly
     );

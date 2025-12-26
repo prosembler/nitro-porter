@@ -21,36 +21,19 @@ function loadConfig(): array
 }
 
 /**
+ * Retrieve an array from named file in `/data`.
+ *
+ * @param string $name
  * @return array
  */
-function loadOrigins(): array
+function loadData(string $name): array
 {
-    return include(ROOT_DIR . '/data/origins.php');
-}
-
-
-/**
- * @return array
- */
-function loadSources(): array
-{
-    return include(ROOT_DIR . '/data/sources.php');
-}
-
-/**
- * @return array
- */
-function loadTargets(): array
-{
-    return include(ROOT_DIR . '/data/targets.php');
-}
-
-/**
- * @return array
- */
-function loadStructure(): array
-{
-    return include(ROOT_DIR . '/data/structure.php');
+    $data = ['origins', 'sources', 'targets', 'structure'];
+    if (in_array($name, $data, true)) {
+        return include(ROOT_DIR . '/data/' . $name . '.php');
+    } else {
+        return [];
+    }
 }
 
 /**

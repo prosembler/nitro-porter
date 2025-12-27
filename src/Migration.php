@@ -96,7 +96,7 @@ class Migration
      */
     public function dbInput(): Connection
     {
-        return $this->inputStorage->getConnection();
+        return $this->inputStorage->getHandle();
     }
 
     /**
@@ -108,7 +108,7 @@ class Migration
      */
     public function dbPorter(): Connection
     {
-        return $this->porterStorage->getConnection();
+        return $this->porterStorage->getHandle();
     }
 
     /**
@@ -120,7 +120,7 @@ class Migration
      */
     public function dbOutput(): Connection
     {
-        return $this->outputStorage->getConnection();
+        return $this->outputStorage->getHandle();
     }
 
     /**
@@ -132,7 +132,7 @@ class Migration
      */
     public function dbPostscript(): Connection
     {
-        return $this->postscriptStorage->getConnection();
+        return $this->postscriptStorage->getHandle();
     }
 
     /**

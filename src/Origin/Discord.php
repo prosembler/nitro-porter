@@ -2,11 +2,10 @@
 
 namespace Porter\Origin;
 
-use Porter\HttpInterface;
 use Porter\Origin;
 use Porter\Storage;
 
-class Discord extends Origin implements HttpInterface
+class Discord extends Origin
 {
     public function run(Storage\Database $input): void
     {

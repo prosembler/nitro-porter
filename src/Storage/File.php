@@ -28,9 +28,9 @@ class File extends Storage
     public const QUOTE = '"';
 
     /**
-     * @var resource File pointer
+     * @var resource File pointer.
      */
-    public $file = null;
+    private $file;
 
     /**
      * @var string The path to the export file.
@@ -41,14 +41,6 @@ class File extends Storage
      * @var bool Whether or not to use compression when creating the file.
      */
     protected bool $useCompression = true;
-
-    /**
-     * @return string
-     */
-    public function getAlias(): string
-    {
-        return 'file';
-    }
 
     /**
      * Whether or not to use compression on the output file.
@@ -93,15 +85,10 @@ class File extends Storage
     public function end(): void
     {
         if ($this->useCompression()) {
-            gzclose($this->file);
+            gzclose($this->getHandle());
         } else {
-            fclose($this->file);
+            fclose($this->getHandle());
         }
-    }
-
-    public function setPrefix(string $prefix): void
-    {
-        // Do nothing.
     }
 
     /**
@@ -196,27 +183,21 @@ class File extends Storage
         while ($row = $data->nextResultRow()) {
             $info['rows']++;
             $row = $this->normalizeRow($map, $structure, $row, $filters);
-            $this->writeRow($this->file, $row, $structure);
+            $this->writeRow($this->getHandle(), $row, $structure);
         }
-        $this->writeEndTable($this->file);
+        $this->writeEndTable($this->getHandle());
 
         return $info;
     }
 
-    public function stream(array $row, array $structure): void
+    public function stream(array $row, array $structure, bool $final = false): void
     {
-        $this->writeRow($this->file, $row, $structure);
+        $this->writeRow($this->getHandle(), $row, $structure);
     }
 
-    public function endStream(): void
+    public function getHandle(): mixed
     {
-        // Required.
-    }
-
-    public function getConnection(): null
-    {
-        trigger_error('Incorrect Storage type: File object has no Connection.');
-        return null;
+        return $this->file;
     }
 
     /**
@@ -228,19 +209,19 @@ class File extends Storage
     public function prepare(string $name, array $structure): void
     {
         unset($structure['keys']); // Unfortunate kludge to allow databases to declare these.
-        $this->writeBeginTable($this->file, $name, $structure);
+        $this->writeBeginTable($this->getHandle(), $name, $structure);
     }
 
     /**
-     * Not required for file storage.
+     * Whether file storage is writable.
      *
-     * @param string $tableName
-     * @param array $columns
+     * @param string $resourceName
+     * @param array $structure
      * @return bool
      */
-    public function exists(string $tableName, array $columns = []): bool
+    public function exists(string $resourceName = '', array $structure = []): bool
     {
-        return true;
+        return is_writable($this->path);
     }
 
     /**

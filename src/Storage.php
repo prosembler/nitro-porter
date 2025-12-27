@@ -38,17 +38,11 @@ abstract class Storage
 
     abstract public function end(): void;
 
-    abstract public function setPrefix(string $prefix): void;
+    abstract public function exists(string $resourceName = '', array $structure = []): bool;
 
-    abstract public function exists(string $tableName, array $columns = []): bool;
+    abstract public function stream(array $row, array $structure, bool $final = false): void;
 
-    abstract public function stream(array $row, array $structure): void;
-
-    abstract public function endStream(): void;
-
-    abstract public function getAlias(): string;
-
-    abstract public function getConnection(): ?Connection;
+    abstract public function getHandle(): mixed;
 
     /**
      * Prepare a row of data for storage.

@@ -75,13 +75,13 @@ class Flarum extends Postscript
                 $port->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_user_id' => (int)$userid
-                ], self::DB_STRUCTURE_POST_MENTIONS_USER);
+                ], self::DB_STRUCTURE_POST_MENTIONS_USER, false);
                 $rows++;
             }
         }
 
         // Insert remaining mentions.
-        $port->outputStorage()->endStream();
+        $port->outputStorage()->stream([], [], true);
 
         // Report.
         Log::storage('build', 'mentions_user', microtime(true) - $start, $rows, $memory);
@@ -182,7 +182,7 @@ class Flarum extends Postscript
                 $port->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$postid
-                ], self::DB_STRUCTURE_POST_MENTIONS_POST);
+                ], self::DB_STRUCTURE_POST_MENTIONS_POST, false);
                 $rows++;
             }
 
@@ -197,13 +197,13 @@ class Flarum extends Postscript
                 $port->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$discussions[$discussionid] // Use the OP lookup
-                ], self::DB_STRUCTURE_POST_MENTIONS_POST);
+                ], self::DB_STRUCTURE_POST_MENTIONS_POST, false);
                 $rows++;
             }
         }
 
         // Insert remaining mentions.
-        $port->outputStorage()->endStream();
+        $port->outputStorage()->stream([], [], true);
 
         // Log failures.
         if ($failures) {

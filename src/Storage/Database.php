@@ -64,14 +64,9 @@ class Database extends Storage
     /**
      * @return Connection
      */
-    public function getConnection(): Connection
+    public function getHandle(): Connection
     {
         return $this->connectionManager->connection();
-    }
-
-    public function getAlias(): string
-    {
-        return $this->connectionManager->getAlias();
     }
 
     /**
@@ -144,23 +139,13 @@ class Database extends Storage
      *
      * While `store()` takes a batch and processes it, this takes 1 row at a time.
      * Created for Postscripts to have finer control over record inserts.
-     * @see Postscript — Where this method is most likely used (its children).
-     * @see endStream — Must be called after using this method.
-     *
      * @param array $row
      * @param array $structure
+     * @param bool $final Must be `true` on final call or records will be lost.
      */
-    public function stream(array $row, array $structure): void
+    public function stream(array $row, array $structure, bool $final = false): void
     {
-        $this->batchInsert($row);
-    }
-
-    /**
-     * Send remaining batched records for insert.
-     */
-    public function endStream(): void
-    {
-        $this->batchInsert([], true);
+        $this->batchInsert($row, $final);
     }
 
     /**
@@ -285,20 +270,20 @@ class Database extends Storage
     /**
      * Whether the requested table & columns exist.
      *
-     * @param string $tableName
-     * @param array $columns
+     * @param string $resourceName
+     * @param array $structure
      * @return bool
      * @see Migration::hasInputSchema()
      */
-    public function exists(string $tableName, array $columns = []): bool
+    public function exists(string $resourceName = '', array $structure = []): bool
     {
         $schema = $this->connectionManager->connection()->getSchemaBuilder();
-        if (empty($columns)) {
+        if (empty($structure)) {
             // No columns requested.
-            return $schema->hasTable($tableName);
+            return $schema->hasTable($resourceName);
         }
         // Table must exist and columns were requested.
-        return $schema->hasTable($tableName) && $schema->hasColumns($tableName, $columns);
+        return $schema->hasTable($resourceName) && $schema->hasColumns($resourceName, $structure);
     }
 
     /**
@@ -357,14 +342,6 @@ class Database extends Storage
                 // @todo Allow more key types as needed.
             }
         };
-    }
-
-    /**
-     * @param string $prefix Database table prefix.
-     */
-    public function setPrefix(string $prefix): void
-    {
-        $this->prefix = $prefix;
     }
 
     /**

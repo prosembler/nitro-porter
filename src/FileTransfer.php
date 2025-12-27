@@ -20,7 +20,7 @@ class FileTransfer
 
     private function getBuilder(): Builder
     {
-        return new Builder($this->porterStorage->getConnection());
+        return new Builder($this->porterStorage->getHandle());
     }
 
     /**

@@ -13,11 +13,12 @@ class PullCommand extends Command
     {
         parent::__construct('pull', 'Pull data from origin.');
         $this
-            ->option('-n --origin', 'Origin package alias')
-            ->option('-i --input', 'Source connection alias (defined in config)')
+            ->option('-r --origin', 'Origin package alias')
+            ->option('-i --input', 'Target connection alias (defined in config)')
             ->usage(
                 '<bold>  pull -s discord -i myserver </end><eol/>' .
-                '<comment>  Pull data from Discord into database with alias `myserver` (in config.php).</end><eol/>'
+                '<comment>  Pull data from Discord into database with alias `myserver` (in config.php). ' .
+                'While it is the output of this step, we use --input per the overall migration process.</end><eol/>'
             );
     }
 
@@ -26,8 +27,8 @@ class PullCommand extends Command
      */
     public function interact(Interactor $io): void
     {
-        if (!$this->source && !Config::getInstance()->get('source')) {
-            $this->set('source', $io->prompt('Source package alias (see `porter list -n=sources`)'));
+        if (!$this->source && !Config::getInstance()->get('origin_alias')) {
+            $this->set('origin', $io->prompt('Origin package alias (see `porter list origins`)'));
         }
 
         if (!$this->input && !Config::getInstance()->get('input_alias')) {

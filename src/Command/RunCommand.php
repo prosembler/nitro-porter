@@ -35,11 +35,11 @@ class RunCommand extends Command
     public function interact(Interactor $io): void
     {
         if (!$this->source && !Config::getInstance()->get('source')) {
-            $this->set('source', $io->prompt('Source package alias (see `porter list -n=sources`)'));
+            $this->set('source', $io->prompt('Source package alias (see `porter list sources`)'));
         }
 
         if (!$this->target && !Config::getInstance()->get('target')) {
-            $this->set('target', $io->prompt('Target package alias (see `porter list -n=targets`)'));
+            $this->set('target', $io->prompt('Target package alias (see `porter list targets`)'));
         }
 
         if (!$this->input && !Config::getInstance()->get('input_alias')) {

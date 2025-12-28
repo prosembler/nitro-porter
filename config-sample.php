@@ -23,6 +23,7 @@ return [
 
     // Aliases of connections.
     // (If you're just editing the 2 default connections below, don't change these.)
+    'origin_alias' => 'discord',
     'input_alias' => 'input',
     'output_alias' => 'output',
 
@@ -31,12 +32,13 @@ return [
         [
             'alias' => 'input',
             'type' => 'database',
-            'adapter' => 'mysql',
+            // @see https://laravel.com/docs/12.x/database#read-and-write-connections
+            'driver' => 'mysql',
             'host' => 'localhost',
             'port' => '3306',
-            'name' => 'porter',
-            'user' => 'porter',
-            'pass' => 'porter',
+            'database' => 'porter',
+            'username' => 'porter',
+            'password' => 'porter',
             'charset' => 'utf8mb4',
             'options' => [
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false, // Critical for large datasets.
@@ -45,15 +47,26 @@ return [
         [
             'alias' => 'output',
             'type' => 'database',
-            'adapter' => 'mysql',
+            // @see https://laravel.com/docs/12.x/database#read-and-write-connections
+            'driver' => 'mysql',
             'host' => 'localhost',
             'port' => '3306',
-            'name' => 'porter',
-            'user' => 'porter',
-            'pass' => 'porter',
+            'database' => 'porter',
+            'username' => 'porter',
+            'password' => 'porter',
             'charset' => 'utf8mb4',
             'options' => [
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false, // Critical for large datasets.
+            ],
+        ],
+        [
+            'alias' => 'discord',
+            'type' => 'api',
+            // @see https://github.com/symfony/symfony/blob/8.0/src/Symfony/Contracts/HttpClient/HttpClientInterface.php
+            'base_uri' => 'https://discord.com/api/',
+            'headers' => [
+                'Accept' => 'application/json',
+                'Authorization' => 'token %env(DISCORD_API_TOKEN)%',
             ],
         ],
     ],

@@ -166,6 +166,7 @@ class Controller
 
         // Create new migration artifacts.
         $inputStorage = new Storage\Database(new ConnectionManager($inputName));
+        $originStorage = new Storage\Https(new ConnectionManager($originName)); // @todo non-API origins
         $origin = originFactory($originName);
 
         // Report on request.
@@ -183,7 +184,7 @@ class Controller
         ) . "\n");
 
         // Do the pull.
-        $origin->run($inputStorage);
+        $origin->run($originStorage, $inputStorage);
 
         // Report finished.
         Log::comment("\n" . sprintf(

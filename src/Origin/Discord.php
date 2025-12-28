@@ -7,7 +7,7 @@ use Porter\Storage;
 
 class Discord extends Origin
 {
-    public function run(Storage\Database $input): void
+    public function run(Storage\Https $input, Storage\Database $output): void
     {
         // TODO: Implement run() method.
     }

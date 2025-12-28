@@ -8,7 +8,7 @@ abstract class Origin
         'name' => '',
     ];
 
-    abstract public function run(Storage\Database $input): void;
+    abstract public function run(Storage\Https $input, Storage\Database $output): void;
 
     /**
      * Get name of the source package.

@@ -3,6 +3,7 @@
 namespace Porter\Storage;
 
 use Illuminate\Database\Query\Builder;
+use Porter\ConnectionManager;
 use Porter\Database\ResultSet;
 use Porter\Migration;
 use Porter\Storage;
@@ -10,9 +11,17 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Https extends Storage
 {
-    public function __construct(
-        private HttpClientInterface $client,
-    ) {
+    /**
+     * @var ConnectionManager
+     */
+    protected ConnectionManager $connectionManager;
+
+    /**
+     * @param ConnectionManager $c
+     */
+    public function __construct(ConnectionManager $c)
+    {
+        $this->connectionManager = $c;
     }
 
     /**
@@ -73,6 +82,6 @@ class Https extends Storage
      */
     public function getHandle(): HttpClientInterface
     {
-        return $this->client;
+        return $this->connectionManager->connection();
     }
 }

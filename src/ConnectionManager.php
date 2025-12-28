@@ -4,6 +4,8 @@ namespace Porter;
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Connection;
+use Symfony\Component\HttpClient\HttpClient as Client;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Manages a single connection to a data source or target, like a database or API.
@@ -19,9 +21,10 @@ class ConnectionManager
 
     protected array $info = [];
 
-    /** @var Connection Connection used for reads. */
-    protected Connection $connection;
+    /** @var Connection|HttpClientInterface Data connection. */
+    protected Connection|HttpClientInterface $connection;
 
+    /** @var Capsule Database manager. */
     public Capsule $dbm;
 
     /**
@@ -44,16 +47,12 @@ class ConnectionManager
         $this->setInfo($info);
         $this->setType($info['type']);
 
-        // Set Illuminate Database instance.
+        // Setup the connection.
         if ($info['type'] === 'database') {
-            $capsule = new Capsule();
-            $capsule->addConnection($this->translateConfig($info), $info['alias']);
-            $this->dbm = $capsule;
-            $this->connection = $this->newConnection();
+            $this->setupDatabase($info, $prefix);
+        } elseif ($info['type'] === 'api') {
+            $this->setupApi($info);
         }
-
-        // Set prefix after connection is generated.
-        $this->connection()->setTablePrefix($prefix);
     }
 
     public function setType(string $type): void
@@ -92,9 +91,9 @@ class ConnectionManager
     /**
      * Get the current DBM connection.
      *
-     * @return Connection
+     * @return Connection|HttpClientInterface
      */
-    public function connection(): Connection
+    public function connection(): Connection|HttpClientInterface
     {
         return $this->connection;
     }
@@ -104,7 +103,7 @@ class ConnectionManager
      *
      * @return Connection
      */
-    protected function newConnection(): Connection
+    protected function newDatabaseConnection(): Connection
     {
         $connection = $this->dbm->getConnection($this->alias);
 
@@ -119,8 +118,9 @@ class ConnectionManager
      * Map keys from our config to Illuminate's.
      * @param array $config
      * @return array
+     * @deprecated
      */
-    public function translateConfig(array $config): array
+    protected function translateDatabaseConfig(array $config): array
     {
         // Valid keys: driver, host, database, username, password, charset, collation, prefix
         $config['driver'] = $config['adapter'];
@@ -153,5 +153,31 @@ class ConnectionManager
         }
 
         return $connection;
+    }
+
+    /**
+     * Setup Illuminate Database instance.
+     *
+     * @param array $info
+     * @param string $prefix
+     */
+    protected function setupDatabase(array $info, string $prefix): void
+    {
+        $capsule = new Capsule();
+        $capsule->addConnection($this->translateDatabaseConfig($info), $info['alias']);
+        $this->dbm = $capsule;
+        $this->connection = $this->newDatabaseConnection();
+        // Set prefix after connection is generated.
+        $this->connection()->setTablePrefix($prefix);
+    }
+
+    /**
+     * Setup Symfony HttpClient instance.
+     *
+     * @param array $info
+     */
+    protected function setupApi(array $info): void
+    {
+        $this->connection = Client::create()->withOptions([$info]);
     }
 }

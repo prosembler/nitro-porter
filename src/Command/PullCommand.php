@@ -27,7 +27,7 @@ class PullCommand extends Command
      */
     public function interact(Interactor $io): void
     {
-        if (!$this->source && !Config::getInstance()->get('origin_alias')) {
+        if (!$this->origin && !Config::getInstance()->get('origin_alias')) {
             $this->set('origin', $io->prompt('Origin package alias (see `porter list origins`)'));
         }
 

@@ -17,15 +17,16 @@ abstract class Origin extends Package
     protected array $config = [];
 
     /**
+     * @param string $connectionAlias
      * @param Storage\Https $input
      * @param Storage\Database $output
      * @throws \Exception
      */
-    public function __construct(Storage\Https $input, Storage\Database $output)
+    public function __construct(string $connectionAlias, Storage\Https $input, Storage\Database $output)
     {
         $this->output = $output;
         $this->input = $input;
-        $this->config = Config::getInstance()->getConnectionAlias(strtolower(__CLASS__));
+        $this->config = Config::getInstance()->getConnectionAlias($connectionAlias);
     }
 
     /**

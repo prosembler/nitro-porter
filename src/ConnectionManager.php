@@ -178,6 +178,8 @@ class ConnectionManager
      */
     protected function setupApi(array $info): void
     {
-        $this->connection = Client::create()->withOptions([$info]);
+        // Allowlist http-clients config options.
+        $info = array_intersect_key($info, array_flip(['base_uri', 'extra']));
+        $this->connection = Client::create()->withOptions($info);
     }
 }

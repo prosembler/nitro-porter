@@ -184,7 +184,7 @@ class Controller
         ) . "\n");
 
         // Do the pull.
-        $origin->run();
+        $origin->run(null);
 
         // Report finished.
         Log::comment("\n" . sprintf(

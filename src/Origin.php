@@ -4,10 +4,6 @@ namespace Porter;
 
 abstract class Origin extends Package
 {
-    public const SUPPORTED = [
-        'name' => '',
-    ];
-
     /** @var Storage\Database Where the data is being written. */
     protected Storage\Database $output;
 
@@ -16,9 +12,6 @@ abstract class Origin extends Package
 
     /** @var array */
     protected array $config = [];
-
-    /** @var array */
-    protected array $headers = [];
 
     /**
      * @param Storage\Https $input
@@ -32,32 +25,6 @@ abstract class Origin extends Package
         $this->config = Config::getInstance()->getConnectionAlias(strtolower(__CLASS__));
     }
 
-    abstract public function run(): void;
-
-    /**
-     * Get name of the origin package.
-     *
-     * @return string
-     */
-    public static function getName(): string
-    {
-        return static::SUPPORTED['name'];
-    }
-
-    /**
-     * @param string $name
-     * @param mixed $value
-     */
-    public function setHeader(string $name, mixed $value): void
-    {
-        $this->headers[$name] = $value;
-    }
-
-    public function getHeaders(): array
-    {
-        return $this->headers;
-    }
-
     /**
      * @param string $endpoint
      * @param array $request
@@ -67,7 +34,7 @@ abstract class Origin extends Package
      */
     protected function pull(string $endpoint, array $request, array $fields, string $tableName): array
     {
-        $response = $this->input->get($endpoint, $request, $this->getHeaders());
+        $response = $this->input->get($endpoint, $request);
         //$this->output->store($tableName, [], $fields, $response, []); //@todo update signature
         return []; // @todo need at least IDs
     }

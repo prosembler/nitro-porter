@@ -188,7 +188,7 @@ class Flarum extends Target
     /**
      * Main import process.
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         // Ignore constraints on tables that block import.
         $port->ignoreOutputDuplicates('users');

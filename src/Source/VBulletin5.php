@@ -69,7 +69,7 @@ class VBulletin5 extends VBulletin
      *
      * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         // Grab all of the ranks.
         $ranks = $port->dbInput()->table('usertitle')

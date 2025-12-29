@@ -28,9 +28,9 @@ class Flarum extends Postscript
      * In test runs, 1/3 of the total migration time was from numberPosts and buildPostMentions.
      * They take about as long as migrating all posts (comments) in the first place.
      *
-     * @param Migration $port
+     * @param ?Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         $this->buildUserMentions($port);
         $this->numberPosts($port);

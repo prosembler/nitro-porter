@@ -45,7 +45,7 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
      *
      * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         // It's usually a good idea to do the porting in the approximate order laid out here.
         // Users

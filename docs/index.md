@@ -14,6 +14,7 @@ Nitro Porter can migrate your community away from these platforms:
 ![AnswerHub](assets/logos/answerhub-150x50.jpg)
 ![ASPPlayground.NET](assets/logos/aspplayground-150x50.png)
 ![bbPress](assets/logos/bbpress-150x50.png)
+![Discord](docs/assets/logos/discord-150x50.png)
 ![Drupal](assets/logos/drupal-150x50.jpeg)
 ![esoTalk](assets/logos/esotalk-150x50.png)
 ![Flarum](assets/logos/flarum-150x50.png)

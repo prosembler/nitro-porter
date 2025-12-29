@@ -2,7 +2,7 @@
 
 namespace Porter;
 
-abstract class Target
+abstract class Target extends Package
 {
     public const SUPPORTED = [
         'name' => '',

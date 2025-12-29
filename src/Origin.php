@@ -2,7 +2,7 @@
 
 namespace Porter;
 
-abstract class Origin
+abstract class Origin extends Package
 {
     public const SUPPORTED = [
         'name' => '',

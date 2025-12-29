@@ -31,16 +31,18 @@ function fileTransferFactory(Source $source, Target $target, string $outputName)
  * Get valid origin class.
  *
  * @param string $origin
+ * @param Storage\Database $input
+ * @param Storage\Https $output
  * @return ?Origin
  */
-function originFactory(string $origin): ?Origin
+function originFactory(string $origin, Storage\Database $input, Storage\Https $output): ?Origin
 {
     $class = '\Porter\Origin\\' . ucwords($origin);
     if (!class_exists($class)) {
         Log::comment("No Source found for {$origin}");
     }
 
-    return (class_exists($class)) ? new $class() : null;
+    return (class_exists($class)) ? new $class($input, $output) : null;
 }
 
 /**

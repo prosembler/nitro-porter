@@ -17,6 +17,7 @@ if (isset($GLOBALS['_composer_autoload_path'])) {
 }
 
 // Environment.
+const APP_VERSION = '4.1';
 const ROOT_DIR = __DIR__;
 if (ini_get('date.timezone') == '') {
     date_default_timezone_set('America/Detroit');

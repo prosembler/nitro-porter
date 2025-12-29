@@ -3,7 +3,7 @@
 require_once dirname(__DIR__) . '/bootstrap.php';
 
 // CLI app setup.
-$app = new Ahc\Cli\Application('Nitro Porter', 'v4.0');
+$app = new Ahc\Cli\Application('Nitro Porter', 'v'.APP_VERSION);
 
 // Add commands.
 $app->add(new Porter\Command\ListCommand());

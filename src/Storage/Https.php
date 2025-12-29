@@ -12,7 +12,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Https extends Storage
 {
-    public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v4)';
+    public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
 
     /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;

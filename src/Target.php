@@ -4,22 +4,6 @@ namespace Porter;
 
 abstract class Target extends Package
 {
-    public const SUPPORTED = [
-        'name' => '',
-        'defaultTablePrefix' => '',
-        'passwordHashMethod' => '',
-        'avatarsPrefix' => '',
-        'avatarThumbPrefix' => '',
-        'avatarPath' => '',
-        'avatarThumbPath' => '',
-        'attachmentPath' => '',
-        'attachmentThumbPath' => '',
-        'features' => [],
-    ];
-
-    /** @var array Settings that change Target behavior. */
-    protected const FLAGS = [];
-
     /**
      * If this is 'false', skip moving first post content to `Discussions.Body`.
      *
@@ -33,48 +17,6 @@ abstract class Target extends Package
     protected bool $useDiscussionBody = true;
 
     public ConnectionManager $connection;
-
-    /**
-     * Get support info of the target package.
-     *
-     * @return array
-     * @see Target::setSources()
-     */
-    public static function getSupport(): array
-    {
-        return static::SUPPORTED;
-    }
-
-    /**
-     * Get name of the target package.
-     *
-     * @return string
-     */
-    public static function getName(): string
-    {
-        return static::SUPPORTED['name'];
-    }
-
-    /**
-     * Get default table prefix of the target package.
-     *
-     * @return string
-     */
-    public static function getPrefix(): string
-    {
-        return static::SUPPORTED['defaultTablePrefix'];
-    }
-
-    /**
-     * Retrieve characteristics of the package.
-     *
-     * @param string $name
-     * @return mixed|null
-     */
-    public static function getFlag(string $name)
-    {
-        return (isset(static::FLAGS[$name])) ? static::FLAGS[$name] : null;
-    }
 
     /**
      * @return bool
@@ -93,9 +35,6 @@ abstract class Target extends Package
     {
         $this->useDiscussionBody = false;
     }
-
-    /** Do the main process for imports, table by table. */
-    abstract public function run(Migration $port): void;
 
     /** Enforce data constraints required by the target platform. */
     abstract public function validate(Migration $port): void;

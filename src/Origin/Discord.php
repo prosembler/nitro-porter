@@ -25,9 +25,8 @@
 
 namespace Porter\Origin;
 
-use Porter\Config;
+use Porter\Migration;
 use Porter\Origin;
-use Porter\Storage;
 
 /**
  * A Discord server is referred to as a 'guild' in the API docs.
@@ -35,7 +34,7 @@ use Porter\Storage;
  */
 class Discord extends Origin
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Discord',
     ];
 
@@ -44,12 +43,13 @@ class Discord extends Origin
     /**
      * All bots can make up to 50 requests per second to Discord's API.
      * 429 response code will have Retry-After header & retry_after in JSON body.
+     * @param ?Migration $port
      * @see https://discord.com/developers/docs/topics/rate-limits#rate-limits
      */
-    public function run(): void
+    public function run(?Migration $port = null): void
     {
         // Discord-specific setup.
-        $this->setHeader('Authorization', 'Bot ' . $this->config['token']);
+        $this->input->setHeader('Authorization', 'Bot ' . $this->config['token']);
 
         $this->users();
         $channelIds = $this->channels();

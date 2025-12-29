@@ -13,14 +13,13 @@ class Https extends Storage
 {
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v4)';
 
-    /**
-     * @var ConnectionManager
-     */
+    /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
 
-    /**
-     * @param ConnectionManager $c
-     */
+    /** @var array */
+    protected array $headers = [];
+
+    /** @param ConnectionManager $c */
     public function __construct(ConnectionManager $c)
     {
         $this->connectionManager = $c;
@@ -40,23 +39,32 @@ class Https extends Storage
     }
 
     /**
-     *
+     * @param string $name
+     * @param mixed $value
      */
-    protected function getGlobalHeaders(): array
+    public function setHeader(string $name, mixed $value): void
     {
-        return [
+        $this->headers[$name] = $value;
+    }
+
+    /**
+     * @return array
+     */
+    public function getHeaders(): array
+    {
+        return array_merge([
             'Content-Type' => 'application/json',
             'User-Agent' => self::USER_AGENT,
-        ];
+        ], $this->headers);
     }
 
     /**
      *
      */
-    public function get(string $endpoint, array $request, array $headers = []): ResponseInterface
+    public function get(string $endpoint, array $request): ResponseInterface
     {
         $options = [
-            'headers' => array_merge($this->getGlobalHeaders(), $headers),
+            'headers' => $this->getHeaders(),
             'body' => json_encode($request),
         ];
         $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);

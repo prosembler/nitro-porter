@@ -43,7 +43,7 @@ class Q2a extends Source
      *
      * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         $this->users($port);
         $this->roles($port);

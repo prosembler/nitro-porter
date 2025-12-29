@@ -63,10 +63,11 @@ return [
             'alias' => 'discord',
             'type' => 'api',
             // @see https://github.com/symfony/symfony/blob/8.0/src/Symfony/Contracts/HttpClient/HttpClientInterface.php
-            'base_uri' => 'https://discord.com/api/',
-            'headers' => [
-                'Accept' => 'application/json',
-                'Authorization' => 'token %env(DISCORD_API_TOKEN)%',
+            'base_uri' => 'https://discord.com/api/v10',
+            'token' => 'secret.token',
+            'extra' => [
+                'guild_id' => '123', // Server ID
+                //'channels' => ['123', '456'], // Optionally limit to certain Channel IDs
             ],
         ],
     ],

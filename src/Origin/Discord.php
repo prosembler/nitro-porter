@@ -25,11 +25,13 @@
 
 namespace Porter\Origin;
 
+use Porter\Log;
 use Porter\Migration;
 use Porter\Origin;
 
 /**
  * A Discord server is referred to as a 'guild' in the API docs.
+ * 429 response code will have Retry-After header & retry_after in JSON body.
  * @see https://discord.com/developers/docs/reference
  */
 class Discord extends Origin
@@ -40,9 +42,62 @@ class Discord extends Origin
 
     public const int MIN_MICROSECONDS = 20000; // Wait 20 milliseconds (1/50 sec) to force rate limit compliance.
 
+    /** @var array  */
+    protected const array DB_STRUCTURE_USERS = [
+        'id' => 'varchar(100)', //@todo key
+        'username' => 'varchar(100)',
+        'discriminator' => 'varchar(100)',
+        'global_name' => 'varchar(100)',
+        'email' => 'varchar(100)',
+        'avatar' => 'varchar(100)',
+        'bot' => 'tinyint',
+        'verified' => 'tinyint',
+    ];
+
+    /** @var array|string[]  */
+    protected const array DB_STRUCTURE_CHANNELS = [
+        'id' => 'varchar(100)', //@todo key
+        'type' => 'int', //@todo key
+        'guild_id' => 'varchar(100)',
+        'position' => 'varchar(100)',
+        'name' => 'text',
+        'topic' => 'text',
+        'last_message_id' => 'varchar(100)',
+        'parent_id' => 'varchar(100)',
+        'message_count' => 'int',
+        // thread-only
+        'owner_id' => 'varchar(100)',
+        'member_count' => 'int',
+        'thread_metadata' => 'text',
+    ];
+
+    /** @var array  */
+    protected const array DB_STRUCTURE_MESSAGES = [
+        'id' => 'varchar(100)', //@todo key
+        'channel_id' => 'varchar(100)', //@todo key
+        'content' => 'text',
+        'timestamp' => 'int',
+        'edited_timestamp' => 'int',
+        'pinned' => 'tinyint',
+        'type' => 'int',
+        // OBJECTS
+        'referenced_message' => 'text',
+        'message_reference' => 'text',
+        'thread' => 'text',
+        'author' => 'text',
+        'poll' => 'text',
+        // OBJECTS[]
+        'attachments' => 'text',
+        'embeds' => 'text',
+        'reactions' => 'text',
+        'sticker_items' => 'text',
+        'mentions' => 'text',
+        'mention_roles' => 'text',
+        'mention_channels' => 'text',
+    ];
+
     /**
-     * All bots can make up to 50 requests per second to Discord's API.
-     * 429 response code will have Retry-After header & retry_after in JSON body.
+     * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
      * @param ?Migration $port
      * @see https://discord.com/developers/docs/topics/rate-limits#rate-limits
      */
@@ -51,15 +106,18 @@ class Discord extends Origin
         // Discord-specific setup.
         $this->input->setHeader('Authorization', 'Bot ' . $this->config['token']);
 
+        // Users
         $this->users();
-        $channelIds = $this->channels();
-        $activeIds = $this->activeThreads();
-        $archivedIds = $this->archivedThreads($channelIds);
 
-        // Messages by channel / thread.
+        // Channels
+        $this->textChannels();
+        $channelIds = $this->getChannels(); // Before polluting with threads.
+        $this->activeThreads();
+        $this->archivedThreads($channelIds);
+
+        // Messages
+        $channelIds = $this->getChannels(); // Now including threads.
         $this->messages($channelIds);
-        $this->messages($activeIds);
-        $this->messages($archivedIds);
     }
 
     /**
@@ -71,60 +129,67 @@ class Discord extends Origin
     }
 
     /**
+     * @return array
+     */
+    private function getChannels(): array
+    {
+        // Start timer.
+        $start = microtime(true);
+        $rows = 0;
+        Log::comment("Get pulled channel ids...");
+
+        // Get discussion id list (avoiding empty discussions) from output.
+        $channels = $this->outputQB()->from('discord_channels')->get('id')->toArray();
+        $ids = array_column($channels, 'id');
+        $memory = memory_get_usage();
+
+        // Report.
+        Log::storage('get', 'discord_channels', microtime(true) - $start, $rows, $memory);
+        return $ids;
+    }
+
+    /**
      * @see https://discord.com/developers/docs/resources/guild#list-guild-members
      */
     protected function users(): void
     {
-        $fields = []; //@todo
         $request = ['limit' => '1000'];
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/members", $request, $fields, 'discord_users');
+        $this->pull("/guilds/$guildId/members", $request, null, self::DB_STRUCTURE_USERS, 'discord_users');
     }
 
     /**
-     * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
-     * Here, we stick to its in-app meaning.
-     *
+     * 'Channel' can also refer to threads; here, we strictly mean OG text channels.
      * @see https://discord.com/developers/docs/resources/channel
      * @see https://discord.com/developers/docs/resources/guild#get-guild-channels
      */
-    protected function channels(): array
+    protected function textChannels(): void
     {
-        $fields = [
-            'id', 'type', 'guild_id', 'position', 'name', 'topic', 'last_message_id', 'parent_id', 'message_count'
-        ];
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/channels", [], $fields, 'discord_channels');
-        return []; // @todo
+        $this->pull("/guilds/$guildId/channels", [], null, self::DB_STRUCTURE_CHANNELS, 'discord_channels');
     }
 
     /**
      * Active threads PER GUILD (1).
      * @see https://discord.com/developers/docs/resources/guild#list-active-guild-threads
      */
-    protected function activeThreads(): array
+    protected function activeThreads(): void
     {
-        $fields = [ // @todo update for threads
-            'id', 'type', 'guild_id', 'position', 'name', 'topic', 'last_message_id', 'parent_id', 'message_count'
-        ];
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/threads/active", [], $fields, 'discord_threads');
-        return []; // @todo
+        $this->pull("/guilds/$guildId/threads/active", [], 'threads', self::DB_STRUCTURE_CHANNELS, 'discord_channels');
     }
 
     /**
      * Public archived threads PER CHANNEL.
      * @see https://discord.com/developers/docs/resources/channel#list-public-archived-threads
      */
-    protected function archivedThreads(array $channelIds): array
+    protected function archivedThreads(array $channelIds): void
     {
-        $fields = [ // @todo update for threads
-            'id', 'type', 'guild_id', 'position', 'name', 'topic', 'last_message_id', 'parent_id', 'message_count'
-        ];
         foreach ($channelIds as $channelId) {
-            $this->pull("/channels/$channelId/threads/archived/public", [], $fields, 'discord_threads');
+            $endpoint = "/channels/$channelId/threads/archived/public";
+            $this->pull($endpoint, [], 'threads', self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+            usleep(self::MIN_MICROSECONDS); // Kludged rate limit.
         }
-        return []; // @todo
     }
 
     /**
@@ -134,16 +199,13 @@ class Discord extends Origin
      */
     protected function messages(array $channelIds): void
     {
-        $fields = [
-            'id', 'channel_id', 'content', 'timestamp', 'edited_timestamp', 'pinned', 'type'
-        ]; //@todo OBJECT: referenced_message, message_reference, thread, author, poll
-        //@todo OBJECTS[]: attachments, embeds, reactions, sticker_items, mentions, mention_roles, mention_channels,
-
         foreach ($channelIds as $channelId) {
             $lastMessage = 0;
             //@todo do...while page as $lastMessage
             $request = ['before' => $lastMessage, 'limit' => '100'];
-            $this->pull("/channels/$channelId/messages", $request, $fields, 'discord_messages');
+            $endpoint = "/channels/$channelId/messages";
+            $this->pull($endpoint, $request, null, self::DB_STRUCTURE_MESSAGES, 'discord_messages');
+            usleep(self::MIN_MICROSECONDS); // Kludged rate limit.
         }
     }
 }

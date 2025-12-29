@@ -5,9 +5,10 @@ namespace Porter\Storage;
 use Illuminate\Database\Query\Builder;
 use Porter\ConnectionManager;
 use Porter\Database\ResultSet;
+use Porter\Log;
 use Porter\Storage;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Https extends Storage
 {
@@ -59,17 +60,45 @@ class Https extends Storage
     }
 
     /**
-     *
+     * Send the request & retrieve the response content.
+     * @return array Response content.
+     * @throws ExceptionInterface
      */
-    public function get(string $endpoint, array $request): ResponseInterface
+    public function get(string $endpoint, array $request): array
     {
+        // Send the request.
         $options = [
             'headers' => $this->getHeaders(),
             'body' => json_encode($request),
         ];
         $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
-        // @todo status handling etc
-        return $response;
+        $content = [];
+
+        // Debug request.
+        if (\Porter\Config::getInstance()->debugEnabled()) {
+            Log::comment("GET ($endpoint): " . json_encode($options));
+        }
+
+        // Get content, check status, & log.
+        $code = $response->getStatusCode();
+        if ($code === 200) {
+            try {
+                $content = $response->toArray();
+            } catch (ExceptionInterface $e) { // Empty $content possible.
+                Log::comment("HTTP 200 ($endpoint), but client error: " . $e->getMessage());
+            }
+        } else { // Panic!
+            try {
+                $message = $response->getContent();
+                Log::comment("HTTP $code ($endpoint): " . $message);
+            } catch (ExceptionInterface $e) {
+                Log::comment("HTTP $code ($endpoint): " . $e->getMessage());
+            }
+            Log::comment('NITRO PORTER ABORTED BY BAD PULL: NON-200 HTTP CODE RESPONSE');
+            exit(); // Safety measure so we don't spam HTTP errors and get banned.
+        }
+
+        return $content;
     }
 
     /**

@@ -155,7 +155,7 @@ class Discord extends Origin
     {
         $request = ['limit' => '1000'];
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/members", $request, null, self::DB_STRUCTURE_USERS, 'discord_users');
+        $this->pull("guilds/$guildId/members", $request, null, self::DB_STRUCTURE_USERS, 'discord_users');
     }
 
     /**
@@ -166,7 +166,7 @@ class Discord extends Origin
     protected function textChannels(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/channels", [], null, self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+        $this->pull("guilds/$guildId/channels", [], null, self::DB_STRUCTURE_CHANNELS, 'discord_channels');
     }
 
     /**
@@ -176,7 +176,7 @@ class Discord extends Origin
     protected function activeThreads(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/threads/active", [], 'threads', self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+        $this->pull("guilds/$guildId/threads/active", [], 'threads', self::DB_STRUCTURE_CHANNELS, 'discord_channels');
     }
 
     /**
@@ -186,7 +186,7 @@ class Discord extends Origin
     protected function archivedThreads(array $channelIds): void
     {
         foreach ($channelIds as $channelId) {
-            $endpoint = "/channels/$channelId/threads/archived/public";
+            $endpoint = "channels/$channelId/threads/archived/public";
             $this->pull($endpoint, [], 'threads', self::DB_STRUCTURE_CHANNELS, 'discord_channels');
             usleep(self::MIN_MICROSECONDS); // Kludged rate limit.
         }
@@ -203,7 +203,7 @@ class Discord extends Origin
             $lastMessage = 0;
             //@todo do...while page as $lastMessage
             $request = ['before' => $lastMessage, 'limit' => '100'];
-            $endpoint = "/channels/$channelId/messages";
+            $endpoint = "channels/$channelId/messages";
             $this->pull($endpoint, $request, null, self::DB_STRUCTURE_MESSAGES, 'discord_messages');
             usleep(self::MIN_MICROSECONDS); // Kludged rate limit.
         }

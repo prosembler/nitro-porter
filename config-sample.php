@@ -63,7 +63,8 @@ return [
             'alias' => 'discord',
             'type' => 'api',
             // @see https://github.com/symfony/symfony/blob/8.0/src/Symfony/Contracts/HttpClient/HttpClientInterface.php
-            'base_uri' => 'https://discord.com/api/v10',
+            // https://symfony.com/doc/current/reference/configuration/framework.html#reference-http-client-base-uri
+            'base_uri' => 'https://discord.com/api/v10/', // Trailing slash required.
             'token' => 'secret.token',
             'extra' => [
                 'guild_id' => '123', // Server ID

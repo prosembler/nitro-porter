@@ -9,7 +9,6 @@ use Porter\ConnectionManager;
 use Porter\Database\ResultSet;
 use Porter\Log;
 use Porter\Migration;
-use Porter\Postscript;
 use Porter\Storage;
 
 class Database extends Storage
@@ -77,7 +76,6 @@ class Database extends Storage
      * @param array $structure
      * @param ResultSet|Builder $data
      * @param array $filters
-     * @param Migration $port
      * @return array Information about the results.
      */
     public function store(
@@ -85,8 +83,7 @@ class Database extends Storage
         array $map,
         array $structure,
         $data,
-        array $filters,
-        Migration $port
+        array $filters
     ): array {
         $info = [
             'rows' => 0,
@@ -100,7 +97,7 @@ class Database extends Storage
                 $info['rows']++;
                 $row = $this->normalizeRow($map, $structure, $row, $filters);
                 $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows'], $port);
+                $this->logBatchProgress($name, $info['rows']);
                 $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
             }
         } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
@@ -109,7 +106,7 @@ class Database extends Storage
                 $info['rows']++;
                 $row = $this->normalizeRow($map, $structure, (array)$row, $filters);
                 $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows'], $port);
+                $this->logBatchProgress($name, $info['rows']);
                 $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
             }
         }
@@ -125,9 +122,8 @@ class Database extends Storage
      *
      * @param string $name
      * @param int $rows
-     * @param Migration $port
      */
-    public function logBatchProgress(string $name, int $rows, Migration $port): void
+    public function logBatchProgress(string $name, int $rows): void
     {
         if ($rows >= self::LOG_THRESHOLD && ($rows % self::LOG_INCREMENT) === 0) {
             Log::comment("inserting '" . $name . "': " . number_format($rows) . ' done...', false);

@@ -264,7 +264,7 @@ class Migration
         $this->porterStorage->prepare($tableName, $structure);
 
         // Store the data.
-        $info = $this->porterStorage->store($tableName, $map, $structure, $data ?? $query, $filters, $this);
+        $info = $this->porterStorage->store($tableName, $map, $structure, $data ?? $query, $filters);
 
         // Report.
         Log::storage('export', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
@@ -287,7 +287,7 @@ class Migration
         $this->outputStorage->prepare($tableName, $struct);
 
         // Store the data.
-        $info = $this->outputStorage->store($tableName, $map, $struct, $exp, $filters, $this);
+        $info = $this->outputStorage->store($tableName, $map, $struct, $exp, $filters);
 
         // Report.
         Log::storage('import', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);

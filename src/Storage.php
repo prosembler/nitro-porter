@@ -16,7 +16,6 @@ abstract class Storage
      * @param array $structure
      * @param ResultSet|Builder $data
      * @param array $filters
-     * @param Migration $port
      * @return array Information about the results.
      */
     abstract public function store(
@@ -24,8 +23,7 @@ abstract class Storage
         array $map,
         array $structure,
         $data,
-        array $filters,
-        Migration $port
+        array $filters
     ): array;
 
     /**

@@ -10,6 +10,7 @@ use Porter\Database\ResultSet;
 use Porter\Log;
 use Porter\Migration;
 use Porter\Storage;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Database extends Storage
 {
@@ -74,7 +75,7 @@ class Database extends Storage
      * @param string $name
      * @param array $map
      * @param array $structure
-     * @param ResultSet|Builder $data
+     * @param ResultSet|Builder|ResponseInterface $data
      * @param array $filters
      * @return array Information about the results.
      */
@@ -109,6 +110,9 @@ class Database extends Storage
                 $this->logBatchProgress($name, $info['rows']);
                 $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
             }
+        } elseif (is_a($data, 'Symfony\Contracts\HttpClient\ResponseInterface')) {
+            // Iterate on API results.
+            //
         }
 
         // Insert remaining records.

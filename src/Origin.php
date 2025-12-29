@@ -2,6 +2,9 @@
 
 namespace Porter;
 
+use Staudenmeir\LaravelCte\Query\Builder;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+
 abstract class Origin extends Package
 {
     /** @var Storage\Database Where the data is being written. */
@@ -26,16 +29,42 @@ abstract class Origin extends Package
     }
 
     /**
+     * Provide a query builder for the output database.
+     * @internal For `Origin` packages.
+     * @return Builder
+     */
+    protected function outputQB(): Builder
+    {
+        return new Builder($this->output->getHandle());
+    }
+
+    /**
      * @param string $endpoint
      * @param array $request
+     * @param ?string $key Response array key of data to be stored (contains $fields) or null if top-level.
      * @param array $fields
      * @param string $tableName
-     * @return array
+     * @throws ExceptionInterface
+     * @see Migration::import()
      */
-    protected function pull(string $endpoint, array $request, array $fields, string $tableName): array
+    protected function pull(string $endpoint, array $request, ?string $key, array $fields, string $tableName): void
     {
+        // Start timer.
+        $start = microtime(true);
+
+        // Prepare the storage medium for the incoming structure.
+        $this->output->prepare($tableName, $fields);
+
+        // Retrieve data from the origin.
         $response = $this->input->get($endpoint, $request);
-        //$this->output->store($tableName, [], $fields, $response, []); //@todo update signature
-        return []; // @todo need at least IDs
+        if ($key) { // @todo Brittle; needs API-equivalent of normalizeRow() eventually.
+            $response = $response[$key];
+        }
+
+        // Store the data.
+        $info = $this->output->store($tableName, [], $fields, $response, []);
+
+        // Report.
+        Log::storage('pull', $endpoint . ' > ' . $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
     }
 }

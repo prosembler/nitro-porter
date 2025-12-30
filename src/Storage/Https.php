@@ -104,6 +104,9 @@ class Https extends Storage
         } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
             Log::comment("HTTP $code ($endpoint) " . $message .  " | " . $e->getMessage());
             Log::comment("NITRO PORTER ABORTED BY $code HTTP CODE RESPONSE" . "\n");
+            if (429 === $code) {
+                Log::comment("NITRO PORTER WAS RATE-LIMITED. DO NOT IMMEDIATELY RETRY!" . "\n");
+            }
             exit(); // Safety measure; don't get banned.
         } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
             // Redirection = 3xx, Transport = network, Decoding = array-specific

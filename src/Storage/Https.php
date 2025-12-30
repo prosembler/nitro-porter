@@ -3,11 +3,17 @@
 namespace Porter\Storage;
 
 use Illuminate\Database\Query\Builder;
+use Porter\Config;
 use Porter\ConnectionManager;
 use Porter\Database\ResultSet;
 use Porter\Log;
 use Porter\Storage;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Https extends Storage
@@ -61,41 +67,50 @@ class Https extends Storage
 
     /**
      * Send the request & retrieve the response content.
+     * @param string $endpoint
+     * @param array $query
      * @return array Response content.
-     * @throws ExceptionInterface
      */
-    public function get(string $endpoint, array $request): array
+    public function get(string $endpoint, array $query): array
     {
-        // Send the request.
+        // Send request.
         $options = [
             'headers' => $this->getHeaders(),
-            'body' => json_encode($request),
+            'query' => $query,
         ];
-        $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
-        $content = [];
-
-        // Debug request.
-        if (\Porter\Config::getInstance()->debugEnabled()) {
-            Log::comment("GET ($endpoint): " . json_encode($options));
+        try {
+            $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
+        } catch (TransportExceptionInterface $e) {
+            Log::comment("ERROR: GET ($endpoint) " . $e->getMessage());
+            return []; // Failure is on our side; safe to continue.
+        }
+        if (Config::getInstance()->debugEnabled()) {
+            // Enable debugging mode to see full request in logs.
+            $options['headers']['Authorization'] = '{redacted}'; // no tokens in logs pls
+            Log::comment("\nSENT: GET ($endpoint) " . json_encode($options) . "\n");
         }
 
-        // Get content, check status, & log.
-        $code = $response->getStatusCode();
-        if ($code === 200) {
-            try {
-                $content = $response->toArray();
-            } catch (ExceptionInterface $e) { // Empty $content possible.
-                Log::comment("HTTP 200 ($endpoint), but client error: " . $e->getMessage());
-            }
-        } else { // Panic!
-            try {
-                $message = $response->getContent();
-                Log::comment("HTTP $code ($endpoint): " . $message);
-            } catch (ExceptionInterface $e) {
-                Log::comment("HTTP $code ($endpoint): " . $e->getMessage());
-            }
-            Log::comment('NITRO PORTER ABORTED BY BAD PULL: NON-200 HTTP CODE RESPONSE');
-            exit(); // Safety measure so we don't spam HTTP errors and get banned.
+        // Parse response.
+        $code = 0;
+        $message = '(Empty body)';
+        $content = [];
+        try {
+            $code = $response->getStatusCode();
+            //$headers = $response->getHeaders();
+            $message = $response->getContent();
+            $content = $response->toArray();
+        } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
+            Log::comment("HTTP $code ($endpoint) " . $message .  " | " . $e->getMessage());
+            Log::comment("NITRO PORTER ABORTED BY $code HTTP CODE RESPONSE" . "\n");
+            exit(); // Safety measure; don't get banned.
+        } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
+            // Redirection = 3xx, Transport = network, Decoding = array-specific
+            Log::comment("HTTP $code ($endpoint) " . $e->getMessage());
+        }
+
+        if (Config::getInstance()->debugEnabled()) {
+            // Enable debugging mode to see full response in logs.
+            Log::comment("REPLY: HTTP $code $message\n");
         }
 
         return $content;

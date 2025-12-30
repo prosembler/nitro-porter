@@ -41,14 +41,13 @@ abstract class Origin extends Package
 
     /**
      * @param string $endpoint
-     * @param array $request
+     * @param array $query
      * @param ?string $key Response array key of data to be stored (contains $fields) or null if top-level.
      * @param array $fields
      * @param string $tableName
-     * @throws ExceptionInterface
      * @see Migration::import()
      */
-    protected function pull(string $endpoint, array $request, ?string $key, array $fields, string $tableName): void
+    protected function pull(string $endpoint, array $query, ?string $key, array $fields, string $tableName): void
     {
         // Start timer.
         $start = microtime(true);
@@ -57,7 +56,7 @@ abstract class Origin extends Package
         $this->output->prepare($tableName, $fields);
 
         // Retrieve data from the origin.
-        $response = $this->input->get($endpoint, $request);
+        $response = $this->input->get($endpoint, $query);
         if ($key) { // @todo Brittle; needs API-equivalent of normalizeRow() eventually.
             $response = $response[$key];
         }

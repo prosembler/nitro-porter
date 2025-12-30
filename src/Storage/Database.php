@@ -75,7 +75,7 @@ class Database extends Storage
      * @param string $name
      * @param array $map
      * @param array $structure
-     * @param ResultSet|Builder|ResponseInterface $data
+     * @param ResultSet|Builder|array $data
      * @param array $filters
      * @return array Information about the results.
      */
@@ -93,30 +93,30 @@ class Database extends Storage
         $this->setBatchTable($name);
 
         if (is_a($data, '\Porter\Database\ResultSet')) {
-            // Iterate on old ResultSet.
+            // Iterate on @deprecated ResultSet.
             while ($row = $data->nextResultRow()) {
-                $info['rows']++;
                 $row = $this->normalizeRow($map, $structure, $row, $filters);
                 $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows']);
+                $this->logBatchProgress($name, $info['rows']++);
                 $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
             }
+            $this->batchInsert([], true); // Insert remaining records.
         } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
             // Use the Builder to process results one at a time.
             foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
-                $info['rows']++;
                 $row = $this->normalizeRow($map, $structure, (array)$row, $filters);
                 $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows']);
+                $this->logBatchProgress($name, $info['rows']++);
                 $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
             }
-        } elseif (is_a($data, 'Symfony\Contracts\HttpClient\ResponseInterface')) {
-            // Iterate on API results.
-            //
+            $this->batchInsert([], true); // Insert remaining records.
+        } elseif (is_array($data)) {
+            // Already batched (e.g. API result).
+            $info['rows'] = count($data);
+            $this->sendBatch($data);
+            $this->logBatchProgress($name, $info['rows']);
+            $info['memory'] = memory_get_usage();
         }
-
-        // Insert remaining records.
-        $this->batchInsert([], true);
 
         return $info;
     }

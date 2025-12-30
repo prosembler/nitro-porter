@@ -41,14 +41,22 @@ abstract class Origin extends Package
 
     /**
      * @param string $endpoint
-     * @param array $query
-     * @param ?string $key Response array key of data to be stored (contains $fields) or null if top-level.
      * @param array $fields
      * @param string $tableName
-     * @see Migration::import()
+     * @param array $query
+     * @param ?string $key Response array key of data to be stored (contains $fields) or null if top-level.
+     * @param array $map
+     * @return array $info from store()
+     * @see Migration::import() for comparison.
      */
-    protected function pull(string $endpoint, array $query, ?string $key, array $fields, string $tableName): void
-    {
+    protected function pull(
+        string $endpoint,
+        array $fields,
+        string $tableName,
+        array $query = [],
+        ?string $key = null,
+        array $map = []
+    ): array {
         // Start timer.
         $start = microtime(true);
 
@@ -57,14 +65,48 @@ abstract class Origin extends Package
 
         // Retrieve data from the origin.
         $response = $this->input->get($endpoint, $query);
-        if ($key) { // @todo Brittle; needs API-equivalent of normalizeRow() eventually.
-            $response = $response[$key];
+
+        // Drop top level & use key only.
+        $data = ($key && isset($response[$key])) ? (array)$response[$key] : $response;
+
+        // Normalize data.
+        foreach ($data as &$item) {
+            // Map data (flatten).
+            foreach ($map as $origin => $output) {
+                // @todo Recursive flattening.
+                if (is_array($output)) {
+                    foreach ($output as $old => $new) {
+                        if (isset($item[$origin][$old])) {
+                            $item[$new] = $item[$origin][$old];
+                        }
+                    }
+                } elseif (isset($item[$origin])) {
+                    $item[$output] = $item[$origin];
+                }
+            }
+
+            // Remove keys not in $fields.
+            $item = array_intersect_key($item, $fields);
+            // Add missing keys with `null` value.
+            $item = array_merge(array_fill_keys(array_keys($fields), null), $item);
+            foreach ($item as &$value) {
+                // Collapse array & objects into text.
+                if (is_iterable($value)) {
+                    $value = json_encode($value);
+                }
+            }
         }
 
         // Store the data.
-        $info = $this->output->store($tableName, [], $fields, $response, []);
+        $info = $this->output->store($tableName, [], $fields, $data, []);
+
+        // Get first/last records for downstream logic.
+        $info['last'] = end($response);
+        $info['first'] = reset($response);
 
         // Report.
-        Log::storage('pull', $endpoint . ' > ' . $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
+        Log::storage('pull', $endpoint . ' > ' . $tableName, microtime(true) - $start, count($data), $info['memory']);
+
+        return $info;
     }
 }

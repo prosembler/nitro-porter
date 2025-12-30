@@ -42,14 +42,31 @@ class Discord extends Origin
 
     public const int MIN_MICROSECONDS = 20000; // Wait 20 milliseconds (1/50 sec) to force rate limit compliance.
 
+    public const int MAX_CHANNEL_QUERIES = 10000; // Channels + threads.
+
+    public const int MAX_MESSAGE_QUERIES = 1000; // Per channel.
+
+    public const array TEXT_CHANNEL_TYPES = [
+        0 => 'GUILD_TEXT',
+        5 => 'GUILD_ANNOUNCEMENT',
+        11 => 'PUBLIC_THREAD',
+        15 => 'GUILD_FORUM',
+    ];
+
     /** @var array  */
     protected const array DB_STRUCTURE_USERS = [
+        'nick' => 'varchar(100)',
+        'avatar' => 'varchar(100)',
+        'roles' => 'text',
+        'joined_at' => 'varchar(100)',
+        'premium_since' => 'varchar(100)',
+        // Under 'user' object
         'id' => 'varchar(100)', //@todo key
         'username' => 'varchar(100)',
         'discriminator' => 'varchar(100)',
         'global_name' => 'varchar(100)',
+        'global_avatar' => 'varchar(100)',
         'email' => 'varchar(100)',
-        'avatar' => 'varchar(100)',
         'bot' => 'tinyint',
         'verified' => 'tinyint',
     ];
@@ -76,8 +93,8 @@ class Discord extends Origin
         'id' => 'varchar(100)', //@todo key
         'channel_id' => 'varchar(100)', //@todo key
         'content' => 'text',
-        'timestamp' => 'int',
-        'edited_timestamp' => 'int',
+        'timestamp' => 'varchar(100)',
+        'edited_timestamp' => 'varchar(100)',
         'pinned' => 'tinyint',
         'type' => 'int',
         // OBJECTS
@@ -107,16 +124,27 @@ class Discord extends Origin
         $this->input->setHeader('Authorization', 'Bot ' . $this->config['token']);
 
         // Users
+        if ($this->output->exists('discord_users')) {
+            $this->output->getHandle()->table('discord_users')->truncate();
+        }
         $this->users();
 
+        // Roles
+
         // Channels
-        $this->textChannels();
-        $channelIds = $this->getChannels(); // Before polluting with threads.
+        if ($this->output->exists('discord_channels')) {
+            $this->output->getHandle()->table('discord_channels')->truncate();
+        }
+        $this->channels();
+        $channelIds = $this->getTextChannels(); // Before polluting with threads.
         $this->activeThreads();
         $this->archivedThreads($channelIds);
 
         // Messages
-        $channelIds = $this->getChannels(); // Now including threads.
+        $channelIds = $this->getTextChannels(); // Now including threads.
+        if ($this->output->exists('discord_messages')) {
+            $this->output->getHandle()->table('discord_messages')->truncate();
+        }
         $this->messages($channelIds);
     }
 
@@ -131,20 +159,22 @@ class Discord extends Origin
     /**
      * @return array
      */
-    private function getChannels(): array
+    private function getTextChannels(): array
     {
         // Start timer.
         $start = microtime(true);
-        $rows = 0;
         Log::comment("Get pulled channel ids...");
 
-        // Get discussion id list (avoiding empty discussions) from output.
-        $channels = $this->outputQB()->from('discord_channels')->get('id')->toArray();
+        // Get channel id list.
+        $channels = $this->outputQB()->from('discord_channels')
+            ->distinct()->limit(10000) // Safety from repeat pulls & invalid data.
+            ->whereIn('type', array_keys(self::TEXT_CHANNEL_TYPES))
+            ->get('id')->toArray();
         $ids = array_column($channels, 'id');
         $memory = memory_get_usage();
 
         // Report.
-        Log::storage('get', 'discord_channels', microtime(true) - $start, $rows, $memory);
+        Log::storage('GET', 'discord_channels', microtime(true) - $start, count($ids), $memory);
         return $ids;
     }
 
@@ -155,18 +185,30 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000'];
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/members", $query, null, self::DB_STRUCTURE_USERS, 'discord_users');
+        $map = [
+            'user' => [
+                'id' => 'id',
+                'username' => 'username',
+                'discriminator' => 'discriminator',
+                'global_name' => 'global_name',
+                'avatar' => 'global_avatar',
+                'email' => 'email',
+                'bot' => 'bot',
+                'verified' => 'verified',
+            ],
+        ];
+        $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', $query, null, $map);
     }
 
     /**
-     * 'Channel' can also refer to threads; here, we strictly mean OG text channels.
+     * 'Channel' can also refer to threads; here, it does not.
      * @see https://discord.com/developers/docs/resources/channel
      * @see https://discord.com/developers/docs/resources/guild#get-guild-channels
      */
-    protected function textChannels(): void
+    protected function channels(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/channels", [], null, self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+        $this->pull("guilds/$guildId/channels", self::DB_STRUCTURE_CHANNELS, 'discord_channels');
     }
 
     /**
@@ -176,7 +218,7 @@ class Discord extends Origin
     protected function activeThreads(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/threads/active", [], 'threads', self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+        $this->pull("guilds/$guildId/threads/active", self::DB_STRUCTURE_CHANNELS, 'discord_channels', [], 'threads');
     }
 
     /**
@@ -187,25 +229,51 @@ class Discord extends Origin
     {
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $this->pull($endpoint, [], 'threads', self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+            $this->pull($endpoint, self::DB_STRUCTURE_CHANNELS, 'discord_channels', [], 'threads');
             usleep(self::MIN_MICROSECONDS); // Kludged rate limit.
         }
     }
 
     /**
      * Default `limit` is 50; max is 100. Use `before` to page backwards.
+     * > Returns an array of message objects from newest to oldest on success.
      * @see https://discord.com/developers/docs/resources/message
      * @see https://discord.com/developers/docs/resources/message#message-object-message-types (types)
      */
     protected function messages(array $channelIds): void
     {
+        if (count($channelIds) > self::MAX_CHANNEL_QUERIES) {
+            Log::comment("INFO: Found more than MAX_CHANNEL_QUERIES.");
+            return;
+        }
+
         foreach ($channelIds as $channelId) {
-            $lastMessage = 0;
-            //@todo do...while page as $lastMessage
-            $query = ['before' => $lastMessage, 'limit' => '100'];
+            // Setup.
             $endpoint = "channels/$channelId/messages";
-            $this->pull($endpoint, $query, null, self::DB_STRUCTURE_MESSAGES, 'discord_messages');
-            usleep(self::MIN_MICROSECONDS); // Kludged rate limit.
+            $lastMessage = 0;
+            $countBatches = 0;
+
+            do {
+                // Pull batch.
+                $countBatches++;
+                $query = ['limit' => '100'];
+                if ($lastMessage) {
+                    $query['before'] = $lastMessage;
+                }
+                $info = $this->pull($endpoint, self::DB_STRUCTURE_MESSAGES, 'discord_messages', $query);
+
+                // Next offset.
+                if (isset($info['last']['id'])) {
+                    $lastMessage = $info['last']['id']; // Should be oldest message.
+                } else {
+                    break;
+                }
+
+                // Loop controls.
+                $moreRows = ($info['rows'] > 0); // If rows found, infer not at end.
+                $moreBatchesAllowed = ($countBatches < self::MAX_MESSAGE_QUERIES); // Max/channel sanity check.
+                usleep(self::MIN_MICROSECONDS); // Forced rate limit.
+            } while ($moreRows && $moreBatchesAllowed);
         }
     }
 }

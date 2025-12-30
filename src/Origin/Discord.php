@@ -153,9 +153,9 @@ class Discord extends Origin
      */
     protected function users(): void
     {
-        $request = ['limit' => '1000'];
+        $query = ['limit' => '1000'];
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/members", $request, null, self::DB_STRUCTURE_USERS, 'discord_users');
+        $this->pull("guilds/$guildId/members", $query, null, self::DB_STRUCTURE_USERS, 'discord_users');
     }
 
     /**
@@ -202,9 +202,9 @@ class Discord extends Origin
         foreach ($channelIds as $channelId) {
             $lastMessage = 0;
             //@todo do...while page as $lastMessage
-            $request = ['before' => $lastMessage, 'limit' => '100'];
+            $query = ['before' => $lastMessage, 'limit' => '100'];
             $endpoint = "channels/$channelId/messages";
-            $this->pull($endpoint, $request, null, self::DB_STRUCTURE_MESSAGES, 'discord_messages');
+            $this->pull($endpoint, $query, null, self::DB_STRUCTURE_MESSAGES, 'discord_messages');
             usleep(self::MIN_MICROSECONDS); // Kludged rate limit.
         }
     }

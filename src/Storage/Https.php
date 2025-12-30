@@ -86,7 +86,9 @@ class Https extends Storage
         }
         if (Config::getInstance()->debugEnabled()) {
             // Enable debugging mode to see full request in logs.
-            $options['headers']['Authorization'] = '{redacted}'; // no tokens in logs pls
+            if (isset($options['headers']['Authorization'])) {
+                $options['headers']['Authorization'] = '{redacted}'; // no tokens in logs pls
+            }
             Log::comment("\nSENT: GET ($endpoint) " . json_encode($options) . "\n");
         }
 

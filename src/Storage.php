@@ -59,9 +59,6 @@ abstract class Storage
         // Rename data keys for the target.
         $row = $this->mapData($row, $map);
 
-        // Fix encoding as needed.
-        $row = $this->fixEncoding($row);
-
         // Drop columns not in the structure.
         $row = array_intersect_key($row, $fields);
 
@@ -70,6 +67,9 @@ abstract class Storage
 
         // Convert arrays & objects to text (JSON).
         $row = $this->flattenData($row);
+
+        // Fix encoding as needed.
+        $row = $this->fixEncoding($row);
 
         // Convert empty strings to null.
         return array_map(function ($value) {

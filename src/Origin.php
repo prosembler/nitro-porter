@@ -69,36 +69,8 @@ abstract class Origin extends Package
         // Drop top level & use key only.
         $data = ($key && isset($response[$key])) ? (array)$response[$key] : $response;
 
-        // Normalize data.
-        foreach ($data as &$item) {
-            // Map data (flatten).
-            foreach ($map as $origin => $output) {
-                // @todo Recursive flattening.
-                if (is_array($output)) {
-                    foreach ($output as $old => $new) {
-                        if (isset($item[$origin][$old])) {
-                            $item[$new] = $item[$origin][$old];
-                        }
-                    }
-                } elseif (isset($item[$origin])) {
-                    $item[$output] = $item[$origin];
-                }
-            }
-
-            // Remove keys not in $fields.
-            $item = array_intersect_key($item, $fields);
-            // Add missing keys with `null` value.
-            $item = array_merge(array_fill_keys(array_keys($fields), null), $item);
-            foreach ($item as &$value) {
-                // Collapse array & objects into text.
-                if (is_iterable($value)) {
-                    $value = json_encode($value);
-                }
-            }
-        }
-
         // Store the data.
-        $info = $this->output->store($tableName, [], $fields, $data, []);
+        $info = $this->output->store($tableName, $map, $fields, $data, []);
 
         // Get first/last records for downstream logic.
         $info['last'] = end($response);

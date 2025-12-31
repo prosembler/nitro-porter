@@ -112,7 +112,7 @@ class Database extends Storage
                 $info = $this->batchInsert($row, $info);
             }
         }
-        $this->batchInsert([], [], true); // Insert remaining records.
+        $this->batchInsert([], $info, true); // Insert remaining records.
 
         return $info;
     }
@@ -168,7 +168,11 @@ class Database extends Storage
             $batch = [];
         }
 
-        $this->logBatchProgress($info['name'], $info['rows']++);
+        // Log count.
+        $info['rows']++;
+        if (isset($info['name'])) {
+            $this->logBatchProgress($info['name'], $info['rows']);
+        }
 
         return $info;
     }

@@ -89,34 +89,30 @@ class Database extends Storage
         $info = [
             'rows' => 0,
             'memory' => 0,
+            'name' => $name,
         ];
         $this->setBatchTable($name);
 
         if (is_a($data, '\Porter\Database\ResultSet')) {
             // Iterate on @deprecated ResultSet.
             while ($row = $data->nextResultRow()) {
-                $row = $this->normalizeRow($map, $structure, $row, $filters);
-                $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows']++);
-                $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
+                $row = $this->normalizeRow($row, $structure, $map, $filters);
+                $info = $this->batchInsert($row, $info);
             }
-            $this->batchInsert([], true); // Insert remaining records.
         } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
             // Use the Builder to process results one at a time.
             foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
-                $row = $this->normalizeRow($map, $structure, (array)$row, $filters);
-                $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows']++);
-                $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
+                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                $info = $this->batchInsert($row, $info);
             }
-            $this->batchInsert([], true); // Insert remaining records.
         } elseif (is_array($data)) {
-            // Already batched (e.g. API result).
-            $info['rows'] = count($data);
-            $this->sendBatch($data);
-            $this->logBatchProgress($name, $info['rows']);
-            $info['memory'] = memory_get_usage();
+            // Iterate on API data.
+            foreach ($data as $row) {
+                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                $info = $this->batchInsert($row, $info);
+            }
         }
+        $this->batchInsert([], [], true); // Insert remaining records.
 
         return $info;
     }
@@ -145,30 +141,36 @@ class Database extends Storage
      */
     public function stream(array $row, array $structure, bool $final = false): void
     {
-        $this->batchInsert($row, $final);
+        $this->batchInsert($row, [], $final);
     }
 
     /**
      * Accept rows one at a time and batch them together for more efficient inserts.
      *
      * @param array $row Row of data to insert.
+     * @param array $info
      * @param bool $final Force an insert with existing batch.
-     * @return int Bytes currently being used by the app.
+     * @return array Meta info.
+     *   - memory = Bytes currently being used by the app.
      */
-    private function batchInsert(array $row, bool $final = false): int
+    private function batchInsert(array $row, array $info, bool $final = false): array
     {
         static $batch = [];
         if (!empty($row)) {
             $batch[] = $row;
         }
-        $bytes = memory_get_usage(); // Measure before potential send.
+
+        // Measure highest memory usage before potential send.
+        $info['memory'] = max(memory_get_usage(), $info['memory']);
 
         if (self::INSERT_BATCH === count($batch) || $final) {
             $this->sendBatch($batch);
             $batch = [];
         }
 
-        return $bytes;
+        $this->logBatchProgress($info['name'], $info['rows']++);
+
+        return $info;
     }
 
     /**

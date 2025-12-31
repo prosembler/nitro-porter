@@ -45,13 +45,13 @@ abstract class Storage
     /**
      * Prepare a row of data for storage.
      *
-     * @param array $map
-     * @param array $structure
-     * @param array $row
-     * @param array $filters
+     * @param array $row Data to operate on.
+     * @param array $fields [fieldName => type]
+     * @param array $map [fieldName => newName]
+     * @param array $filters [fieldName => callable]
      * @return array
      */
-    public function normalizeRow(array $map, array $structure, array $row, array $filters): array
+    public function normalizeRow(array $row, array $fields, array $map, array $filters): array
     {
         // Apply callback filters.
         $row = $this->filterData($row, $filters);
@@ -63,7 +63,13 @@ abstract class Storage
         $row = $this->fixEncoding($row);
 
         // Drop columns not in the structure.
-        $row = array_intersect_key($row, $structure);
+        $row = array_intersect_key($row, $fields);
+
+        // Add missing keys.
+        $row = array_merge(array_fill_keys(array_keys($fields), null), $row);
+
+        // Convert arrays & objects to text (JSON).
+        $row = $this->flattenData($row);
 
         // Convert empty strings to null.
         return array_map(function ($value) {
@@ -100,6 +106,18 @@ abstract class Storage
     {
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
+            // Allow flattening 1 level. @todo Make recursive.
+            if (is_array($dest)) {
+                foreach ($dest as $old => $new) {
+                    if (isset($row[$src][$old])) {
+                        $row[$new] = $row[$src][$old]; // Move value up a level.
+                    }
+                }
+                unset($row[$src]); // Remove column that was an array value.
+                continue; // No need to map again.
+            }
+
+            // Simple-map remaining values.
             foreach ($row as $columnName => $value) {
                 if ($columnName === $src) {
                     $row[$dest] = $value; // Add column with new name.
@@ -156,5 +174,21 @@ abstract class Storage
                 (is_string($value) || is_numeric($value));
             return ($doEncode) ? mb_convert_encoding($value, 'UTF-8', mb_detect_encoding($value)) : $value;
         }, $row);
+    }
+
+    /**
+     * Convert arrays & objects to flat text.
+     *
+     * @param array $row
+     * @return array
+     */
+    protected function flattenData(array $row): array
+    {
+        foreach ($row as &$value) {
+            if (is_iterable($value)) {
+                $value = json_encode($value);
+            }
+        }
+        return $row;
     }
 }

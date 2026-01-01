@@ -3,7 +3,6 @@
 namespace Porter;
 
 use Staudenmeir\LaravelCte\Query\Builder;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 
 abstract class Origin extends Package
 {
@@ -64,20 +63,26 @@ abstract class Origin extends Package
         $this->output->prepare($tableName, $fields);
 
         // Retrieve data from the origin.
-        $response = $this->input->get($endpoint, $query);
+        $split_send = microtime(true);
+        list($response, $headers) = $this->input->get($endpoint, $query);
+        $split_reply = microtime(true);
 
         // Drop top level & use key only.
         $data = ($key && isset($response[$key])) ? (array)$response[$key] : $response;
 
         // Store the data.
+        $this->output->ignoreTable($tableName); // Auto-append rather than duplicating.
         $info = $this->output->store($tableName, $map, $fields, $data, []);
 
         // Get first/last records for downstream logic.
         $info['last'] = end($response);
         $info['first'] = reset($response);
+        $info['headers'] = $headers;
+        $info['api_time'] = $split_reply - $split_send;
+        $info['pull_time'] = microtime(true) - $start;
 
         // Report.
-        Log::storage('pull', $endpoint . ' > ' . $tableName, microtime(true) - $start, count($data), $info['memory']);
+        Log::storage('pull', $tableName, $info['pull_time'], count($data), $info['memory']);
 
         return $info;
     }

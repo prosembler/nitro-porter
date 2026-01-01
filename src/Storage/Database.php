@@ -207,6 +207,25 @@ class Database extends Storage
     }
 
     /**
+     * Do not reset this table.
+     *
+     * @param string $tableName
+     */
+    public function protectTable(string $tableName): void
+    {
+        $this->resetTables[] = $tableName;
+    }
+
+    /**
+     * @param string $tableName
+     * @return bool
+     */
+    public function isProtectedTable(string $tableName): bool
+    {
+        return in_array($tableName, $this->resetTables);
+    }
+
+    /**
      * Set table name that sendBatch() will target.
      *
      * @param string $tableName
@@ -234,11 +253,11 @@ class Database extends Storage
      */
     public function prepare(string $name, array $structure): void
     {
-        if (!in_array($name, $this->resetTables)) {
-            // Avoid double-dropping a table during an import because we probably already put data in it.
+        // Only drop/truncate tables that already exist if they're not protected.
+        if (!$this->exists($name) || !$this->isProtectedTable($name)) {
             $this->createOrUpdateTable($this->prefix . $name, $structure);
         }
-        $this->resetTables[] = $name;
+        $this->protectTable($name); // Avoid drop/truncate a table after it's prepared.
         $this->setBatchTable($name);
     }
 
@@ -253,10 +272,12 @@ class Database extends Storage
         $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
         $schema = $dbm->getSchemaBuilder();
         if ($this->exists($name)) {
-            // Empty the table if it already exists.
+            // Empty the table if it already exists & is not protected.
             // Foreign key check must be disabled or MySQL throws error.
-            $dbm->unprepared("SET foreign_key_checks = 0");
-            $dbm->query()->from($name)->truncate();
+            if (!$this->isProtectedTable($name)) {
+                $dbm->unprepared("SET foreign_key_checks = 0");
+                $dbm->query()->from($name)->truncate();
+            }
 
             // Add any missing columns.
             // To do this, removing existing columns from $structure & build a schema closure.

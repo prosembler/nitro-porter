@@ -176,10 +176,11 @@ class Discord extends Origin
     }
 
     /**
-     * @see Https::get() for handling of 429s via `retry-after` header.
      * @param array $headers
+     * @param int $replySeconds
+     * @see Https::get() for handling of 429s via `retry-after` header.
      */
-    private function rateLimit(array $headers, $replySeconds = 0): void
+    private function rateLimit(array $headers, int $replySeconds = 0): void
     {
         // Get header info.
         $limit = $headers['x-ratelimit-limit'][0] ?? null; // total number that can be made

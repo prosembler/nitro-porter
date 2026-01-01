@@ -53,6 +53,9 @@ abstract class Storage
      */
     public function normalizeRow(array $row, array $fields, array $map, array $filters): array
     {
+        // $fields['keys'] is only for prepare(); ignore here.
+        unset($fields['keys']);
+
         // Apply callback filters.
         $row = $this->filterData($row, $filters);
 

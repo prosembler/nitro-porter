@@ -20,11 +20,16 @@ class Https extends Storage
 {
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
 
+    public const int MAX_ERRORS = 5; // Conservative to prevent bans. You can always re-run.
+
     /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
 
     /** @var array */
     protected array $headers = [];
+
+    /** @var array */
+    protected array $errors = [];
 
     /** @param ConnectionManager $c */
     public function __construct(ConnectionManager $c)
@@ -63,6 +68,16 @@ class Https extends Storage
             'Content-Type' => 'application/json',
             'User-Agent' => self::USER_AGENT,
         ], $this->headers);
+    }
+
+    public function addError(array $errorInfo): void
+    {
+        $this->errors[] = $errorInfo;
+    }
+
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 
     /**
@@ -115,21 +130,37 @@ class Https extends Storage
                         // OK FINE WE CAN TRY AGAIN AFTER A NAP.
                         Log::comment("RATE LIMITED: Pausing for $seconds seconds");
                         sleep($seconds);
-                        $this->get($endpoint, $query); // TRY AGAIN.
+                        return $this->get($endpoint, $query); // TRY AGAIN.
                     }
                 }
             } catch (ExceptionInterface $e) {
             }
-            // ABSOLUTE PANIC.
+
+            // Collect & log the non-429 error.
+            $this->addError([
+                'code' => $code,
+                'message' => $message,
+                'headers' => $headers,
+            ]);
             Log::comment("HTTP $code ($endpoint) " . $message .  " | " . $e->getMessage());
             Log::comment('HEADERS: ' . json_encode($headers));
-            $now = date('H:i:s e');
-            Log::comment("NITRO PORTER ABORTED $now BY $code HTTP CODE RESPONSE" . "\n");
-            exit(); // Safety measure; don't get banned.
+
+            // PANIC if too many errors.
+            if (count($this->getErrors()) >= self::MAX_ERRORS) {
+                $now = date('H:i:s e');
+                Log::comment("\nNITRO PORTER ABORTED $now BY $code HTTP CODE RESPONSE" . "\n");
+                exit(); // Safety measure; don't get banned.
+            }
+
+            // Pause a beat for safety if we didn't abort.
+            Log::comment("Pausing 10 seconds due to error.");
+            sleep(10);
+            return $this->get($endpoint, $query); // TRY AGAIN.
         } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
             // Redirection = 3xx, Transport = network, Decoding = array-specific
-            // Unlikely to have consequences, so just log & move on.
+            // Unlikely to have consequences, so just log & retry.
             Log::comment("HTTP $code ($endpoint) " . $e->getMessage());
+            return $this->get($endpoint, $query); // TRY AGAIN.
         }
 
         if (Config::getInstance()->debugEnabled()) {

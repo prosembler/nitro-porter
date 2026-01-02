@@ -3,6 +3,7 @@
 namespace Porter\Storage;
 
 use Illuminate\Database\Query\Builder;
+use JetBrains\PhpStorm\NoReturn;
 use Porter\Config;
 use Porter\ConnectionManager;
 use Porter\Database\ResultSet;
@@ -22,6 +23,8 @@ class Https extends Storage
 
     public const int MAX_ERRORS = 5; // Conservative to prevent bans. You can always re-run.
 
+    public const int MAX_RETRIES = 20;
+
     /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
 
@@ -35,6 +38,8 @@ class Https extends Storage
     public function __construct(ConnectionManager $c)
     {
         $this->connectionManager = $c;
+        $this->setHeader('Content-Type', 'application/json');
+        $this->setHeader('User-Agent', self::USER_AGENT);
     }
 
     /**
@@ -64,15 +69,25 @@ class Https extends Storage
      */
     public function getHeaders(): array
     {
-        return array_merge([
-            'Content-Type' => 'application/json',
-            'User-Agent' => self::USER_AGENT,
-        ], $this->headers);
+        return $this->headers;
     }
 
+    /**
+     * Log & store an HTTP error.
+     * EXIT if MAX_ERRORS exceeded.
+     * @param array $errorInfo
+     */
     public function addError(array $errorInfo): void
     {
         $this->errors[] = $errorInfo;
+        Log::comment("HTTP {$errorInfo['code']} ({$errorInfo['endpoint']}) " .
+            $errorInfo['message'] . " | " . $errorInfo['exception']->getMessage());
+        Log::comment('HEADERS: ' . json_encode($errorInfo['headers']));
+        if (count($this->getErrors()) >= self::MAX_ERRORS) {
+            $this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
+        } else {
+            sleep(5); // Pause a beat for safety.
+        }
     }
 
     public function getErrors(): array
@@ -81,69 +96,83 @@ class Https extends Storage
     }
 
     /**
+     * @param int $code HTTP code
+     * @param array $headers
+     * @return bool|int Seconds to wait (or false to stop).
+     */
+    protected function retry(int $code, array $headers): bool|int
+    {
+        if (429 === $code && !empty($headers['retry-after'][0])) {
+            $seconds = (int)$headers['retry-after'][0]; // Standard HTTP header.
+            if ($seconds > 0 && $seconds < 300) { // Valid amount of time under 5 min.
+                Log::comment("RATE LIMITED: Pausing for $seconds seconds");
+                sleep($seconds); // TAKE A NAP BUT THEN FIRE ZE RETRY.
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param string $message
+     */
+    protected function abort(string $message): void
+    {
+        Log::comment("\nNITRO PORTER ABORTED at " . date('H:i:s e') . " — $message" . "\n");
+        exit();
+    }
+
+    /**
      * Send the request & retrieve the response content.
      * @param string $endpoint
      * @param array $query
      * @return array Response content.
      */
-    public function get(string $endpoint, array $query): array
+    public function get(string $endpoint, array $query, int $retries = 0): array
     {
+        // Detect excessive retries.
+        if ($retries > self::MAX_RETRIES) {
+            $this->abort("MAX_RETRIES (" . self::MAX_RETRIES . ") reached");
+        }
+
         // Send request.
         $options = [
             'headers' => $this->getHeaders(),
             'query' => $query,
         ];
-        try {
-            $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
-        } catch (TransportExceptionInterface $e) {
-            Log::comment("\nERROR: GET ($endpoint) " . $e->getMessage());
-            return []; // Failure is on our side; safe to continue.
-        }
         if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
             Log::comment("\nSENT: GET ($endpoint)\n> " . json_encode($this->redactHeaders($options)));
+        }
+        try {
+            $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
+        } catch (TransportExceptionInterface $e) { // Bad option passed.
+            $this->abort("GET ($endpoint) " . $e->getMessage());
+            exit(); // Stan is throwing a tantrum.
         }
 
         // Parse response.
         $code = 0;
-        $message = '(Empty body)';
         $headers = [];
+        $message = '';
         try {
+            $headers = $response->getHeaders(false); // Forcibly retrieve headers.
+            $message = $response->getContent(false); // Forcibly retrieve body.
             $code = $response->getStatusCode();
-            $headers = $response->getHeaders();
-            $message = $response->getContent();
             $content = $response->toArray();
         } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
-            try { // to handle rate limit errors.
-                $headers = $response->getHeaders(false); // Forcibly retrieve headers.
-                $message = $response->getContent(false); // Forcibly retrieve body.
-                if (429 === $code) {
-                    $seconds = (int)$headers['retry-after'][0]; // Standard HTTP header.
-                    if ($seconds > 0 && $seconds < 300) { // Valid amount of time under 5 min.
-                        Log::comment("RATE LIMITED: Pausing for $seconds seconds");
-                        sleep($seconds); // TAKE A NAP.
-                        return $this->get($endpoint, $query); // TRY AGAIN.
-                    }
-                }
-            } catch (ExceptionInterface $e) {
+            // Handle 429 (rate limit) errors & retries.
+            if ($this->retry($code, $headers)) {
+                return $this->get($endpoint, $query, $retries++); // TRY AGAIN.
             }
-
             // Collect & log (non-429) error before trying again.
-            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers]);
-            Log::comment("HTTP $code ($endpoint) " . $message .  " | " . $e->getMessage());
-            Log::comment('HEADERS: ' . json_encode($headers));
-            if (count($this->getErrors()) >= self::MAX_ERRORS) {
-                // PANIC if too many errors.
-                Log::comment("\nABORT " . date('H:i:s e') . " — MAX_ERRORS reached" . "\n");
-                exit(); // Safety measure; don't get banned.
-            }
-            sleep(10); // Pause a beat for safety if we didn't abort.
-            return $this->get($endpoint, $query); // TRY AGAIN.
+            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
+            return $this->get($endpoint, $query, $retries++); // TRY AGAIN.
         } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
             // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
             Log::comment("HTTP $code ($endpoint) " . $e->getMessage());
-            return $this->get($endpoint, $query); // TRY AGAIN.
+            return $this->get($endpoint, $query, $retries++); // TRY AGAIN.
         }
-        if (Config::getInstance()->debugEnabled()) { // Show full response in logs.
+        if (Config::getInstance()->debugEnabled()) { // Show (good) full response in logs.
             Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
         }
 

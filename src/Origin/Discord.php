@@ -313,9 +313,6 @@ class Discord extends Origin
             return;
         }
 
-        // Do not reset data every run.
-        $this->output->protectTable('discord_messages');
-
         // Status tracking.
         $channels = array_fill_keys($channelIds, false);
         $k = 0;

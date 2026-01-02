@@ -99,74 +99,52 @@ class Https extends Storage
             Log::comment("\nERROR: GET ($endpoint) " . $e->getMessage());
             return []; // Failure is on our side; safe to continue.
         }
-        if (Config::getInstance()->debugEnabled()) {
-            // Enable debugging mode to see full request in logs.
-            if (isset($options['headers']['Authorization'])) {
-                $options['headers']['Authorization'] = '_'; // no tokens in logs pls
-            }
-            if (isset($options['headers']['User-Agent'])) {
-                $options['headers']['User-Agent'] = '_'; // abbreviate logs
-            }
-            Log::comment("\nSENT: GET ($endpoint)\n> " . json_encode($options));
+        if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
+            Log::comment("\nSENT: GET ($endpoint)\n> " . json_encode($this->redactHeaders($options)));
         }
 
         // Parse response.
         $code = 0;
         $message = '(Empty body)';
-        $content = $headers = [];
+        $headers = [];
         try {
             $code = $response->getStatusCode();
             $headers = $response->getHeaders();
             $message = $response->getContent();
             $content = $response->toArray();
         } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
-            // Attempt to gracefully handle rate limit errors.
-            try {
+            try { // to handle rate limit errors.
                 $headers = $response->getHeaders(false); // Forcibly retrieve headers.
                 $message = $response->getContent(false); // Forcibly retrieve body.
-                if (429 === $code && !empty($headers['retry-after'][0])) {
+                if (429 === $code) {
                     $seconds = (int)$headers['retry-after'][0]; // Standard HTTP header.
                     if ($seconds > 0 && $seconds < 300) { // Valid amount of time under 5 min.
-                        // OK FINE WE CAN TRY AGAIN AFTER A NAP.
                         Log::comment("RATE LIMITED: Pausing for $seconds seconds");
-                        sleep($seconds);
+                        sleep($seconds); // TAKE A NAP.
                         return $this->get($endpoint, $query); // TRY AGAIN.
                     }
                 }
             } catch (ExceptionInterface $e) {
             }
 
-            // Collect & log the non-429 error.
-            $this->addError([
-                'code' => $code,
-                'message' => $message,
-                'headers' => $headers,
-            ]);
+            // Collect & log (non-429) error before trying again.
+            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers]);
             Log::comment("HTTP $code ($endpoint) " . $message .  " | " . $e->getMessage());
             Log::comment('HEADERS: ' . json_encode($headers));
-
-            // PANIC if too many errors.
             if (count($this->getErrors()) >= self::MAX_ERRORS) {
-                $now = date('H:i:s e');
-                Log::comment("\nNITRO PORTER ABORTED $now BY $code HTTP CODE RESPONSE" . "\n");
+                // PANIC if too many errors.
+                Log::comment("\nABORT " . date('H:i:s e') . " — MAX_ERRORS reached" . "\n");
                 exit(); // Safety measure; don't get banned.
             }
-
-            // Pause a beat for safety if we didn't abort.
-            Log::comment("Pausing 10 seconds due to error.");
-            sleep(10);
+            sleep(10); // Pause a beat for safety if we didn't abort.
             return $this->get($endpoint, $query); // TRY AGAIN.
         } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
-            // Redirection = 3xx, Transport = network, Decoding = array-specific
-            // Unlikely to have consequences, so just log & retry.
+            // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
             Log::comment("HTTP $code ($endpoint) " . $e->getMessage());
             return $this->get($endpoint, $query); // TRY AGAIN.
         }
-
-        if (Config::getInstance()->debugEnabled()) {
-            // Enable debugging mode to see full response in logs.
-            $num = count($content);
-            Log::comment("REPLY: HTTP $code ($num records)");
+        if (Config::getInstance()->debugEnabled()) { // Show full response in logs.
+            Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
         }
 
         return [$content, $headers];
@@ -217,5 +195,22 @@ class Https extends Storage
     public function getHandle(): HttpClientInterface
     {
         return $this->connectionManager->connection();
+    }
+
+    /**
+     * Redact headers for logs.
+     *
+     * @param array $options
+     * @return array
+     */
+    protected function redactHeaders(array $options): array
+    {
+        if (isset($options['headers']['Authorization'])) {
+            $options['headers']['Authorization'] = '_'; // no tokens in logs pls
+        }
+        if (isset($options['headers']['User-Agent'])) {
+            $options['headers']['User-Agent'] = '_'; // abbreviate logs
+        }
+        return $options;
     }
 }

@@ -60,6 +60,8 @@ abstract class Origin extends Package
         $start = microtime(true);
 
         // Prepare the storage medium for the incoming structure.
+        $this->output->protectTable($tableName); // Do not reset data from origins every run.
+        $this->output->ignoreTable($tableName);  // Allow duplicate inserts.
         $this->output->prepare($tableName, $fields);
 
         // Retrieve data from the origin.

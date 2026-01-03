@@ -49,7 +49,7 @@ class Flarum extends Postscript
     {
         // Start timer.
         $start = microtime(true);
-        $rows = 0;
+        $info['rows'] = 0;
 
         // Prepare mentions table.
         $port->outputStorage()->prepare('post_mentions_user', self::DB_STRUCTURE_POST_MENTIONS_USER);
@@ -72,19 +72,18 @@ class Flarum extends Postscript
             );
             // There can be multiple userids per post.
             foreach ($mentions['userids'] as $userid) {
-                $port->outputStorage()->stream([
+                $info = $port->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_user_id' => (int)$userid
-                ], self::DB_STRUCTURE_POST_MENTIONS_USER, false);
-                $rows++;
+                ], self::DB_STRUCTURE_POST_MENTIONS_USER, $info, false);
             }
         }
 
         // Insert remaining mentions.
-        $port->outputStorage()->stream([], [], true);
+        $port->outputStorage()->stream([], [], [], true);
 
         // Report.
-        Log::storage('build', 'mentions_user', microtime(true) - $start, $rows, $memory);
+        Log::storage('build', 'mentions_user', microtime(true) - $start, $info['rows'], $memory);
     }
 
     /**
@@ -139,7 +138,7 @@ class Flarum extends Postscript
     {
         // Start timer.
         $start = microtime(true);
-        $rows = 0;
+        $info['rows'] = 0;
         $failures = 0;
 
         // Prepare mentions table.
@@ -179,11 +178,10 @@ class Flarum extends Postscript
                 }
 
                 // Record post mentions.
-                $port->outputStorage()->stream([
+                $info = $port->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$postid
-                ], self::DB_STRUCTURE_POST_MENTIONS_POST, false);
-                $rows++;
+                ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info, false);
             }
 
             // There can also be multiple mentioned discussionids per post.
@@ -194,16 +192,15 @@ class Flarum extends Postscript
                 }
 
                 // Record post mentions.
-                $port->outputStorage()->stream([
+                $info = $port->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$discussions[$discussionid] // Use the OP lookup
-                ], self::DB_STRUCTURE_POST_MENTIONS_POST, false);
-                $rows++;
+                ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info, false);
             }
         }
 
         // Insert remaining mentions.
-        $port->outputStorage()->stream([], [], true);
+        $port->outputStorage()->stream([], [], [], true);
 
         // Log failures.
         if ($failures) {
@@ -211,7 +208,7 @@ class Flarum extends Postscript
         }
 
         // Report.
-        Log::storage('build', 'mentions_post', microtime(true) - $start, $rows, $memory);
+        Log::storage('build', 'mentions_post', microtime(true) - $start, $info['rows'], $memory);
     }
 
     /**

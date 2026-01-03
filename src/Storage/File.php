@@ -136,8 +136,10 @@ class File extends Storage
      * @param resource $fp
      * @param array $row
      * @param array $structure
+     * @param array $info
+     * @return array
      */
-    public function writeRow($fp, array $row, array $structure): void
+    public function writeRow($fp, array $row, array $structure, array $info = []): array
     {
         // Loop through the columns in the export structure and grab their values from the row.
         $exRow = array();
@@ -148,30 +150,12 @@ class File extends Storage
             // Format the value for writing.
             $exRow[] = $this->formatValue($value);
         }
+
         // Write the data.
         fwrite($fp, implode(self::DELIM, $exRow));
         // End the record.
         fwrite($fp, self::NEWLINE);
-    }
-
-    /**
-     * Write an entire single table's data to file.
-     * @inheritdoc
-     */
-    public function store(
-        string $name,
-        array $map,
-        array $structure,
-        $data,
-        array $filters
-    ): array {
-        $info['rows'] = 0;
-        while ($row = $data->nextResultRow()) {
-            $info['rows']++;
-            $row = $this->normalizeRow($row, $structure, $map, $filters);
-            $this->writeRow($this->getHandle(), $row, $structure);
-        }
-        $this->writeEndTable($this->getHandle());
+        $info['rows']++;
 
         return $info;
     }
@@ -181,11 +165,17 @@ class File extends Storage
      *
      * @param array $row
      * @param array $structure
+     * @param array $info
      * @param bool $final Whether this is the last row.
+     * @return array
      */
-    public function stream(array $row, array $structure, bool $final = false): void
+    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
     {
-        $this->writeRow($this->getHandle(), $row, $structure);
+        $info = $this->writeRow($this->getHandle(), $row, $structure, $info);
+        if ($final) {
+            $this->writeEndTable($this->getHandle());
+        }
+        return $info;
     }
 
     /**

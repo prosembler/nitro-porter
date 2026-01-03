@@ -73,7 +73,6 @@ abstract class Origin extends Package
         $data = ($key && isset($response[$key])) ? (array)$response[$key] : $response;
 
         // Store the data.
-        $this->output->ignoreTable($tableName); // Auto-append rather than duplicating.
         $info = $this->output->store($tableName, $map, $fields, $data, []);
 
         // Get first/last records for downstream logic.

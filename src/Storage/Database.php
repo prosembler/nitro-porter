@@ -54,48 +54,6 @@ class Database extends Storage
     }
 
     /**
-     * Save the given records to the database. Use prefix.
-     * @inheritdoc
-     */
-    public function store(
-        string $name,
-        array $map,
-        array $structure,
-        $data,
-        array $filters
-    ): array {
-        $info = [
-            'rows' => 0,
-            'memory' => 0,
-            'name' => $name,
-        ];
-        $this->setBatchTable($name);
-
-        if (is_a($data, '\Porter\Database\ResultSet')) {
-            // Iterate on @deprecated ResultSet.
-            while ($row = $data->nextResultRow()) {
-                $row = $this->normalizeRow($row, $structure, $map, $filters);
-                $info = $this->batchInsert($row, $info);
-            }
-        } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
-            // Use the Builder to process results one at a time.
-            foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
-                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
-                $info = $this->batchInsert($row, $info);
-            }
-        } elseif (is_array($data)) {
-            // Iterate on API data.
-            foreach ($data as $row) {
-                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
-                $info = $this->batchInsert($row, $info);
-            }
-        }
-        $this->batchInsert([], $info, true); // Insert remaining records.
-
-        return $info;
-    }
-
-    /**
      * Report incremental storage for large datasets.
      *
      * @param string $name
@@ -115,11 +73,15 @@ class Database extends Storage
      * Created for Postscripts to have finer control over record inserts.
      * @param array $row
      * @param array $structure
+     * @param array $info
      * @param bool $final Must be `true` on final call or records will be lost.
+     * @return array
      */
-    public function stream(array $row, array $structure, bool $final = false): void
+    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
     {
-        $this->batchInsert($row, [], $final);
+        $info = $this->batchInsert($row, $info, $final);
+        $info['rows']++;
+        return $info;
     }
 
     /**
@@ -147,7 +109,6 @@ class Database extends Storage
         }
 
         // Log count.
-        $info['rows']++;
         if (isset($info['name'])) {
             $this->logBatchProgress($info['name'], $info['rows']);
         }

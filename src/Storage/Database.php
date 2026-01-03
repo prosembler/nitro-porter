@@ -3,14 +3,11 @@
 namespace Porter\Storage;
 
 use Illuminate\Database\Connection;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Porter\ConnectionManager;
-use Porter\Database\ResultSet;
 use Porter\Log;
 use Porter\Migration;
 use Porter\Storage;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Database extends Storage
 {

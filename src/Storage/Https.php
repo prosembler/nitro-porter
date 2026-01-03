@@ -2,10 +2,8 @@
 
 namespace Porter\Storage;
 
-use Illuminate\Database\Query\Builder;
 use Porter\Config;
 use Porter\ConnectionManager;
-use Porter\Database\ResultSet;
 use Porter\Log;
 use Porter\Storage;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;

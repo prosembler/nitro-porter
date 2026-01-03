@@ -2,9 +2,6 @@
 
 namespace Porter\Storage;
 
-use Illuminate\Database\Connection;
-use Illuminate\Database\Query\Builder;
-use Porter\Database\ResultSet;
 use Porter\Storage;
 
 class File extends Storage

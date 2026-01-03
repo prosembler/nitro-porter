@@ -15,53 +15,37 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 class Database extends Storage
 {
     /** @var int How many rows to insert at once. */
-    public const INSERT_BATCH = 1000;
+    public const int INSERT_BATCH = 1000;
 
     /** @var int When to start reporting on incremental storage (in the logs). */
-    public const LOG_THRESHOLD = 100000;
+    public const int LOG_THRESHOLD = 100000;
 
     /** @var int Increment to report at after `REPORT_THRESHOLD` is reached; must be multiple of `INSERT_BATCH`. */
-    public const LOG_INCREMENT = 100000;
+    public const int LOG_INCREMENT = 100000;
 
-    /**
-     * @var array Table structures that define the format of the intermediary export tables.
-     */
-    public array $mapStructure = []; // @todo
-
-    /**
-     * @var string Prefix for the storage database.
-     */
+    /** @var string Prefix for the storage database. */
     protected string $prefix = '';
 
-    /**
-     * @var string Table name currently targeted by the batcher.
-     */
+    /** @var string Table name currently targeted by the batcher. */
     protected string $batchTable = '';
 
-    /**
-     * @var array List of tables that have already been reset to avoid dropping multipart import data.
-     */
+    /** @var array List of tables that have already been reset to avoid dropping multipart import data. */
     protected array $resetTables = [];
 
-    /**
-     * @var array List of tables to ignore errors on insert.
-     */
+    /** @var array List of tables to ignore errors on insert. */
     protected array $ignoreErrorsTables = [];
 
-    /**
-     * @var ConnectionManager
-     */
+    /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
 
-    /**
-     * @param ConnectionManager $c
-     */
+    /** @param ConnectionManager $c */
     public function __construct(ConnectionManager $c)
     {
         $this->connectionManager = $c;
     }
 
     /**
+     * Retrieve a reference to the underlying storage method library.
      * @return Connection
      */
     public function getHandle(): Connection
@@ -71,13 +55,7 @@ class Database extends Storage
 
     /**
      * Save the given records to the database. Use prefix.
-     *
-     * @param string $name
-     * @param array $map
-     * @param array $structure
-     * @param ResultSet|Builder|array $data
-     * @param array $filters
-     * @return array Information about the results.
+     * @inheritdoc
      */
     public function store(
         string $name,
@@ -218,9 +196,9 @@ class Database extends Storage
 
     /**
      * @param string $tableName
-     * @return bool
+     * @return bool Whether table is protected.
      */
-    public function isProtectedTable(string $tableName): bool
+    private function isProtectedTable(string $tableName): bool
     {
         return in_array($tableName, $this->resetTables);
     }
@@ -248,17 +226,17 @@ class Database extends Storage
     /**
      * Create fresh table for storage. Use prefix.
      *
-     * @param string $name
+     * @param string $resourceName
      * @param array $structure
      */
-    public function prepare(string $name, array $structure): void
+    public function prepare(string $resourceName, array $structure): void
     {
         // Only drop/truncate tables that already exist if they're not protected.
-        if (!$this->exists($name) || !$this->isProtectedTable($name)) {
-            $this->createOrUpdateTable($this->prefix . $name, $structure);
+        if (!$this->exists($resourceName) || !$this->isProtectedTable($resourceName)) {
+            $this->createOrUpdateTable($this->prefix . $resourceName, $structure);
         }
-        $this->protectTable($name); // Avoid drop/truncate a table after it's prepared.
-        $this->setBatchTable($name);
+        $this->protectTable($resourceName); // Avoid drop/truncate a table after it's prepared.
+        $this->setBatchTable($resourceName);
     }
 
     /**
@@ -319,14 +297,13 @@ class Database extends Storage
      * Ideally, we'd just pass structures in the correct format to start with.
      * Unfortunately, this isn't greenfield software, and today it's less-bad
      * to write this method than to try to convert thousands of these manually.
-     *
      * @see https://laravel.com/docs/9.x/migrations#creating-columns
      *
      * @param array $tableInfo Keys are column names, values are MySQL data types.
      *      A special key 'keys' can be passed to define database columns.
      * @return callable Closure defining a single Illuminate Database table.
      */
-    public function getTableStructureClosure(array $tableInfo): callable
+    private function getTableStructureClosure(array $tableInfo): callable
     {
         // Build the closure using given structure.
         return function (Blueprint $table) use ($tableInfo) {
@@ -401,7 +378,7 @@ class Database extends Storage
      * @param string $type
      * @return int
      */
-    public function getVarcharLength($type): int
+    private function getVarcharLength(string $type): int
     {
         $matches = [];
         preg_match('/varchar\(([0-9]{1,3})\)/', $type, $matches);

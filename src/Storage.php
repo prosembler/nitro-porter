@@ -2,7 +2,6 @@
 
 namespace Porter;
 
-use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Porter\Database\ResultSet;
 
@@ -12,34 +11,40 @@ abstract class Storage
      * Software-specific import process.
      *
      * @param string $name Name of the data chunk / table to be written.
-     * @param array $map
-     * @param array $structure
-     * @param ResultSet|Builder $data
-     * @param array $filters
+     * @param array $map Origin -> Input names
+     * @param array $structure Name -> type
+     * @param ResultSet|Builder|array $data
+     * @param array $filters Name -> callable
      * @return array Information about the results.
      */
     abstract public function store(
         string $name,
         array $map,
         array $structure,
-        $data,
+        ResultSet|Builder|array $data,
         array $filters
     ): array;
 
     /**
-     * @param string $name
+     * Once per $resourceName, prior to store() being used.
+     * @param string $resourceName
      * @param array $structure The final, combined structure to be written.
      */
-    abstract public function prepare(string $name, array $structure): void;
+    abstract public function prepare(string $resourceName, array $structure): void;
 
+    /** Once before Storage is first used. */
     abstract public function begin(): void;
 
+    /** Once after Storage is done being used. */
     abstract public function end(): void;
 
+    /** Whether $resourceName exists, and optionally contains $structure. */
     abstract public function exists(string $resourceName = '', array $structure = []): bool;
 
+    /** Send one record for storage at a time. */
     abstract public function stream(array $row, array $structure, bool $final = false): void;
 
+    /** Retrieve a reference to the underlying storage method library. */
     abstract public function getHandle(): mixed;
 
     /**

@@ -2,6 +2,7 @@
 
 namespace Porter\Storage;
 
+use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Porter\Database\ResultSet;
 use Porter\Storage;
@@ -26,19 +27,13 @@ class File extends Storage
     /** Quote character in the import file. */
     public const QUOTE = '"';
 
-    /**
-     * @var resource File pointer.
-     */
+    /** @var resource File pointer. */
     private $file;
 
-    /**
-     * @var string The path to the export file.
-     */
+    /** @var string The path to the export file. */
     public string $path = '';
 
-    /**
-     * @var bool Whether or not to use compression when creating the file.
-     */
+    /** @var bool Whether or not to use compression when creating the file. */
     protected bool $useCompression = true;
 
     /**
@@ -161,13 +156,7 @@ class File extends Storage
 
     /**
      * Write an entire single table's data to file.
-     *
-     * @param string $name
-     * @param array $map
-     * @param array $structure
-     * @param ResultSet|Builder $data
-     * @param array $filters
-     * @return array Information about the results.
+     * @inheritdoc
      */
     public function store(
         string $name,
@@ -187,11 +176,22 @@ class File extends Storage
         return $info;
     }
 
+    /**
+     * Send one record for storage at a time.
+     *
+     * @param array $row
+     * @param array $structure
+     * @param bool $final Whether this is the last row.
+     */
     public function stream(array $row, array $structure, bool $final = false): void
     {
         $this->writeRow($this->getHandle(), $row, $structure);
     }
 
+    /**
+     * Retrieve a reference to the underlying storage method library.
+     * @return resource
+     */
     public function getHandle(): mixed
     {
         return $this->file;
@@ -200,13 +200,13 @@ class File extends Storage
     /**
      * Write CSV header row.
      *
-     * @param string $name
+     * @param string $resourceName
      * @param array $structure
      */
-    public function prepare(string $name, array $structure): void
+    public function prepare(string $resourceName, array $structure): void
     {
         unset($structure['keys']); // Unfortunate kludge to allow databases to declare these.
-        $this->writeBeginTable($this->getHandle(), $name, $structure);
+        $this->writeBeginTable($this->getHandle(), $resourceName, $structure);
     }
 
     /**
@@ -225,7 +225,7 @@ class File extends Storage
      * @param mixed $value
      * @return string
      */
-    public function escapedValue(mixed $value): string
+    private function escapedValue(mixed $value): string
     {
         // Set the search and replace to escape strings.
         $escapeSearch = [
@@ -252,11 +252,10 @@ class File extends Storage
      * @param mixed $value
      * @return int|string
      */
-    public function formatValue(mixed $value): int|string
+    private function formatValue(mixed $value): int|string
     {
         if (is_integer($value)) {
-            // Do nothing, formats as is.
-            // Only allow ints because PHP allows weird shit as numeric like "\n\n.1"
+            // Do nothing. Only allow ints because PHP allows weird shit as numeric like "\n\n.1"
             return $value;
         } elseif (is_string($value) || is_numeric($value)) {
             // Fix carriage returns for file storage.

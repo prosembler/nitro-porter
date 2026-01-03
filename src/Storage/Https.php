@@ -3,7 +3,6 @@
 namespace Porter\Storage;
 
 use Illuminate\Database\Query\Builder;
-use JetBrains\PhpStorm\NoReturn;
 use Porter\Config;
 use Porter\ConnectionManager;
 use Porter\Database\ResultSet;
@@ -11,7 +10,6 @@ use Porter\Log;
 use Porter\Storage;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -21,17 +19,19 @@ class Https extends Storage
 {
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
 
-    public const int MAX_ERRORS = 5; // Conservative to prevent bans. You can always re-run.
+    /** @var int Conservative limit on non-429 4xx/5xx errors to prevent bans. */
+    public const int MAX_ERRORS = 5;
 
+    /** @var int Number of tries to retry a request on non-4xx/5xx errors. */
     public const int MAX_RETRIES = 20;
 
     /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
 
-    /** @var array */
+    /** @var array Name => Value */
     protected array $headers = [];
 
-    /** @var array */
+    /** @var array Use 'code', 'message', 'headers', 'exception' */
     protected array $errors = [];
 
     /** @param ConnectionManager $c */
@@ -43,12 +43,8 @@ class Https extends Storage
     }
 
     /**
-     * @param string $name Name of the data chunk / table to be written.
-     * @param array $map
-     * @param array $structure
-     * @param ResultSet|Builder $data
-     * @param array $filters
-     * @return array Information about the results.
+     * Does nothing... yet.
+     * @inheritdoc
      */
     public function store(string $name, array $map, array $structure, $data, array $filters): array
     {
@@ -56,8 +52,9 @@ class Https extends Storage
     }
 
     /**
-     * @param string $name
-     * @param mixed $value
+     * Add a header to be sent.
+     * @param string $name Header name.
+     * @param mixed $value Header value.
      */
     public function setHeader(string $name, mixed $value): void
     {
@@ -65,6 +62,7 @@ class Https extends Storage
     }
 
     /**
+     * Headers to be sent.
      * @return array
      */
     public function getHeaders(): array
@@ -74,7 +72,7 @@ class Https extends Storage
 
     /**
      * Log & store an HTTP error.
-     * EXIT if MAX_ERRORS exceeded.
+     * EXIT if MAX_ERRORS exceeded. otherwise pause.
      * @param array $errorInfo
      */
     public function addError(array $errorInfo): void
@@ -90,12 +88,17 @@ class Https extends Storage
         }
     }
 
+    /**
+     * 4xx/5xx error info.
+     */
     public function getErrors(): array
     {
         return $this->errors;
     }
 
     /**
+     * Whether to attempt another get().
+     * Based on HTTP 429 response and retry-after header.
      * @param int $code HTTP code
      * @param array $headers
      * @return bool|int Seconds to wait (or false to stop).
@@ -114,6 +117,8 @@ class Https extends Storage
     }
 
     /**
+     * Terminate Nitro Porter process.
+     *
      * @param string $message
      */
     protected function abort(string $message): void
@@ -124,9 +129,9 @@ class Https extends Storage
 
     /**
      * Send the request & retrieve the response content.
-     * @param string $endpoint
-     * @param array $query
-     * @param int $retries
+     * @param string $endpoint URI, no `/` at start or path of base_uri will be overwritten.
+     * @param array $query paramName => value
+     * @param int $retries How many times we've tried (recursively).
      * @return array Response content.
      */
     public function get(string $endpoint, array $query, int $retries = 0): array
@@ -181,10 +186,37 @@ class Https extends Storage
     }
 
     /**
-     * @param string $name
+     * Reference to the underlying library.
+     *
+     * @return HttpClientInterface
+     */
+    public function getHandle(): HttpClientInterface
+    {
+        return $this->connectionManager->connection();
+    }
+
+    /**
+     * Redact headers for logs.
+     *
+     * @param array $options
+     * @return array
+     */
+    protected function redactHeaders(array $options): array
+    {
+        if (isset($options['headers']['Authorization'])) {
+            $options['headers']['Authorization'] = '_'; // no tokens in logs pls
+        }
+        if (isset($options['headers']['User-Agent'])) {
+            $options['headers']['User-Agent'] = '_'; // abbreviate logs
+        }
+        return $options;
+    }
+
+    /**
+     * @param string $resourceName
      * @param array $structure The final, combined structure to be written.
      */
-    public function prepare(string $name, array $structure): void
+    public function prepare(string $resourceName, array $structure): void
     {
         //
     }
@@ -210,37 +242,10 @@ class Https extends Storage
     }
 
     /**
-     * @param array $row
-     * @param array $structure
-     * @param bool $final
+     * @inheritDoc
      */
     public function stream(array $row, array $structure, bool $final = false): void
     {
         //
-    }
-
-    /**
-     * @return HttpClientInterface
-     */
-    public function getHandle(): HttpClientInterface
-    {
-        return $this->connectionManager->connection();
-    }
-
-    /**
-     * Redact headers for logs.
-     *
-     * @param array $options
-     * @return array
-     */
-    protected function redactHeaders(array $options): array
-    {
-        if (isset($options['headers']['Authorization'])) {
-            $options['headers']['Authorization'] = '_'; // no tokens in logs pls
-        }
-        if (isset($options['headers']['User-Agent'])) {
-            $options['headers']['User-Agent'] = '_'; // abbreviate logs
-        }
-        return $options;
     }
 }

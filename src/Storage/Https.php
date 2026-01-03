@@ -126,6 +126,7 @@ class Https extends Storage
      * Send the request & retrieve the response content.
      * @param string $endpoint
      * @param array $query
+     * @param int $retries
      * @return array Response content.
      */
     public function get(string $endpoint, array $query, int $retries = 0): array

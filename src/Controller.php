@@ -151,4 +151,46 @@ class Controller
         Log::comment("[ After testing, you may delete any `PORT_` database tables. ]");
         Log::comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
     }
+
+    /**
+     * Data pull from origin workflow.
+     *
+     * @param Request $request
+     * @throws \Exception
+     */
+    public function pull(Request $request): void
+    {
+        // Break down the Request.
+        $originName = $request->getOrigin();
+        $inputName = $request->getInput();
+
+        // Create new migration artifacts.
+        $inputStorage = new Storage\Database(new ConnectionManager($inputName));
+        $originStorage = new Storage\Https(new ConnectionManager($originName)); // @todo non-API origins
+        $origin = originFactory($originName, $originStorage, $inputStorage);
+
+        // Report on request.
+        Log::comment("NITRO PORTER PULLING...");
+        Log::comment("Pulling " . $originName . " into " . $inputName);
+
+        // Setup.
+        set_time_limit(0);
+
+        // Report start.
+        $start = microtime(true);
+        Log::comment("\n" . sprintf(
+            '[ STARTED at %s ]',
+            date('H:i:s e')
+        ) . "\n");
+
+        // Do the pull.
+        $origin->run(null);
+
+        // Report finished.
+        Log::comment("\n" . sprintf(
+            '[ FINISHED at %s after running for %s ]',
+            date('H:i:s e'),
+            formatElapsed(microtime(true) - $start)
+        ));
+    }
 }

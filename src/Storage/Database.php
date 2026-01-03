@@ -3,126 +3,51 @@
 namespace Porter\Storage;
 
 use Illuminate\Database\Connection;
-use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Schema\Blueprint;
 use Porter\ConnectionManager;
-use Porter\Database\ResultSet;
 use Porter\Log;
 use Porter\Migration;
-use Porter\Postscript;
 use Porter\Storage;
 
 class Database extends Storage
 {
     /** @var int How many rows to insert at once. */
-    public const INSERT_BATCH = 1000;
+    public const int INSERT_BATCH = 1000;
 
     /** @var int When to start reporting on incremental storage (in the logs). */
-    public const LOG_THRESHOLD = 100000;
+    public const int LOG_THRESHOLD = 100000;
 
     /** @var int Increment to report at after `REPORT_THRESHOLD` is reached; must be multiple of `INSERT_BATCH`. */
-    public const LOG_INCREMENT = 100000;
+    public const int LOG_INCREMENT = 100000;
 
-    /**
-     * @var array Table structures that define the format of the intermediary export tables.
-     */
-    public array $mapStructure = []; // @todo
-
-    /**
-     * @var string Prefix for the storage database.
-     */
+    /** @var string Prefix for the storage database. */
     protected string $prefix = '';
 
-    /**
-     * @var string Table name currently targeted by the batcher.
-     */
+    /** @var string Table name currently targeted by the batcher. */
     protected string $batchTable = '';
 
-    /**
-     * @var array List of tables that have already been reset to avoid dropping multipart import data.
-     */
+    /** @var array List of tables that have already been reset to avoid dropping multipart import data. */
     protected array $resetTables = [];
 
-    /**
-     * @var array List of tables to ignore errors on insert.
-     */
+    /** @var array List of tables to ignore errors on insert. */
     protected array $ignoreErrorsTables = [];
 
-    /**
-     * @var ConnectionManager
-     */
+    /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
 
-    /**
-     * @param ConnectionManager $c
-     */
+    /** @param ConnectionManager $c */
     public function __construct(ConnectionManager $c)
     {
         $this->connectionManager = $c;
     }
 
     /**
+     * Retrieve a reference to the underlying storage method library.
      * @return Connection
      */
-    public function getConnection(): Connection
+    public function getHandle(): Connection
     {
         return $this->connectionManager->connection();
-    }
-
-    public function getAlias(): string
-    {
-        return $this->connectionManager->getAlias();
-    }
-
-    /**
-     * Save the given records to the database. Use prefix.
-     *
-     * @param string $name
-     * @param array $map
-     * @param array $structure
-     * @param ResultSet|Builder $data
-     * @param array $filters
-     * @param Migration $port
-     * @return array Information about the results.
-     */
-    public function store(
-        string $name,
-        array $map,
-        array $structure,
-        $data,
-        array $filters,
-        Migration $port
-    ): array {
-        $info = [
-            'rows' => 0,
-            'memory' => 0,
-        ];
-        $this->setBatchTable($name);
-
-        if (is_a($data, '\Porter\Database\ResultSet')) {
-            // Iterate on old ResultSet.
-            while ($row = $data->nextResultRow()) {
-                $info['rows']++;
-                $row = $this->normalizeRow($map, $structure, $row, $filters);
-                $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows'], $port);
-                $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
-            }
-        } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
-            // Use the Builder to process results one at a time.
-            foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
-                $info['rows']++;
-                $row = $this->normalizeRow($map, $structure, (array)$row, $filters);
-                $bytes = $this->batchInsert($row);
-                $this->logBatchProgress($name, $info['rows'], $port);
-                $info['memory'] = max($bytes, $info['memory']); // Highest memory usage.
-            }
-        }
-
-        // Insert remaining records.
-        $this->batchInsert([], true);
-
-        return $info;
     }
 
     /**
@@ -130,9 +55,8 @@ class Database extends Storage
      *
      * @param string $name
      * @param int $rows
-     * @param Migration $port
      */
-    public function logBatchProgress(string $name, int $rows, Migration $port): void
+    public function logBatchProgress(string $name, int $rows): void
     {
         if ($rows >= self::LOG_THRESHOLD && ($rows % self::LOG_INCREMENT) === 0) {
             Log::comment("inserting '" . $name . "': " . number_format($rows) . ' done...', false);
@@ -144,46 +68,49 @@ class Database extends Storage
      *
      * While `store()` takes a batch and processes it, this takes 1 row at a time.
      * Created for Postscripts to have finer control over record inserts.
-     * @see Postscript — Where this method is most likely used (its children).
-     * @see endStream — Must be called after using this method.
-     *
      * @param array $row
      * @param array $structure
+     * @param array $info
+     * @param bool $final Must be `true` on final call or records will be lost.
+     * @return array
      */
-    public function stream(array $row, array $structure): void
+    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
     {
-        $this->batchInsert($row);
-    }
-
-    /**
-     * Send remaining batched records for insert.
-     */
-    public function endStream(): void
-    {
-        $this->batchInsert([], true);
+        $info = $this->batchInsert($row, $info, $final);
+        $info['rows']++;
+        return $info;
     }
 
     /**
      * Accept rows one at a time and batch them together for more efficient inserts.
      *
      * @param array $row Row of data to insert.
+     * @param array $info
      * @param bool $final Force an insert with existing batch.
-     * @return int Bytes currently being used by the app.
+     * @return array Meta info.
+     *   - memory = Bytes currently being used by the app.
      */
-    private function batchInsert(array $row, bool $final = false): int
+    private function batchInsert(array $row, array $info, bool $final = false): array
     {
         static $batch = [];
         if (!empty($row)) {
             $batch[] = $row;
         }
-        $bytes = memory_get_usage(); // Measure before potential send.
+
+        // Measure highest memory usage before potential send.
+        $info['memory'] = max(memory_get_usage(), $info['memory']);
 
         if (self::INSERT_BATCH === count($batch) || $final) {
             $this->sendBatch($batch);
             $batch = [];
         }
 
-        return $bytes;
+        // Log count.
+        if (isset($info['name'])) {
+            $this->logBatchProgress($info['name'], $info['rows']);
+        }
+
+        return $info;
     }
 
     /**
@@ -216,6 +143,25 @@ class Database extends Storage
     }
 
     /**
+     * Do not reset this table.
+     *
+     * @param string $tableName
+     */
+    public function protectTable(string $tableName): void
+    {
+        $this->resetTables[] = $tableName;
+    }
+
+    /**
+     * @param string $tableName
+     * @return bool Whether table is protected.
+     */
+    private function isProtectedTable(string $tableName): bool
+    {
+        return in_array($tableName, $this->resetTables);
+    }
+
+    /**
      * Set table name that sendBatch() will target.
      *
      * @param string $tableName
@@ -238,17 +184,17 @@ class Database extends Storage
     /**
      * Create fresh table for storage. Use prefix.
      *
-     * @param string $name
+     * @param string $resourceName
      * @param array $structure
      */
-    public function prepare(string $name, array $structure): void
+    public function prepare(string $resourceName, array $structure): void
     {
-        if (!in_array($name, $this->resetTables)) {
-            // Avoid double-dropping a table during an import because we probably already put data in it.
-            $this->createOrUpdateTable($this->prefix . $name, $structure);
+        // Only drop/truncate tables that already exist if they're not protected.
+        if (!$this->exists($resourceName) || !$this->isProtectedTable($resourceName)) {
+            $this->createOrUpdateTable($this->prefix . $resourceName, $structure);
         }
-        $this->resetTables[] = $name;
-        $this->setBatchTable($name);
+        $this->protectTable($resourceName); // Avoid drop/truncate a table after it's prepared.
+        $this->setBatchTable($resourceName);
     }
 
     /**
@@ -262,10 +208,12 @@ class Database extends Storage
         $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
         $schema = $dbm->getSchemaBuilder();
         if ($this->exists($name)) {
-            // Empty the table if it already exists.
+            // Empty the table if it already exists & is not protected.
             // Foreign key check must be disabled or MySQL throws error.
-            $dbm->unprepared("SET foreign_key_checks = 0");
-            $dbm->query()->from($name)->truncate();
+            if (!$this->isProtectedTable($name)) {
+                $dbm->unprepared("SET foreign_key_checks = 0");
+                $dbm->query()->from($name)->truncate();
+            }
 
             // Add any missing columns.
             // To do this, removing existing columns from $structure & build a schema closure.
@@ -285,20 +233,20 @@ class Database extends Storage
     /**
      * Whether the requested table & columns exist.
      *
-     * @param string $tableName
-     * @param array $columns
+     * @param string $resourceName
+     * @param array $structure
      * @return bool
      * @see Migration::hasInputSchema()
      */
-    public function exists(string $tableName, array $columns = []): bool
+    public function exists(string $resourceName = '', array $structure = []): bool
     {
         $schema = $this->connectionManager->connection()->getSchemaBuilder();
-        if (empty($columns)) {
+        if (empty($structure)) {
             // No columns requested.
-            return $schema->hasTable($tableName);
+            return $schema->hasTable($resourceName);
         }
         // Table must exist and columns were requested.
-        return $schema->hasTable($tableName) && $schema->hasColumns($tableName, $columns);
+        return $schema->hasTable($resourceName) && $schema->hasColumns($resourceName, $structure);
     }
 
     /**
@@ -307,14 +255,13 @@ class Database extends Storage
      * Ideally, we'd just pass structures in the correct format to start with.
      * Unfortunately, this isn't greenfield software, and today it's less-bad
      * to write this method than to try to convert thousands of these manually.
-     *
      * @see https://laravel.com/docs/9.x/migrations#creating-columns
      *
      * @param array $tableInfo Keys are column names, values are MySQL data types.
      *      A special key 'keys' can be passed to define database columns.
      * @return callable Closure defining a single Illuminate Database table.
      */
-    public function getTableStructureClosure(array $tableInfo): callable
+    private function getTableStructureClosure(array $tableInfo): callable
     {
         // Build the closure using given structure.
         return function (Blueprint $table) use ($tableInfo) {
@@ -360,14 +307,6 @@ class Database extends Storage
     }
 
     /**
-     * @param string $prefix Database table prefix.
-     */
-    public function setPrefix(string $prefix): void
-    {
-        $this->prefix = $prefix;
-    }
-
-    /**
      * Disable foreign key & secondary unique checking temporarily for import.
      *
      * Does not disable primary unique key enforcement (which is not possible).
@@ -397,7 +336,7 @@ class Database extends Storage
      * @param string $type
      * @return int
      */
-    public function getVarcharLength($type): int
+    private function getVarcharLength(string $type): int
     {
         $matches = [];
         preg_match('/varchar\(([0-9]{1,3})\)/', $type, $matches);

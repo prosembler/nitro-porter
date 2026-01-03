@@ -43,6 +43,7 @@
         "ext-gd": "*",
         "ext-pdo": "*",
         "ext-zlib": "*",
+        "ramsey/collection": "^2",
         "illuminate/database": "^11",
         "staudenmeir/laravel-cte": "^1",
         "symfony/http-client": "^8",

@@ -168,7 +168,7 @@ class IpBoard3 extends Source
     /**
      * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         // Export avatars
         //if ($this->param('avatars')) {

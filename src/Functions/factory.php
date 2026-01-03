@@ -8,6 +8,7 @@ use Porter\ConnectionManager;
 use Porter\FileTransfer;
 use Porter\Log;
 use Porter\Migration;
+use Porter\Origin;
 use Porter\Postscript;
 use Porter\Source;
 use Porter\Target;
@@ -24,6 +25,24 @@ function fileTransferFactory(Source $source, Target $target, string $outputName)
 {
     $porterStorage = new Storage\Database(new ConnectionManager($outputName, 'PORT_'));
     return new FileTransfer($source, $target, $porterStorage);
+}
+
+/**
+ * Get valid origin class.
+ *
+ * @param string $origin
+ * @param Storage\Https $input
+ * @param Storage\Database $output
+ * @return ?Origin
+ */
+function originFactory(string $origin, Storage\Https $input, Storage\Database $output): ?Origin
+{
+    $class = '\Porter\Origin\\' . ucwords($origin);
+    if (!class_exists($class)) {
+        Log::comment("No Source found for {$origin}");
+    }
+
+    return (class_exists($class)) ? new $class($origin, $input, $output) : null;
 }
 
 /**
@@ -115,7 +134,7 @@ function migrationFactory(
         $porterStorage,
         $outputStorage,
         $postscriptStorage,
-        loadStructure(),
+        loadData('structure'),
         $limitTables,
         $captureOnly
     );

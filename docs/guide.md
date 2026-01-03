@@ -94,6 +94,20 @@ porter run -s Xenforo -i example_db -t Flarum
 
 ## Advanced Usage
 
+### API data origin (Discord)
+
+The 'pull' command (new in 4.2) enables pulling data from a remote resource like an API. So far, only Discord is supported.
+To use it, create a Discord bot ("[Application](https://discord.com/developers/applications)") and add it to your Discord server, 
+then update the following fields in your `config.php` under `'alias' => 'discord',`:
+
+* `token` with your bot's secret token.
+* `guild_id` (under `extra`) with your [server ID]((https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID)).
+
+Using 'pull' will populate a localhost database with the data from the Discord server, preparing it for a normal migration.
+After it completes, follow the above instructions with 'Discord' as the Source and the same Input database.
+
+### File transfers
+
 The File Transfer tool (new in 4.0) enables moving files (like attachments & avatars) between platforms by renaming & copying them.
 To use it, set the following fields in your `config.php`:
 

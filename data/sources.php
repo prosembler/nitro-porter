@@ -7,6 +7,7 @@ return [
     'BbPress1',
     'BbPress2',
     'CodoForum',
+    'Discord',
     'Drupal6',
     'Drupal7',
     'EsoTalk',

@@ -2,25 +2,8 @@
 
 namespace Porter;
 
-abstract class Source
+abstract class Source extends Package
 {
-    public const SUPPORTED = [
-        'name' => '',
-        'defaultTablePrefix' => '',
-        'charsetTable' => '',
-        'passwordHashMethod' => '',
-        'avatarsPrefix' => '',
-        'avatarThumbPrefix' => '',
-        'avatarPath' => '',
-        'avatarThumbPath' => '',
-        'attachmentPath' => '',
-        'attachmentThumbPath' => '',
-        'features' => [],
-    ];
-
-    /** @var array Settings that change Source behavior. */
-    protected const FLAGS = [];
-
     /**
      * If this is 'false', skip extract first post content from `Discussions.Body`.
      *
@@ -37,53 +20,6 @@ abstract class Source
      * @var array Required tables, columns set per exporter
      */
     public array $sourceTables = [];
-
-    /**
-     * Forum-specific export routine
-     */
-    abstract public function run(Migration $port): void;
-
-    /**
-     * Get name of the source package.
-     *
-     * @return array
-     * @see Support::setSources()
-     */
-    public static function getSupport(): array
-    {
-        return static::SUPPORTED;
-    }
-
-    /**
-     * Get name of the source package.
-     *
-     * @return string
-     */
-    public static function getName(): string
-    {
-        return static::SUPPORTED['name'];
-    }
-
-    /**
-     * Get default table prefix of the source package.
-     *
-     * @return string
-     */
-    public static function getPrefix(): string
-    {
-        return static::SUPPORTED['defaultTablePrefix'];
-    }
-
-    /**
-     * Retrieve characteristics of the package.
-     *
-     * @param string $name
-     * @return mixed
-     */
-    public static function getFlag(string $name): mixed
-    {
-        return (isset(static::FLAGS[$name])) ? static::FLAGS[$name] : null;
-    }
 
     /**
      * Whether to connect the OP to the discussion record.

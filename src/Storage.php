@@ -17,13 +17,42 @@ abstract class Storage
      * @param array $filters Name -> callable
      * @return array Information about the results.
      */
-    abstract public function store(
+    public function store(
         string $name,
         array $map,
         array $structure,
         ResultSet|Builder|array $data,
         array $filters
-    ): array;
+    ): array {
+        $info = [
+            'rows' => 0,
+            'memory' => 0,
+            'name' => $name,
+        ];
+
+        if (is_a($data, '\Porter\Database\ResultSet')) {
+            // Iterate on @deprecated ResultSet.
+            while ($row = $data->nextResultRow()) {
+                $row = $this->normalizeRow($row, $structure, $map, $filters);
+                $info = $this->stream($row, $structure, $info);
+            }
+        } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
+            // Use the Builder to process results one at a time.
+            foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
+                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                $info = $this->stream($row, $structure, $info);
+            }
+        } elseif (is_array($data)) {
+            // Iterate on API data.
+            foreach ($data as $row) {
+                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                $info = $this->stream($row, $structure, $info);
+            }
+        }
+        $this->stream([], [], $info, true); // Insert remaining records.
+
+        return $info;
+    }
 
     /**
      * Once per $resourceName, prior to store() being used.
@@ -42,7 +71,7 @@ abstract class Storage
     abstract public function exists(string $resourceName = '', array $structure = []): bool;
 
     /** Send one record for storage at a time. */
-    abstract public function stream(array $row, array $structure, bool $final = false): void;
+    abstract public function stream(array $row, array $structure, array $info = [], bool $final = false): array;
 
     /** Retrieve a reference to the underlying storage method library. */
     abstract public function getHandle(): mixed;

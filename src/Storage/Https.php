@@ -43,15 +43,6 @@ class Https extends Storage
     }
 
     /**
-     * Does nothing... yet.
-     * @inheritdoc
-     */
-    public function store(string $name, array $map, array $structure, $data, array $filters): array
-    {
-        return [];
-    }
-
-    /**
      * Add a header to be sent.
      * @param string $name Header name.
      * @param mixed $value Header value.
@@ -244,8 +235,8 @@ class Https extends Storage
     /**
      * @inheritDoc
      */
-    public function stream(array $row, array $structure, bool $final = false): void
+    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
     {
-        //
+        return [];
     }
 }

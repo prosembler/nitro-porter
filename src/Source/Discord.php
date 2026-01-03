@@ -16,20 +16,23 @@ use Porter\Source;
  */
 class Discord extends Source
 {
-    public const CHANNEL_TYPES = [
-        0 => 'GUILD_TEXT',
-        4 => 'GUILD_CATEGORY',
-        5 => 'GUILD_ANNOUNCEMENT',
-        11 => 'PUBLIC_THREAD',
-        15 => 'GUILD_FORUM',
+    public const CHANNEL_TYPE = [
+        'GUILD_TEXT' => 0,
+        'GUILD_CATEGORY' => 4,
+        'GUILD_ANNOUNCEMENT' => 5,
+        'PUBLIC_THREAD' => 11,
+        'GUILD_FORUM' => 15,
     ];
 
     /**
-     * @param Migration $port
+     * @param Migration|null $port
      */
     public function run(?Migration $port = null): void
     {
         $this->users($port);
+        $this->categories($port);
+        $this->discussions($port);
+        $this->comments($port);
     }
 
     /**
@@ -38,13 +41,45 @@ class Discord extends Source
     protected function users(Migration $port): void
     {
         $map = [
-            'uid' => 'UserID',
+            'id' => 'UserID',
             'name' => 'Name',
         ];
-        $port->export(
-            'User',
-            "select * from discord_users",
-            $map
-        );
+        $query = $port->sourceQB()->from('discord_users')
+            ->select();
+        $port->export('User', $query, $map);
+    }
+
+    protected function categories(Migration $port): void
+    {
+        $map = [
+            'id' => 'CategoryID',
+            'name' => 'Name',
+        ];
+        $query = $port->sourceQB()->from('discord_channels')
+            ->where('type', '=', self::CHANNEL_TYPE['GUILD_FORUM'])
+            ->select();
+        $port->export('Category', $query, $map);
+    }
+
+    protected function discussions(Migration $port): void
+    {
+        $map = [
+            'id' => 'DiscussionID',
+            'name' => 'Name',
+        ];
+        $query = $port->sourceQB()->from('discord_channels')
+            ->where('type', '=', self::CHANNEL_TYPE['PUBLIC_THREAD'])
+            ->select();
+        $port->export('Discussion', $query, $map);
+    }
+
+    protected function comments(Migration $port): void
+    {
+        $map = [
+            'id' => 'CommentID',
+        ];
+        $query = $port->sourceQB()->from('discord_messages')
+            ->select();
+        $port->export('Comment', $query, $map);
     }
 }

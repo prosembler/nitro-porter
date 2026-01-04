@@ -144,10 +144,14 @@ abstract class Storage
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
             // Allow flattening 1 level. @todo Make recursive.
-            if (is_array($dest)) {
-                foreach ($dest as $old => $new) {
-                    if (isset($row[$src][$old])) {
-                        $row[$new] = $row[$src][$old]; // Move value up a level.
+            if (is_array($dest)) { // Move ENTIRE sub-row up a level.
+                if (0 === count($dest)) { // empty array = *
+                    $row = (isset($row[$src])) ? (array)$row[$src] : $row;
+                } else { // Move single values up a level. (`else` is redundant; just reads clearer)
+                    foreach ($dest as $old => $new) {
+                        if (isset($row[$src][$old])) {
+                            $row[$new] = $row[$src][$old];
+                        }
                     }
                 }
                 unset($row[$src]); // Remove column that was an array value.

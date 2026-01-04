@@ -43,7 +43,6 @@ abstract class Origin extends Package
      * @param array $fields
      * @param string $tableName
      * @param array $query
-     * @param ?string $key Response array key of data to be stored (contains $fields) or null if top-level.
      * @param array $map
      * @return array $info from store()
      * @see Migration::import() for comparison.
@@ -53,7 +52,6 @@ abstract class Origin extends Package
         array $fields,
         string $tableName,
         array $query = [],
-        ?string $key = null,
         array $map = []
     ): array {
         // Start timer.
@@ -69,11 +67,8 @@ abstract class Origin extends Package
         list($response, $headers) = $this->input->get($endpoint, $query);
         $split_reply = microtime(true);
 
-        // Drop top level & use key only.
-        $data = ($key && isset($response[$key])) ? (array)$response[$key] : $response;
-
         // Store the data.
-        $info = $this->output->store($tableName, $map, $fields, $data, []);
+        $info = $this->output->store($tableName, $map, $fields, $response, []);
 
         // Get first/last records for downstream logic.
         $info['last'] = end($response);
@@ -83,7 +78,7 @@ abstract class Origin extends Package
         $info['pull_time'] = microtime(true) - $start;
 
         // Report.
-        Log::storage('pull', $tableName, $info['pull_time'], count($data), $info['memory']);
+        Log::storage('pull', $tableName, $info['pull_time'], count($response), $info['memory']);
 
         return $info;
     }

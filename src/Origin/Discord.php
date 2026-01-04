@@ -280,7 +280,7 @@ class Discord extends Origin
                 'verified' => 'verified',
             ],
         ];
-        $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', $query, null, $map);
+        $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', $query, $map);
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
@@ -315,7 +315,8 @@ class Discord extends Origin
     protected function activeThreads(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/threads/active", self::DB_STRUCTURE_CHANNELS, 'discord_channels', [], 'threads');
+        $map = ['threads' => []]; // Use 'threads' as main data.
+        $this->pull("guilds/$guildId/threads/active", self::DB_STRUCTURE_CHANNELS, 'discord_channels', $map);
     }
 
     /**
@@ -324,9 +325,10 @@ class Discord extends Origin
      */
     protected function archivedThreads(array $channelIds): void
     {
+        $map = ['threads' => []];  // Use 'threads' as main data.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::DB_STRUCTURE_CHANNELS, 'discord_channels', [], 'threads');
+            $info = $this->pull($endpoint, self::DB_STRUCTURE_CHANNELS, 'discord_channels', $map);
             $this->rateLimit($info['headers']);
         }
     }

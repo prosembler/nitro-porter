@@ -25,6 +25,7 @@
 
 namespace Porter\Origin;
 
+use Illuminate\Support\Collection;
 use Porter\Config;
 use Porter\Log;
 use Porter\Migration;
@@ -84,6 +85,15 @@ class Discord extends Origin
                 'columns' => ['id'],
             ]
         ],
+    ];
+
+    /** @var array */
+    protected const array DB_STRUCTURE_ROLES = [
+        'id' => 'varchar(100)',
+        'name' => 'varchar(100)',
+        'position' => 'int',
+        'managed' => 'tinyint',
+        'mentionable' => 'tinyint',
     ];
 
     /** @var array  */
@@ -155,6 +165,7 @@ class Discord extends Origin
         $this->users();
 
         // Roles
+        $this->roles();
 
         // Channels
         $this->channels();
@@ -263,6 +274,15 @@ class Discord extends Origin
             ],
         ];
         $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', $query, null, $map);
+    }
+
+    /**
+     * @see https://discord.com/developers/docs/topics/permissions#role-object
+     */
+    protected function roles(): void
+    {
+        $guildId = $this->getGuildId();
+        $this->pull("/guilds/$guildId/roles", self::DB_STRUCTURE_ROLES, 'discord_roles');
     }
 
     /**

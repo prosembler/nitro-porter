@@ -97,6 +97,14 @@ class Discord extends Origin
     ];
 
     /** @var array  */
+    protected const array DB_STRUCTURE_EMOJIS = [
+        'id' => 'varchar(100)',
+        'name' => 'varchar(100)',
+        'user' => 'text', // author
+        'animated' => 'tinyint',
+    ];
+
+    /** @var array  */
     protected const array DB_STRUCTURE_CHANNELS = [
         'id' => 'varchar(100)',
         'type' => 'int', //@todo key?
@@ -133,11 +141,11 @@ class Discord extends Origin
         'message_reference' => 'text',
         'thread' => 'text',
         'author' => 'text',
-        'poll' => 'text',
         // OBJECTS[]
-        'attachments' => 'text',
-        'embeds' => 'text',
-        'reactions' => 'text',
+        'poll' => 'text', // @see https://discord.com/developers/docs/resources/poll#poll-object
+        'attachments' => 'text', // @see https://discord.com/developers/docs/resources/message#attachment-object
+        'embeds' => 'text', // @see https://discord.com/developers/docs/resources/message#embed-object
+        'reactions' => 'text', // @see https://discord.com/developers/docs/resources/message#reaction-object
         'sticker_items' => 'text',
         'mentions' => 'text',
         'mention_roles' => 'text',
@@ -163,8 +171,6 @@ class Discord extends Origin
 
         // Users
         $this->users();
-
-        // Roles
         $this->roles();
 
         // Channels
@@ -174,6 +180,7 @@ class Discord extends Origin
         $this->archivedThreads($channelIds);
 
         // Messages
+        $this->emojis();
         $channelIds = $this->getTextChannels(); // Now including threads.
         $this->messages($channelIds);
     }
@@ -276,13 +283,18 @@ class Discord extends Origin
         $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', $query, null, $map);
     }
 
-    /**
-     * @see https://discord.com/developers/docs/topics/permissions#role-object
-     */
+    /** @see https://discord.com/developers/docs/topics/permissions#role-object */
     protected function roles(): void
     {
         $guildId = $this->getGuildId();
         $this->pull("/guilds/$guildId/roles", self::DB_STRUCTURE_ROLES, 'discord_roles');
+    }
+
+    /** @see https://discord.com/developers/docs/resources/emoji#emoji-object */
+    protected function emojis(): void
+    {
+        $guildId = $this->getGuildId();
+        $this->pull("/guilds/$guildId/emojis", self::DB_STRUCTURE_EMOJIS, 'discord_emojis');
     }
 
     /**

@@ -432,6 +432,9 @@ class Migration
      */
     public function hasInputSchema(string $table, array|string $columns = []): bool
     {
+        if (is_string($columns)) { // Backwards compatibility for Sources.
+            $columns = [$columns => $columns];
+        }
         return $this->inputStorage->exists($table, $columns);
     }
 

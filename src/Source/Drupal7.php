@@ -41,7 +41,7 @@ class Drupal7 extends Source
     /**
      * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         $this->path = '/uploads/'; //$this->param('attach-target', null) . '/uploads/';
         /*$origin = ''; //$this->param('attach-source', null);

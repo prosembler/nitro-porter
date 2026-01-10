@@ -59,7 +59,7 @@ class PunBb extends Source
      *
      * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         $this->cdn = ''; //$this->param('cdn', '');
         /*if ($avatarPath = $this->param('avatars-source', false)) {

@@ -35,11 +35,11 @@ class RunCommand extends Command
     public function interact(Interactor $io): void
     {
         if (!$this->source && !Config::getInstance()->get('source')) {
-            $this->set('source', $io->prompt('Source package alias (see `porter list -n=sources`)'));
+            $this->set('source', $io->prompt('Source package alias (see `porter list sources`)'));
         }
 
         if (!$this->target && !Config::getInstance()->get('target')) {
-            $this->set('target', $io->prompt('Target package alias (see `porter list -n=targets`)'));
+            $this->set('target', $io->prompt('Target package alias (see `porter list targets`)'));
         }
 
         if (!$this->input && !Config::getInstance()->get('input_alias')) {
@@ -58,17 +58,17 @@ class RunCommand extends Command
      */
     public function execute(): void
     {
-        $request = new Request(
-            $this->source,
-            $this->target,
-            $this->input,
-            $this->output,
-            $this->sp,
-            $this->tp,
-            $this->cdn,
-            $this->data
-        );
+        $request = (new Request(
+            sourcePackage: $this->source,
+            targetPackage: $this->target,
+            inputConnection: $this->input,
+            outputConnection: $this->output,
+            inputTablePrefix: $this->sp,
+            outputTablePrefix: $this->tp,
+            cdnPrefix: $this->cdn,
+            dataTypes: $this->data,
+        ));
 
-        runPorter($request);
+        (new \Porter\Controller())->run($request);
     }
 }

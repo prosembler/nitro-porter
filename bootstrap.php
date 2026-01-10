@@ -17,6 +17,7 @@ if (isset($GLOBALS['_composer_autoload_path'])) {
 }
 
 // Environment.
+const APP_VERSION = '4.1';
 const ROOT_DIR = __DIR__;
 if (ini_get('date.timezone') == '') {
     date_default_timezone_set('America/Detroit');
@@ -33,5 +34,6 @@ if (\Porter\Config::getInstance()->debugEnabled()) {
 }
 
 // Load source & target support.
-\Porter\Support::getInstance()->setSources(loadSources());
-\Porter\Support::getInstance()->setTargets(loadTargets());
+\Porter\Support::getInstance()->setOrigins(loadData('origins'));
+\Porter\Support::getInstance()->setSources(loadData('sources'));
+\Porter\Support::getInstance()->setTargets(loadData('targets'));

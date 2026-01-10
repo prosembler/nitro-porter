@@ -56,7 +56,7 @@ class FluxBb extends Source
      *@todo Project file size / export time and possibly break into multiple files
      *
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         $this->cdn = ''; //$this->param('cdn', '');
         /*if ($this->avatarPath = '') { //$this->param('avatars-source')) {

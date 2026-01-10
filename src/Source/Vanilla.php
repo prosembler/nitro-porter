@@ -51,7 +51,7 @@ class Vanilla extends Source
     /**
      * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(?Migration $port = null): void
     {
         // Core tables essentially map to our intermediate format as-is.
         $tables = [

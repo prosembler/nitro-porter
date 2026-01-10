@@ -52,6 +52,7 @@ Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freel
 ![AnswerHub](docs/assets/logos/answerhub-150x50.jpg)
 ![ASPPlayground.NET](docs/assets/logos/aspplayground-150x50.png)
 ![bbPress](docs/assets/logos/bbpress-150x50.png)
+![Discord](docs/assets/logos/discord-150x50.png)
 ![Drupal](docs/assets/logos/drupal-150x50.jpeg)
 ![esoTalk](docs/assets/logos/esotalk-150x50.png)
 ![Flarum](docs/assets/logos/flarum-150x50.png)

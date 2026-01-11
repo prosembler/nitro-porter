@@ -242,7 +242,6 @@ class Flarum extends Target
             'Photo' => 'avatar_url',
             'DateInserted' => 'joined_at',
             'DateLastActive' => 'last_seen_at',
-            'Confirmed' => 'is_email_confirmed',
             'CountDiscussions' => 'discussion_count',
             'CountComments' => 'comment_count',
         ];

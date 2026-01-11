@@ -15,7 +15,7 @@ class FileTransfer
      */
     public function __construct(protected Source $source, protected Target $target, protected Storage $porterStorage)
     {
-        $this->supported = $this->evaluateSupport();
+        $this->supported = $this->evaluateSupport($source, $target);
     }
 
     private function getBuilder(): Builder
@@ -28,7 +28,7 @@ class FileTransfer
      *
      * @return bool
      */
-    protected function evaluateSupport(): bool
+    protected function evaluateSupport(Source $source, Target $target): bool
     {
         $support = true;
 
@@ -42,6 +42,12 @@ class FileTransfer
             $support = false;
         }
 
+        // Source support.
+        if (!$source->getFlag('fileTransferSupport')) {
+            Log::comment("Skipping file transfer: Source package has no support.");
+            $support = false;
+        }
+
         // Valid target root.
         $targetRoot = Config::getInstance()->get('target_root');
         if (empty($targetRoot)) {
@@ -52,7 +58,11 @@ class FileTransfer
             $support = false;
         }
 
-        // @todo
+        // Target support.
+        if (!$target->getFlag('fileTransferSupport')) {
+            Log::comment("Skipping file transfer: Target package has no support.");
+            $support = false;
+        }
 
         return $support;
     }

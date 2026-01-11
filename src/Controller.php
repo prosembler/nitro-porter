@@ -74,6 +74,15 @@ class Controller
             $source->skipDiscussionBody();
             $target->skipDiscussionBody();
         }
+
+        // Evaluate if both packages have file transfer support and sync them.
+        if (
+            $source::getFlag('fileTransferSupport') === true &&
+            $target::getFlag('fileTransferSupport') === true
+        ) {
+            $source->enableFileTransfer();
+            $target->enableFileTransfer();
+        }
     }
 
     /**

@@ -49,6 +49,10 @@ class Xenforo extends Source
         ]
     ];
 
+    protected const array FLAGS = [
+        'fileTransferSupport' => true,
+    ];
+
     /**
      * Forum-specific export format.
      *

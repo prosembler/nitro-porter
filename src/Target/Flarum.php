@@ -46,8 +46,9 @@ class Flarum extends Target
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => false,
+        'fileTransferSupport' => true,
     ];
 
     /**
@@ -910,13 +911,15 @@ class Flarum extends Target
      * Setup the destination values for FileTransfer.
      *
      * Set PORT_Media.TargetFullPath and PORT_User.TargetAvatarFullPath
-     * @todo Skip if !FileTransfer::isSupported()
      *
      * @param Migration $port
      */
     public function mapFileTransfer(Migration $port): void
     {
-        $prx = $port->dbPorter()->getTablePrefix();
+        // Abort if we lack support.
+        if (!$this->getFileTransferSupport()) {
+            return;
+        }
 
         // Start timer.
         $start = microtime(true);

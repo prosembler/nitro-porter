@@ -4,37 +4,8 @@ namespace Porter;
 
 abstract class Target extends Package
 {
-    /**
-     * If this is 'false', skip moving first post content to `Discussions.Body`.
-     *
-     * Do not change this default in child Targets.
-     * Use `'hasDiscussionBody' => false` in FLAGS to declare your Target can skip this step.
-     *
-     * @var bool
-     * @see Target::getDiscussionBodyMode()
-     * @see Target::skipDiscussionBody()
-     */
-    protected bool $useDiscussionBody = true;
-
+    /** @var ConnectionManager  */
     public ConnectionManager $connection;
-
-    /**
-     * @return bool
-     */
-    public function getDiscussionBodyMode(): bool
-    {
-        return $this->useDiscussionBody;
-    }
-
-    /**
-     * Set `useDiscussionBody` to false.
-     *
-     * @return void
-     */
-    public function skipDiscussionBody()
-    {
-        $this->useDiscussionBody = false;
-    }
 
     /** Enforce data constraints required by the target platform. */
     abstract public function validate(Migration $port): void;

@@ -82,12 +82,11 @@ class Formatter
                 $text = self::closeTags($text);
                 $text = self::fixIllegalTags($text);
                 return $this->fixRawMentions(Vanilla::parse($text));
-            case 'BBCode':
-                $text = BBCode::parse($text);
-                // Fall thru to Markdown to catch HTML characters.
             case 'Markdown':
                 // Markdown bundle allows some (filtered) HTML.
                 return $this->fixRawMentions(Markdown::parse($text));
+            case 'BBCode':
+                return $this->fixRawMentions(BBCode::parse($text));
             case 'Rich': // Quill
                 return self::wrap('r', self::dequill($text));
             case 'Text':

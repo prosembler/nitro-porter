@@ -84,7 +84,7 @@ These include things like badges, reactions, bookmarks, and polls.
 Nitro Porter **never** transfers permissions. It's not safe to do so automatically due to variations in how platforms implement them.
 You will **always** need to reassign permissions after a migration.
 
-**Passwords** are generally _hashed_, which means no system can "decrypt" or "convert" them. However, if both the source and target platform support the same hashing algorithm, they should transfer seamlessly. Alternatively, the target system could add support for the source hashing algorithm and convert password hashes as users login next. This is beyond the scope of what any migration tool can do in isolation, but we're happy to [answer questions](https://github.com/prosembler/nitro-porter/discussions/new) about the process should you wish to build that functionality.
+**Passwords** are generally _hashed_, which means no system can "decrypt" or "convert" them. However, if both the source and target platform support the same hashing algorithm, they should transfer seamlessly. Alternatively, the target system could add support for the source hashing algorithm and convert password hashes as users login next (see [Garden/Password](https://github.com/prosembler/garden-password)). This is beyond the scope of what any migration tool can do in isolation, but we're happy to [answer questions](https://github.com/prosembler/nitro-porter/discussions/new) about the process should you wish to build that functionality.
 
 ### 🔭 Future support
 

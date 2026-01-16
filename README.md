@@ -6,23 +6,23 @@ Nitro Porter is the _only_ multi-platform community migration tool.
 ## 🚀 Mission
 
 Every community deserves the best software for its mission while preserving its unique history.
-Nitro Porter's goal is sub-hour data migrations for most communities without developer support.
+Nitro Porter's goal is 1-hour no-code data migrations for any community with accessible data.
 
 ### 🔍 Why do this?
 
-Community history is vitally important. Being able to change platforms creates competition in the software ecosystem.
-However, community software has high lock-in due to difficult data migrations, creating stagnation.
-Nitro Porter seeks to lower that friction and automate as much of the migration as possible.
+Community history is vitally important. Platform lock-in stifles competition in the software ecosystem.
 When everyone owns their own data and can freely choose their platform, everyone wins.
 
 ### 🤔 How is this possible?
 
-Multi-platform migrations are made maintainable by first converting data to an intermediary "porter" format.
-This constrains migration paths to (# sources) + (# targets), rather than (# sources) x (# targets).
-This allows repeatable, testable results in a central project rather than myriad low-quality, single-purpose tools.
+All data is first converted to an intermediary "porter format."
+This reduces the number of code paths from `#sources x #targets` to `#sources + #targets`.
+The result is repeatable results in a single multi-tool rather than myriad low-quality, single-purpose tools.
 
-Nitro Porter allow anyone with basic programming skills to add a source or target.
-Any generally available forum software (commercial or free) may be added as a source or target.
+### 🪴 How is it extended?
+
+Nitro Porter packages allow anyone with _basic_ programming skills to add a source or target.
+Any community software (commercial or free) may be added as a source or target.
 Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freely available to all.
 
 ## 🚥 Get started
@@ -86,15 +86,16 @@ These include things like badges, reactions, bookmarks, and polls.
 Nitro Porter **never** transfers permissions. It's not safe to do so automatically due to variations in how platforms implement them.
 You will **always** need to reassign permissions after a migration.
 
+**Passwords** are generally _hashed_, which means no system can "decrypt" or "convert" them. However, if both the source and target platform support the same hashing algorithm, they should transfer seamlessly. Alternatively, the target system could add support for the source hashing algorithm and convert password hashes as users login next. This is beyond the scope of what any migration tool can do in isolation, but we're happy to [answer questions](https://github.com/prosembler/nitro-porter/discussions/new) about the process should you wish to build that functionality.
+
 ### 🔭 Future support
 
-Don't see your software? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to request it and keep an eye on our [informal roadmap](https://github.com/users/linc/projects/2).
+Don't see your software? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to request it and keep an eye on our [informal roadmap](https://github.com/orgs/prosembler/projects/1).
 We're happy to add a new **Source** for any software, provided it is not bespoke.
-For a new **Target**, we require support from the vendor if it is not free and open source software.
+For a new **Target**, we typically require support from the vendor.
 
-Currently, all data sources and targets are based on SQL databases (except the Vanilla target's flat file)
-and only natively supports MySQL-compatible connections. All other storage formats (like mbox or ASP Playground's MSSQL) 
-requires pre-work to convert the data to a MySQL database. In the future, we plan to natively support MongoDB, PostgreSQL, MSSQL, & Web APIs. 
-The 3.0 rewrite of Nitro Porter[^1] was done with that future in mind.
+Currently, nearly all data sources and targets are based on MySQL-compatible databases.
+Other storage formats (e.g. mbox, MSSQL, API) require pre-conversion to a MySQL database. 
+The 3.0 rewrite of Nitro Porter[^1] was built with native support for those alternate formats in mind and it will continue to expand.
 
 [^1]: 🚀 Forked 27 Sep 2021 in memory of Kyle

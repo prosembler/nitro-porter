@@ -15,14 +15,12 @@ When everyone owns their own data and can freely choose their platform, everyone
 
 ### 🤔 How is this possible?
 
-All data is first converted to an intermediary "porter format."
-This reduces the number of code paths from `#sources x #targets` to `#sources + #targets`.
+Data is first converted to an intermediary "porter format," reducing the number of code paths from `#sources x #targets` to `#sources + #targets`.
 The result is repeatable results in a single multi-tool rather than myriad low-quality, single-purpose tools.
 
 ### 🪴 How is it extended?
 
-Nitro Porter packages allow anyone with _basic_ programming skills to add a source or target.
-Any community software (commercial or free) may be added as a source or target.
+Nitro Porter packages allow anyone with _basic_ programming skills to add any community software (commercial or free) as source or target.
 Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freely available to all.
 
 ## 🚥 Get started

@@ -9,6 +9,10 @@ abstract class Source extends Package
      */
     public array $sourceTables = [];
 
+    public function __construct(protected ?Storage $inputStorage = null, protected ?Storage $porterStorage = null)
+    {
+    }
+
     /**
      * @return string
      */

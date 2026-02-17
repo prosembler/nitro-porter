@@ -37,19 +37,13 @@ class Migration
      */
     protected DbFactory $database;
 
-    /**
-     * @var Storage Where the source data is from (read-only).
-     */
+    /** @var Storage Where the source data is from (read-only). */
     protected Storage $inputStorage;
 
-    /**
-     * @var Storage Where the mapping data is sent.
-     */
+    /** @var Storage Where the mapping data is sent. */
     protected Storage $porterStorage;
 
-    /**
-     * @var Storage Where the target data is sent.
-     */
+    /** @var Storage Where the target data is sent. */
     protected Storage $outputStorage;
 
     /** @var Storage Copy of where target data is sent for post-processing. */

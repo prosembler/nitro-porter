@@ -9,6 +9,7 @@ use Porter\FileTransfer;
 use Porter\Log;
 use Porter\Migration;
 use Porter\Origin;
+use Porter\Package;
 use Porter\Postscript;
 use Porter\Source;
 use Porter\Target;
@@ -28,73 +29,85 @@ function fileTransferFactory(Source $source, Target $target, string $outputName)
 }
 
 /**
- * Get valid origin class.
+ * Get Package if it exists.
+ *
+ * Uses sub-factories to more explicitly define return types.
+ *
+ * @param string $type
+ * @param string $name
+ * @param ?Storage $input
+ * @param ?Storage $output
+ * @return mixed|null
+ */
+function packageFactory(string $type, string $name, ?Storage $input, ?Storage $output): mixed
+{
+    if (!in_array($type, ['Origin', 'Source', 'Target', 'Postscript'])) {
+        Log::comment("Invalid package type.");
+    }
+    $class = "\Porter\$type\\" . ucwords($name);
+    if (!class_exists($class)) {
+        Log::comment("No {$type} package found for {$name}");
+    }
+
+    return (class_exists($class)) ? new $class($input, $output, $name) : null;
+}
+
+/**
+ * Get Origin if it exists.
  *
  * @param string $origin
- * @param Storage\Https $input
- * @param Storage\Database $output
+ * @param ?Storage\Https $originStorage
+ * @param ?Storage\Database $inputStorage
  * @return ?Origin
  */
-function originFactory(string $origin, Storage\Https $input, Storage\Database $output): ?Origin
-{
-    $class = '\Porter\Origin\\' . ucwords($origin);
-    if (!class_exists($class)) {
-        Log::comment("No Source found for {$origin}");
-    }
-
-    return (class_exists($class)) ? new $class($origin, $input, $output) : null;
+function originFactory(
+    string $origin,
+    ?Storage\Https $originStorage = null,
+    ?Storage\Database $inputStorage = null
+): ?Origin {
+    return packageFactory('Origin', $origin, $originStorage, $inputStorage);
 }
 
 /**
- * Get valid source class.
+ * Get Source if it exists.
  *
  * @param string $source
+ * @param ?Storage $inputStorage
+ * @param ?Storage $porterStorage
  * @return ?Source
  */
-function sourceFactory(string $source): ?Source
+function sourceFactory(string $source, ?Storage $inputStorage = null, ?Storage $porterStorage = null): ?Source
 {
-    $class = '\Porter\Source\\' . ucwords($source);
-    if (!class_exists($class)) {
-        Log::comment("No Source found for {$source}");
-    }
-
-    return (class_exists($class)) ? new $class() : null;
+    return packageFactory('Source', $source, $inputStorage, $porterStorage);
 }
 
 /**
- * Get valid target class.
+ * Get Target if it exists.
  *
  * @param string $target
+ * @param ?Storage $porterStorage
+ * @param ?Storage $outputStorage
  * @return ?Target
  */
-function targetFactory(string $target): ?Target
+function targetFactory(string $target, ?Storage $porterStorage = null, ?Storage $outputStorage = null): ?Target
 {
-    if ('file' === $target) {
-        return null;
-    }
-
-    $class = '\Porter\Target\\' . ucwords($target);
-    if (!class_exists($class)) {
-        Log::comment("No Target found for {$target}");
-    }
-
-    return (class_exists($class)) ? new $class() : null;
+    return packageFactory('Target', $target, $porterStorage, $outputStorage);
 }
 
 /**
- * Get postscript class if it exists.
+ * Get Postscript if it exists.
  *
  * @param string $postscript
+ * @param Storage $outputStorage
+ * @param Storage $postscriptStorage
  * @return ?Postscript
  */
-function postscriptFactory(string $postscript): ?Postscript
-{
-    $class = '\Porter\Postscript\\' . ucwords($postscript);
-    if (!class_exists($class)) {
-        Log::comment("No Postscript found for {$postscript}.");
-    }
-
-    return (class_exists($class)) ? new $class() : null;
+function postscriptFactory(
+    string $postscript,
+    ?Storage $outputStorage = null,
+    ?Storage $postscriptStorage = null
+): ?Postscript {
+    return packageFactory('Postscript', $postscript, $outputStorage, $postscriptStorage);
 }
 
 /**

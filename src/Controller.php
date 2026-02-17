@@ -117,9 +117,9 @@ class Controller
             ($outputName === 'sql') // @todo Handle in Target
         );
 
-        $source = sourceFactory($sourceName);
-        $target = targetFactory($targetName);
-        $postscript = postscriptFactory($targetName);
+        $source = sourceFactory($sourceName, $inputStorage, $porterStorage);
+        $target = targetFactory($targetName, $porterStorage, $outputStorage);
+        $postscript = postscriptFactory($targetName, $outputStorage, $postscriptStorage);
         $fileTransfer = fileTransferFactory($source, $target, $outputName);
 
         // Report on request.

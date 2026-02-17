@@ -10,6 +10,10 @@ namespace Porter;
  */
 abstract class Postscript extends Package
 {
+    public function __construct(protected ?Storage $outputStorage = null, protected ?Storage $postscriptStorage = null)
+    {
+    }
+
     /** Main process, custom per package. */
     abstract public function run(?Migration $port = null): void;
 }

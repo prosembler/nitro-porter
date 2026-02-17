@@ -6,25 +6,17 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Origin extends Package
 {
-    /** @var Storage\Database Where the data is being written. */
-    protected Storage\Database $output;
-
-    /** @var Storage\Https Where the source data is from (read-only). */
-    protected Storage\Https $input;
-
     /** @var array */
     protected array $config = [];
 
     /**
-     * @param string $connectionAlias
-     * @param Storage\Https $input
-     * @param Storage\Database $output
      * @throws \Exception
      */
-    public function __construct(string $connectionAlias, Storage\Https $input, Storage\Database $output)
-    {
-        $this->output = $output;
-        $this->input = $input;
+    public function __construct(
+        protected Storage\Https $input, // Where the source data is from (read-only).
+        protected Storage\Database $output, // Where the data is being written.
+        string $connectionAlias,
+    ) {
         $this->config = Config::getInstance()->getConnectionAlias($connectionAlias);
     }
 

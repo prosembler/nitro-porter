@@ -7,6 +7,10 @@ abstract class Target extends Package
     /** @var ConnectionManager  */
     public ConnectionManager $connection;
 
+    public function __construct(protected ?Storage $porterStorage = null, protected ?Storage $outputStorage = null)
+    {
+    }
+
     /** Enforce data constraints required by the target platform. */
     abstract public function validate(Migration $port): void;
 
@@ -49,6 +53,45 @@ abstract class Target extends Package
             $results[] = $dupe->$column;
         }
         return $results;
+    }
+
+    /**
+     * Enforce unique usernames. Report users skipped (because of `insert ignore`).
+     *
+     * Unsure this could get automated fix. You'd have to determine which has/have data attached and possibly merge.
+     * You'd also need more data from findDuplicates, especially the IDs.
+     * Folks are just gonna need to manually edit their existing forum data for now to rectify dupe issues.
+     *
+     * @param Migration $port
+     */
+    protected function uniqueUserNames(Migration $port): void
+    {
+        $allowlist = [
+            '[Deleted User]',
+            '[DeletedUser]',
+            '-Deleted-User-',
+            '[Slettet bruker]', // Norwegian
+            '[Utilisateur supprimé]', // French
+        ]; // @see fixDuplicateDeletedNames()
+        $dupes = array_diff($this->findDuplicates('User', 'Name', $port), $allowlist);
+        if (!empty($dupes)) {
+            Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+        }
+    }
+
+    /**
+     * Enforce unique emails. Report users skipped (because of `insert ignore`).
+     *
+     * @param Migration $port
+     * @see uniqueUserNames
+     *
+     */
+    protected function uniqueUserEmails(Migration $port): void
+    {
+        $dupes = $this->findDuplicates('User', 'Email', $port);
+        if (!empty($dupes)) {
+            Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+        }
     }
 
     /**

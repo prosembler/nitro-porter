@@ -103,7 +103,20 @@ class Controller
         $dataTypes = $request->getDatatypes();
 
         // Create new migration artifacts.
-        $port = migrationFactory($inputName, $outputName, $sourcePrefix, $targetPrefix, $dataTypes);
+        $inputStorage = storageFactory($inputName, $sourcePrefix);
+        $porterStorage = storageFactory($outputName, 'PORT_');
+        $outputStorage = storageFactory($outputName, $targetPrefix);
+        $postscriptStorage = storageFactory($outputName, $targetPrefix);
+        $port = migrationFactory(
+            $inputName,
+            $inputStorage,
+            $porterStorage,
+            $outputStorage,
+            $postscriptStorage,
+            $dataTypes,
+            ($outputName === 'sql') // @todo Handle in Target
+        );
+
         $source = sourceFactory($sourceName);
         $target = targetFactory($targetName);
         $postscript = postscriptFactory($targetName);

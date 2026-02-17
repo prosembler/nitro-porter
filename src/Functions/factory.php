@@ -98,36 +98,41 @@ function postscriptFactory(string $postscript): ?Postscript
 }
 
 /**
+ * @throws Exception
+ */
+function storageFactory(string $name, ?string $prefix = ''): Storage
+{
+    if ($name === 'file') { // @todo storageFactory
+        return new Storage\File();
+    }
+    return new Storage\Database(new ConnectionManager($name, $prefix));
+}
+
+/**
  * Setup a new migration.
  *
  * @param string $inputName
- * @param string $outputName
- * @param string $sourcePrefix
- * @param string $targetPrefix
+ * @param Storage $inputStorage
+ * @param Storage $porterStorage
+ * @param Storage $outputStorage
+ * @param Storage $postscriptStorage
  * @param string|null $limitTables
+ * @param bool $captureOnly
  * @return Migration
  * @throws Exception
+ * @deprecated
  */
 function migrationFactory(
     string $inputName,
-    string $outputName,
-    string $sourcePrefix = '',
-    string $targetPrefix = '',
-    ?string $limitTables = ''
+    Storage $inputStorage,
+    Storage $porterStorage,
+    Storage $outputStorage,
+    Storage $postscriptStorage,
+    ?string $limitTables = '',
+    bool $captureOnly = false
 ): Migration {
     // @todo Delete $inputDB after Sources are all moved to $inputStorage.
     $inputDB = new \Porter\Database\DbFactory((new ConnectionManager($inputName))->connection()->getPDO());
-    $inputStorage = new Storage\Database(new ConnectionManager($inputName, $sourcePrefix));
-    if ($outputName === 'file') { // @todo storageFactory
-        $porterStorage = new Storage\File(); // Only 1 valid 'file' type currently.
-        $outputStorage = new Storage\File(); // @todo dead variable (halts at porter step)
-        $postscriptStorage = new Storage\File(); // @todo dead variable (halts at porter step)
-    } else {
-        $porterStorage = new Storage\Database(new ConnectionManager($outputName, 'PORT_'));
-        $outputStorage = new Storage\Database(new ConnectionManager($outputName, $targetPrefix));
-        $postscriptStorage = new Storage\Database(new ConnectionManager($outputName, $targetPrefix));
-    }
-    $captureOnly = ($outputName === 'sql');
     return new Migration(
         $inputDB,
         $inputStorage,

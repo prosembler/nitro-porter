@@ -20,15 +20,15 @@ class Request
         'badges',
     ];
 
-    private string $originName;
-    private string $sourceName;
-    private string $targetName;
-    private string $inputConnection;
-    private string $outputConnection;
-    private string $inputTablePrefix;
-    private string $outputTablePrefix;
-    private string $cdnPrefix;
-    private string $dataTypes;
+    private ?string $originName;
+    private ?string $sourceName;
+    private ?string $targetName;
+    private ?string $inputConnection;
+    private ?string $outputConnection;
+    private ?string $inputTablePrefix;
+    private ?string $outputTablePrefix;
+    private ?string $cdnPrefix;
+    private ?string $dataTypes;
 
     /**
      * Build a valid Porter request.

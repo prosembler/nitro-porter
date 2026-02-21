@@ -352,8 +352,8 @@ class Migration
     {
         // Manually add table prefix.
         if (!$this->hasInputSchema($table)) {
-            Log::comment('ERROR: Missing collation table ' . $this->dbInput()->getDatabaseName() .
-                '.' . $this->dbInput()->getTablePrefix() . $table);
+            Log::comment('Warning: No collation table found for database \'' . $this->dbInput()->getDatabaseName() .
+                '\'.' . $this->dbInput()->getTablePrefix() . $table);
             return 'UTF-8';
         }
         $table = $this->dbInput()->getTablePrefix() . $table;

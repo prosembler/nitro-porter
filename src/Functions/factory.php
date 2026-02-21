@@ -44,7 +44,7 @@ function packageFactory(string $type, string $name, ?Storage $input, ?Storage $o
     if (!in_array($type, ['Origin', 'Source', 'Target', 'Postscript'])) {
         Log::comment("Invalid package type.");
     }
-    $class = "\Porter\$type\\" . ucwords($name);
+    $class = "\Porter\\" . $type . "\\" . ucwords($name);
     if (!class_exists($class)) {
         Log::comment("No {$type} package found for {$name}");
     }

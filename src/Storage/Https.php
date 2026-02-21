@@ -132,10 +132,10 @@ class Https extends Storage
         $retries++;
 
         // Send request.
-        $options = [
-            'headers' => $this->getHeaders(),
-            'query' => $query,
-        ];
+        $options = ['headers' => $this->getHeaders()];
+        if (!empty($query)) {
+            $options['query'] = $query;
+        }
         if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
             Log::comment("\nSENT: GET ($endpoint)\n> " . json_encode($this->redactHeaders($options)));
         }

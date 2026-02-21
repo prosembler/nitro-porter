@@ -26,6 +26,9 @@ class Controller
 
         $port->begin();
         $source->run($port);
+        if (method_exists($source, 'validate')) {
+            $source->validate(); // New; no need for $port & not required via abstract for bc.
+        }
         $port->end();
     }
 

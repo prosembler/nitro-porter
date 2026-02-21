@@ -135,6 +135,13 @@ abstract class Storage
     /**
      * Apply column map to the data row to rename keys as required.
      *
+     * Uses:
+     * 1) 'src' => 'dest' — maps key `src` in $row to column `dest`. Simplest and original use.
+     * 2) `src' => [] — maps array list in `src` up a level into $row ("flattens" up 1 level)
+     *      Ex: API response {'foo':[],'meta':0} where 'foo' is the list to be stored, not the top-level metadata.
+     * 3) `src.sub` => `dest` — maps JSON array key `sub` in $row key `src` to column `dest.
+     *      Ex: ['src.name' => 'dest'] takes JSON in `src` field and gets property `name`.
+     *
      * @param array $row
      * @param array $map
      * @return array
@@ -143,7 +150,7 @@ abstract class Storage
     {
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
-            // Allow flattening 1 level. @todo Make recursive.
+            // Allow flattening (1 level). @todo Make recursive.
             if (is_array($dest)) { // Move ENTIRE sub-row up a level.
                 if (0 === count($dest)) { // empty array = *
                     $row = (isset($row[$src])) ? (array)$row[$src] : $row;
@@ -156,6 +163,17 @@ abstract class Storage
                 }
                 unset($row[$src]); // Remove column that was an array value.
                 continue; // No need to map again.
+            }
+
+            // Allow dot-syntax (1 level).
+            if (str_contains($src, '.')) {
+                list($key, $subkey) = explode('.', $src);
+                if (!is_array($row[$key])) {
+                    $row[$key] = json_decode($row[$key], true);
+                }
+                $row[$dest] = $row[$key][$subkey] ?? null;
+                unset($row[$key]); // Remove column that was a nested value.
+                continue;  // No need to map again.
             }
 
             // Simple-map remaining values.

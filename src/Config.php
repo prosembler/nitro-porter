@@ -92,7 +92,7 @@ class Config
     {
         $result = [];
         foreach ($this->config['connections'] as $connection) {
-            if ($alias === $connection['alias']) {
+            if ($alias === $connection['alias'] || strtolower($alias) === $connection['alias']) {
                 $result = $connection;
                 break;
             }

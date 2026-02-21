@@ -129,6 +129,7 @@ class Https extends Storage
         if ($retries > self::MAX_RETRIES) {
             $this->abort("MAX_RETRIES (" . self::MAX_RETRIES . ") reached");
         }
+        $retries++;
 
         // Send request.
         $options = [
@@ -151,21 +152,21 @@ class Https extends Storage
         $message = '';
         try {
             $headers = $response->getHeaders(false); // Forcibly retrieve headers.
-            $message = $response->getContent(false); // Forcibly retrieve body.
+            $message = $response->getContent(false); //gdt Forcibly retrieve body.
             $code = $response->getStatusCode();
             $content = $response->toArray();
         } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
             // Handle 429 (rate limit) errors & retries.
             if ($this->retry($code, $headers)) {
-                return $this->get($endpoint, $query, $retries++); // TRY AGAIN.
+                return $this->get($endpoint, $query, $retries); // TRY AGAIN.
             }
             // Collect & log (non-429) error before trying again.
             $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
-            return $this->get($endpoint, $query, $retries++); // TRY AGAIN.
+            return $this->get($endpoint, $query, $retries); // TRY AGAIN.
         } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
             // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
             Log::comment("HTTP $code ($endpoint) " . $e->getMessage());
-            return $this->get($endpoint, $query, $retries++); // TRY AGAIN.
+            return $this->get($endpoint, $query, $retries); // TRY AGAIN.
         }
         if (Config::getInstance()->debugEnabled()) { // Show (good) full response in logs.
             Log::comment("REPLY: HTTP $code (" . count($content) . " records)");

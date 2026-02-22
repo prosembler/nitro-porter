@@ -34,6 +34,7 @@ abstract class Origin extends Package
      * @param string $endpoint
      * @param array $fields
      * @param string $tableName
+     * @param string|null $key A non-null value will discard other data & use this key (only) as the data.
      * @param array $query
      * @param array $map
      * @return array $info from store()
@@ -43,6 +44,7 @@ abstract class Origin extends Package
         string $endpoint,
         array $fields,
         string $tableName,
+        ?string $key = null,
         array $query = [],
         array $map = []
     ): array {
@@ -58,6 +60,11 @@ abstract class Origin extends Package
         $split_send = microtime(true);
         list($response, $headers) = $this->input->get($endpoint, $query);
         $split_reply = microtime(true);
+
+        // Discard the rest of the response if we only want a key's contents.
+        if (!empty($key)) {
+            $response = $response[$key];
+        }
 
         // Store the data.
         $info = $this->output->store($tableName, $map, $fields, $response, []);

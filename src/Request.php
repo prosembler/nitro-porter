@@ -25,8 +25,8 @@ class Request
     private ?string $targetName;
     private ?string $inputConnection;
     private ?string $outputConnection;
-    private ?string $inputTablePrefix;
-    private ?string $outputTablePrefix;
+    private string $inputTablePrefix = '';
+    private string $outputTablePrefix = '';
     private ?string $cdnPrefix;
     private ?string $dataTypes;
 

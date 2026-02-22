@@ -150,14 +150,9 @@ abstract class Storage
     {
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
-            // Allow flattening (promote nested values 1 level).
-            if (is_array($dest)) { // Move declared keys up a level & map to new name.
-                foreach ($dest as $old => $new) {
-                    if (isset($row[$src][$old])) {
-                        $row[$new] = $row[$src][$old];
-                    }
-                }
-                unset($row[$src]); // Remove column that was an array value.
+            // Allow flattening of nested data (1 level).
+            if (is_array($dest)) {
+                $row = $this->mapNestedData($src, $dest, $row);
                 continue; // No need to map again.
             }
 
@@ -234,5 +229,26 @@ abstract class Storage
             }
         }
         return $row;
+    }
+
+    /**
+     * Move declared keys up a level AND map to new name.
+     *
+     * When $map contains an array, get nested columns and promote to the top-level of the row.
+     *
+     * @param string $columnName In $row
+     * @param array $submap Operates like $map, but for the nested values.
+     * @param array $row
+     * @return array
+     */
+    protected function mapNestedData(string $columnName, array $submap, array $row): array
+    {
+        foreach ($submap as $old => $new) {
+            if (isset($row[$columnName][$old])) {
+                $row[$new] = $row[$columnName][$old];
+            }
+        }
+        unset($row[$columnName]);
+        return $row; // Remove column that was an array value.
     }
 }

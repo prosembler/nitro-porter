@@ -150,7 +150,7 @@ abstract class Storage
     {
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
-            // Allow flattening (1 level). @todo Make recursive.
+            // Allow flattening (promote nested values 1 level).
             if (is_array($dest)) { // Move ENTIRE sub-row up a level.
                 if (0 === count($dest)) { // empty array = *
                     $row = (isset($row[$src])) ? (array)$row[$src] : $row;
@@ -163,17 +163,6 @@ abstract class Storage
                 }
                 unset($row[$src]); // Remove column that was an array value.
                 continue; // No need to map again.
-            }
-
-            // Allow dot-syntax (1 level).
-            if (str_contains($src, '.')) {
-                list($key, $subkey) = explode('.', $src);
-                if (!is_array($row[$key])) {
-                    $row[$key] = json_decode($row[$key], true);
-                }
-                $row[$dest] = $row[$key][$subkey] ?? null;
-                unset($row[$key]); // Remove column that was a nested value.
-                continue;  // No need to map again.
             }
 
             // Simple-map remaining values.

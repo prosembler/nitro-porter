@@ -2,6 +2,8 @@
 
 namespace Porter;
 
+use Staudenmeir\LaravelCte\Query\Builder;
+
 abstract class Source extends Package
 {
     /**
@@ -11,6 +13,16 @@ abstract class Source extends Package
 
     public function __construct(protected ?Storage $inputStorage = null, protected ?Storage $porterStorage = null)
     {
+    }
+
+    public function inputQB()
+    {
+        return new Builder($this->inputStorage->getHandle());
+    }
+
+    public function porterQB()
+    {
+        return new Builder($this->porterStorage->getHandle());
     }
 
     /**

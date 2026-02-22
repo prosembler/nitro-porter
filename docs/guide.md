@@ -2,7 +2,7 @@
 
 ## Installation
 
-'!!! warning "Localhost Development Only"
+!!! warning "Localhost Development Only"
 Don't use this in Production or anywhere publicly accessible
 
 ### Docker Desktop (recommended)
@@ -57,6 +57,7 @@ If you're in a hurry, contract a developer to manage the process for you. As usu
 Get the "short" names of the packages and connections you want to use.
 
 Run `porter list` and then choose whether to list:
+
 * sources [`s`] — Package names you can migrate from
 * targets [`t`] — Package names you can migrate to
 * connections [`c`] — What's in your config (did you make one?)

@@ -25,8 +25,6 @@
 
 namespace Porter\Origin;
 
-use Illuminate\Support\Collection;
-use Porter\Config;
 use Porter\Log;
 use Porter\Migration;
 use Porter\Origin;
@@ -41,6 +39,8 @@ class Discord extends Origin
     public const array SUPPORTED = [
         'name' => 'Discord',
     ];
+
+    public const string CDN_BASE_URI = 'https://cdn.discordapp.com/';
 
     /**
      * Discord has both a 50/sec rate limit (API) and a 10K/10min rate limit (Cloudflare).
@@ -141,6 +141,7 @@ class Discord extends Origin
         'message_reference' => 'text',
         'thread' => 'text',
         'author' => 'text',
+        'authorid' => 'int', // Derived from author.id — flattened to allow Source to filter.
         // OBJECTS[]
         'poll' => 'text', // @see https://discord.com/developers/docs/resources/poll#poll-object
         'attachments' => 'text', // @see https://discord.com/developers/docs/resources/message#attachment-object
@@ -180,9 +181,13 @@ class Discord extends Origin
         $this->archivedThreads($channelIds);
 
         // Messages
-        $this->emojis();
         $channelIds = $this->getTextChannels(); // Now including threads.
         $this->messages($channelIds);
+
+        // Files
+        //$this->emojis();
+        //$this->avatars();
+        //$this->attachments();
     }
 
     /**
@@ -261,6 +266,12 @@ class Discord extends Origin
         return $message->id ?? 0;
     }
 
+    /** @return array */
+    private function getUserIDs(): array
+    {
+        return $this->outputQB()->from('discord_users')->get('id')->toArray();
+    }
+
     /**
      * @see https://discord.com/developers/docs/resources/guild#list-guild-members
      */
@@ -280,21 +291,61 @@ class Discord extends Origin
                 'verified' => 'verified',
             ],
         ];
-        $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', $query, $map);
+        $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', null, $query, $map);
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
     protected function roles(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/roles", self::DB_STRUCTURE_ROLES, 'discord_roles');
+        $this->pull("guilds/$guildId", self::DB_STRUCTURE_ROLES, 'discord_roles', 'roles');
     }
 
-    /** @see https://discord.com/developers/docs/resources/emoji#emoji-object */
+    /**
+     * @see https://discord.com/developers/docs/reference#image-formatting
+     * > The returned format can be changed by changing the extension name at the end of the URL.
+     * >> The returned size can be changed by appending a querystring of ?size=desired_size to the URL.
+     * >> Image size can be any power of two between 16 and 4096.
+     * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
+     * >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
+     * >> WebP and AVIF formats must be requested as WebP since they don't convert well to other formats.
+     * > Ex data URI format: `data:image/jpeg;base64,BASE64_ENCODED_JPEG_IMAGE_DATA`
+     * >> Ensure content type (image/jpeg, image/png, image/gif) matches the image data being provided.
+     * @param int $id
+     */
+    protected function getImage(int $id): void
+    {
+        // @todo
+    }
+
+    /**
+     * Porter currently lacks a way to migrate an emoji set but we still pull them for backup purposes.
+     * @see https://discord.com/developers/docs/resources/emoji#emoji-object
+     */
     protected function emojis(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("/guilds/$guildId/emojis", self::DB_STRUCTURE_EMOJIS, 'discord_emojis');
+        $this->pull("guilds/$guildId", self::DB_STRUCTURE_EMOJIS, 'discord_emojis', 'emojis');
+        // Files
+        // @todo self::CDN_BASE_URI . emojis/emoji_id.png
+    }
+
+    /** @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls */
+    protected function attachments(): void
+    {
+        // @todo https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png
+        // ?ex=65d903de - Hex timestamp indicating when an attachment CDN URL will expire
+        // &is=65c68ede - Hex timestamp indicating when the URL was issued
+        // &hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f& - Signature
+    }
+
+    /** @see https://discord.com/developers/docs/reference#image-formatting-cdn-endpoints */
+    protected function avatars(): void
+    {
+        $ids = $this->getUserIDs();
+        foreach ($ids as $id) {
+            // @todo self:: CDN_BASE_URI . avatars/user_id/user_avatar.png
+        }
     }
 
     /**
@@ -315,8 +366,7 @@ class Discord extends Origin
     protected function activeThreads(): void
     {
         $guildId = $this->getGuildId();
-        $map = ['threads' => []]; // Use 'threads' as main data.
-        $this->pull("guilds/$guildId/threads/active", self::DB_STRUCTURE_CHANNELS, 'discord_channels', $map);
+        $this->pull("guilds/$guildId/threads/active", self::DB_STRUCTURE_CHANNELS, 'discord_channels', 'threads');
     }
 
     /**
@@ -325,10 +375,9 @@ class Discord extends Origin
      */
     protected function archivedThreads(array $channelIds): void
     {
-        $map = ['threads' => []];  // Use 'threads' as main data.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::DB_STRUCTURE_CHANNELS, 'discord_channels', $map);
+            $info = $this->pull($endpoint, self::DB_STRUCTURE_CHANNELS, 'discord_channels', 'threads');
             $this->rateLimit($info['headers']);
         }
     }
@@ -387,10 +436,13 @@ class Discord extends Origin
             // Setup & pull batch.
             $endpoint = "channels/$channelId/messages";
             $query = ['limit' => '100'];
+            $map = [
+                'author' => ['id' => 'authorid'],
+            ];
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::DB_STRUCTURE_MESSAGES, 'discord_messages', $query);
+            $info = $this->pull($endpoint, self::DB_STRUCTURE_MESSAGES, 'discord_messages', null, $query, $map);
 
             // Update status.
             if (0 === (int)$info['rows']) {

@@ -15,12 +15,12 @@ abstract class Source extends Package
     {
     }
 
-    public function inputQB()
+    public function inputQB(): Builder
     {
         return new Builder($this->inputStorage->getHandle());
     }
 
-    public function porterQB()
+    public function porterQB(): Builder
     {
         return new Builder($this->porterStorage->getHandle());
     }

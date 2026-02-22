@@ -152,7 +152,7 @@ abstract class Storage
         foreach ($map as $src => $dest) {
             // Allow flattening of nested data (1 level).
             if (is_array($dest)) {
-                $row = $this->mapNestedData($src, $dest, $row);
+                $row = $this->mapNestedData($row, $dest, $src);
                 continue; // No need to map again.
             }
 
@@ -236,16 +236,16 @@ abstract class Storage
      *
      * When $map contains an array, get nested columns and promote to the top-level of the row.
      *
-     * @param string $columnName In $row
-     * @param array $submap Operates like $map, but for the nested values.
      * @param array $row
+     * @param array $submap Operates like $map, but for the nested values.
+     * @param string $columnName In $row
      * @return array
      */
-    protected function mapNestedData(string $columnName, array $submap, array $row): array
+    protected function mapNestedData(array $row, array $submap, string $columnName): array
     {
-        foreach ($submap as $old => $new) {
-            if (isset($row[$columnName][$old])) {
-                $row[$new] = $row[$columnName][$old];
+        foreach ($submap as $src => $dest) {
+            if (isset($row[$columnName][$src])) {
+                $row[$dest] = $row[$columnName][$src];
             }
         }
         unset($row[$columnName]);

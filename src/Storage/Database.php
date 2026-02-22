@@ -77,6 +77,9 @@ class Database extends Storage
     public function stream(array $row, array $structure, array $info = [], bool $final = false): array
     {
         $info = $this->batchInsert($row, $info, $final);
+        if (!isset($info['rows'])) {
+            $info['rows'] = 0;
+        }
         $info['rows']++;
         return $info;
     }
@@ -98,7 +101,9 @@ class Database extends Storage
         }
 
         // Measure highest memory usage before potential send.
-        $info['memory'] = max(memory_get_usage(), $info['memory']);
+        if (!empty($info['memory'])) {
+            $info['memory'] = max(memory_get_usage(), $info['memory']);
+        }
 
         if (self::INSERT_BATCH === count($batch) || $final) {
             $this->sendBatch($batch);

@@ -74,6 +74,9 @@ class Formatter
      */
     public function toTextFormatter(?string $format, ?string $text): string
     {
+        if ($text === null) {
+            return '';
+        }
         switch ($format) {
             case 'Html':
             case 'Wysiwyg':

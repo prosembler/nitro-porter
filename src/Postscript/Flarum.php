@@ -388,6 +388,8 @@ class Flarum extends Postscript
      */
     protected function resetAccessTokens(Migration $port): void
     {
-        $port->dbPostscript()->table('access_tokens')->truncate();
+        if ($port->dbPostscript()->getSchemaBuilder()->hasTable('access_tokens')) {
+            $port->dbPostscript()->table('access_tokens')->truncate();
+        }
     }
 }

@@ -10,7 +10,6 @@ namespace Porter\Source;
 
 use Porter\Log;
 use Porter\Source;
-use Porter\Migration;
 
 class PhpBb3 extends Source
 {
@@ -84,29 +83,27 @@ class PhpBb3 extends Source
     /**
      * Forum-specific export format.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->userNotes($port);
-        $this->ranks($port);
-        $this->signatures($port);
+        $this->users();
+        $this->roles();
+        $this->userNotes();
+        $this->ranks();
+        $this->signatures();
 
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->bookmarks($port);
-        $this->polls($port);
-        $this->conversations($port);
-        $this->attachments($port);
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->bookmarks();
+        $this->polls();
+        $this->conversations();
+        $this->attachments();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function userNotes(Migration $port): void
+    protected function userNotes(): void
     {
         $corruptedRecords = [];
 
@@ -144,7 +141,7 @@ class PhpBb3 extends Source
                 }
             )
         );
-        $port->export(
+        $this->export(
             'UserNote',
             "select l.*, 'Text' as format
                 from :_log l
@@ -221,13 +218,12 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         // Grab the avatar salt.
         //$data = $port->get("select config_value from :_config where config_name = 'avatar_salt'");
-        $data = $port->dbInput()->table('config')
+        $data = $this->dbInput()->table('config')
             ->select(['config_value'])
             ->where('config_name', '=', 'avatar_salt')
             ->first();
@@ -246,7 +242,7 @@ class PhpBb3 extends Source
             'user_rank' => 'RankID',
             'user_ip' => 'LastIPAddress'
         );
-        $port->export(
+        $this->export(
             'User',
             "select *,
                     case user_avatar_type
@@ -267,9 +263,8 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function ranks(Migration $port): void
+    protected function ranks(): void
     {
         $rank_Map = array(
             'rank_id' => 'RankID',
@@ -301,7 +296,7 @@ class PhpBb3 extends Source
                 }
             )
         );
-        $port->export(
+        $this->export(
             'Rank',
             "select
                     r.*,
@@ -316,23 +311,22 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'group_id' => 'RoleID',
             'group_name' => 'Name',
             'group_desc' => 'Description'
         );
-        $port->export('Role', 'select * from :_groups', $role_Map);
+        $this->export('Role', 'select * from :_groups', $role_Map);
 
         // UserRoles
         $userRole_Map = array(
             'user_id' => 'UserID',
             'group_id' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             'select user_id, group_id from :_users
                 union
@@ -342,16 +336,15 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
         $userMeta_Map = array(
             'user_id' => 'UserID',
             'name' => 'Name',
             'user_sig' => array('Column' => 'Value', 'Filter' => array($this, 'removeBBCodeUIDs'))
         );
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     user_id,
@@ -373,9 +366,8 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'forum_id' => 'CategoryID',
@@ -383,7 +375,7 @@ class PhpBb3 extends Source
             'forum_desc' => 'Description',
             'left_id' => 'Sort'
         );
-        $port->export(
+        $this->export(
             'Category',
             "select *,
                     nullif(parent_id,0) as ParentCategoryID
@@ -393,9 +385,8 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'topic_id' => 'DiscussionID',
@@ -407,7 +398,7 @@ class PhpBb3 extends Source
             'topic_first_post_id' => array('Column' => 'FirstCommentID', 'Type' => 'int'),
             'type' => 'Type'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select t.*,
                     'BBCode' as Format,
@@ -423,9 +414,8 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
@@ -436,7 +426,7 @@ class PhpBb3 extends Source
             'poster_ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'forceIP4'),
             'post_edit_user' => 'UpdateUserID'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select p.*,
                     'BBCode' as Format,
@@ -448,11 +438,10 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function bookmarks(Migration $port): void
+    protected function bookmarks(): void
     {
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "select
                     tt.user_id as UserID,
@@ -465,13 +454,12 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
-        $port->query("drop table if exists z_pmto;");
+        $this->query("drop table if exists z_pmto;");
 
-        $port->query(
+        $this->query(
             "create table z_pmto(
                 id int unsigned,
                 userid int unsigned,
@@ -479,7 +467,7 @@ class PhpBb3 extends Source
             );"
         );
 
-        $port->query(
+        $this->query(
             "insert ignore into z_pmto(id, userid)
                 select
                     msg_id,
@@ -487,7 +475,7 @@ class PhpBb3 extends Source
                 from :_privmsgs"
         );
 
-        $port->query(
+        $this->query(
             "insert ignore into z_pmto(id, userid)
                 select
                     msg_id,
@@ -495,7 +483,7 @@ class PhpBb3 extends Source
                 from :_privmsgs_to;"
         );
 
-        $port->query(
+        $this->query(
             "insert ignore into z_pmto(id, userid)
                 select
                     msg_id,
@@ -503,9 +491,9 @@ class PhpBb3 extends Source
                 from :_privmsgs_to"
         );
 
-        $port->query("drop table if exists z_pmto2;");
+        $this->query("drop table if exists z_pmto2;");
 
-        $port->query(
+        $this->query(
             "create table z_pmto2 (
                 id int unsigned,
                 userids varchar(250),
@@ -513,7 +501,7 @@ class PhpBb3 extends Source
             );"
         );
 
-        $port->query(
+        $this->query(
             "insert ignore into z_pmto2(id, userids)
                 select
                     id,
@@ -522,9 +510,9 @@ class PhpBb3 extends Source
                 group by id;"
         );
 
-        $port->query("drop table if exists z_pm;");
+        $this->query("drop table if exists z_pm;");
 
-        $port->query(
+        $this->query(
             "create table z_pm(
                 id int unsigned,
                 subject varchar(255),
@@ -534,7 +522,7 @@ class PhpBb3 extends Source
             );"
         );
 
-        $port->query(
+        $this->query(
             "insert into z_pm(id, subject, subject2, userids)
                 select
                     pm.msg_id,
@@ -548,11 +536,11 @@ class PhpBb3 extends Source
                     join z_pmto2 t on t.id = pm.msg_id;"
         );
 
-        $port->query("create index z_idx_pm on z_pm(id);");
+        $this->query("create index z_idx_pm on z_pm(id);");
 
-        $port->query("drop table if exists z_pmgroup;");
+        $this->query("drop table if exists z_pmgroup;");
 
-        $port->query(
+        $this->query(
             "create table z_pmgroup(
                 groupid int unsigned,
                 subject varchar(255),
@@ -560,7 +548,7 @@ class PhpBb3 extends Source
             );"
         );
 
-        $port->query(
+        $this->query(
             "insert into z_pmgroup(groupid, subject, userids)
                 select
                     min(pm.id),
@@ -571,10 +559,10 @@ class PhpBb3 extends Source
                     pm.subject2, pm.userids;"
         );
 
-        $port->query("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
-        $port->query("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
+        $this->query("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
+        $this->query("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
 
-        $port->query(
+        $this->query(
             "update z_pm pm
                 join z_pmgroup g on pm.subject2 = g.subject
                     and pm.userids = g.userids
@@ -590,7 +578,7 @@ class PhpBb3 extends Source
                 'Filter' => array($this, 'EntityDecode')
             )
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select pm.*,
                     g.subject as RealSubject,
@@ -607,7 +595,7 @@ class PhpBb3 extends Source
             'message_text' => array('Column' => 'Body', 'Filter' => array($this, 'removeBBCodeUIDs')),
             'author_id' => 'InsertUserID'
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select pm.*,
                     pm2.groupid,
@@ -623,7 +611,7 @@ class PhpBb3 extends Source
             'userid' => 'UserID',
             'groupid' => 'ConversationID'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "select g.groupid, t.userid
                 from z_pmto t
@@ -631,16 +619,15 @@ class PhpBb3 extends Source
             $userConversation_Map
         );
 
-        $port->query('drop table if exists z_pmto');
-        $port->query('drop table if exists z_pmto2;');
-        $port->query('drop table if exists z_pm;');
-        $port->query('drop table if exists z_pmgroup;');
+        $this->query('drop table if exists z_pmto');
+        $this->query('drop table if exists z_pmto2;');
+        $this->query('drop table if exists z_pm;');
+        $this->query('drop table if exists z_pmgroup;');
     }
 
     /**
-     * @param Migration $port
      */
-    protected function polls(Migration $port): void
+    protected function polls(): void
     {
         $poll_Map = array(
             'poll_id' => 'PollID',
@@ -650,7 +637,7 @@ class PhpBb3 extends Source
             'topic_poster' => 'InsertUserID',
             'anonymous' => 'Anonymous'
         );
-        $port->export(
+        $this->export(
             'Poll',
             "select distinct
                     t.*,
@@ -671,7 +658,7 @@ class PhpBb3 extends Source
             'topic_time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
             'topic_poster' => 'InsertUserID'
         );
-        $port->export(
+        $this->export(
             'PollOption',
             "select po.*,
                     po.poll_option_id * 1000000 + po.topic_id as id,
@@ -687,7 +674,7 @@ class PhpBb3 extends Source
             'vote_user_id' => 'UserID',
             'id' => 'PollOptionID'
         );
-        $port->export(
+        $this->export(
             'PollVote',
             "select v.*,
                     v.poll_option_id * 1000000 + v.topic_id as id
@@ -697,9 +684,8 @@ class PhpBb3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $cdn = ''; //$this->param('cdn', '');
         $media_Map = array(
@@ -711,7 +697,7 @@ class PhpBb3 extends Source
             'mimetype' => 'Type',
             'filesize' => 'Size',
         );
-        $port->export(
+        $this->export(
             'Media',
             "select a.*,
                     case when a.post_msg_id = t.topic_first_post_id
@@ -731,13 +717,12 @@ class PhpBb3 extends Source
     /**
      * Add file extension to hashed phpBB3 attachment filenames.
      *
-     * @param Migration $port
      * @param string $directory
      */
-    protected function exportBlobs(Migration $port, string $directory): void
+    protected function exportBlobs(string $directory): void
     {
         // Select attachments
-        $result = $port->query("select physical_filename as name, extension as ext from phpbb_attachments");
+        $result = $this->query("select physical_filename as name, extension as ext from phpbb_attachments");
 
         // Iterate thru files based on database results and rename.
         $renamed = $failed = 0;

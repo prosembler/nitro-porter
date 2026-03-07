@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class AdvancedForum extends Source
 {
@@ -34,15 +33,14 @@ class AdvancedForum extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
@@ -65,12 +63,11 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $filePath = ''; // @todo Avatar path support
-        $port->export(
+        $this->export(
             'User',
             "select `u`.`uid` as `UserID`, `u`.`name` as `Name`, `u`.`mail` as `Email`, `u`.`pass` as `Password`,
                     'drupal' as `HashMethod`, from_unixtime(`created`) as `DateInserted`,
@@ -81,11 +78,10 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $port->export(
+        $this->export(
             'Role',
             "SELECT `name` AS `Name`, `rid` AS `RoleID`
                 FROM `:_role` `r`
@@ -93,7 +89,7 @@ class AdvancedForum extends Source
         );
 
         // User Role.
-        $port->export(
+        $this->export(
             'UserRole',
             "SELECT `rid` AS `RoleID`, `uid` AS `UserID`
                 FROM `:_users_roles` `ur`"
@@ -101,11 +97,10 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
-        $port->export(
+        $this->export(
             'Category',
             "SELECT `ttd`.`tid` AS `CategoryID`, `tth`.`parent` AS `ParentCategoryID`,
                     `ttd`.`name` AS `Name`, `ttd`.`weight` AS `Sort`
@@ -118,14 +113,13 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'body_format' => array('Column' => 'Format', 'Filter' => array(__CLASS__, 'translateFormatType'))
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "
             SELECT `fi`.`nid` AS `DiscussionID`, `fi`.`tid` AS `CategoryID`, `fi`.`title` AS `Name`,
@@ -142,14 +136,13 @@ class AdvancedForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'comment_body_format' => array('Column' => 'Format', 'Filter' => array(__CLASS__, 'translateFormatType'))
         );
-        $port->export(
+        $this->export(
             'Comment',
             "SELECT `c`.`cid` AS `CommentID`, `c`.`nid` AS `DiscussionID`, `c`.`uid` AS `InsertUserID`,
                     from_unixtime(`c`.`created`) AS `DateInserted`,

@@ -7,7 +7,6 @@
 use Porter\ConnectionManager;
 use Porter\FileTransfer;
 use Porter\Log;
-use Porter\Migration;
 use Porter\Origin;
 use Porter\Package;
 use Porter\Postscript;
@@ -119,41 +118,4 @@ function storageFactory(string $name, ?string $prefix = ''): Storage
         return new Storage\File();
     }
     return new Storage\Database(new ConnectionManager($name, $prefix));
-}
-
-/**
- * Setup a new migration.
- *
- * @param string $inputName
- * @param Storage $inputStorage
- * @param Storage $porterStorage
- * @param Storage $outputStorage
- * @param Storage $postscriptStorage
- * @param string|null $limitTables
- * @param bool $captureOnly
- * @return Migration
- * @throws Exception
- * @deprecated
- */
-function migrationFactory(
-    string $inputName,
-    Storage $inputStorage,
-    Storage $porterStorage,
-    Storage $outputStorage,
-    Storage $postscriptStorage,
-    ?string $limitTables = '',
-    bool $captureOnly = false
-): Migration {
-    // @todo Delete $inputDB after Sources are all moved to $inputStorage.
-    $inputDB = new \Porter\Database\DbFactory((new ConnectionManager($inputName))->connection()->getPDO());
-    return new Migration(
-        $inputDB,
-        $inputStorage,
-        $porterStorage,
-        $outputStorage,
-        $postscriptStorage,
-        loadData('structure'),
-        $limitTables,
-        $captureOnly
-    );
 }

@@ -4,7 +4,6 @@ namespace Porter\Postscript;
 
 use Porter\ConnectionManager;
 use Porter\Log;
-use Porter\Migration;
 use Porter\Parser\Flarum\QuoteEmbed;
 use Porter\Postscript;
 
@@ -27,36 +26,34 @@ class Flarum extends Postscript
      *
      * In test runs, 1/3 of the total migration time was from numberPosts and buildPostMentions.
      * They take about as long as migrating all posts (comments) in the first place.
-     *
-     * @param ?Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->buildUserMentions($port);
-        $this->numberPosts($port);
-        $this->buildPostMentions($port); // Must be AFTER `numberPosts()`
-        $this->setLastRead($port);
-        $this->addDefaultGroups($port);
-        $this->addDefaultBadgeCategory($port);
-        $this->promoteAdmin($port);
-        $this->resetAccessTokens($port);
+        $this->buildUserMentions();
+        $this->numberPosts();
+        $this->buildPostMentions(); // Must be AFTER `numberPosts()`
+        $this->setLastRead();
+        $this->addDefaultGroups();
+        $this->addDefaultBadgeCategory();
+        $this->promoteAdmin();
+        $this->resetAccessTokens();
     }
 
     /**
      * Find mentions in posts and record to database table.
      */
-    protected function buildUserMentions(Migration $port): void
+    protected function buildUserMentions(): void
     {
         // Start timer.
         $start = microtime(true);
         $info['rows'] = 0;
 
         // Prepare mentions table.
-        $port->outputStorage()->prepare('post_mentions_user', self::DB_STRUCTURE_POST_MENTIONS_USER);
-        $port->ignoreOutputDuplicates('post_mentions_user'); // Primary key forbids more than 1 record per user/post.
+        $this->outputStorage()->prepare('post_mentions_user', self::DB_STRUCTURE_POST_MENTIONS_USER);
+        $this->ignoreOutputDuplicates('post_mentions_user'); // Primary key forbids more than 1 record per user/post.
 
         // Get output post data.
-        $posts = $port->postQB()
+        $posts = $this->postQB()
             ->from('posts')
             ->select(['id', 'discussion_id', 'content']);
         $memory = memory_get_usage();
@@ -72,7 +69,7 @@ class Flarum extends Postscript
             );
             // There can be multiple userids per post.
             foreach ($mentions['userids'] as $userid) {
-                $info = $port->outputStorage()->stream([
+                $info = $this->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_user_id' => (int)$userid
                 ], self::DB_STRUCTURE_POST_MENTIONS_USER, $info, false);
@@ -80,7 +77,7 @@ class Flarum extends Postscript
         }
 
         // Insert remaining mentions.
-        $port->outputStorage()->stream([], [], [], true);
+        $this->outputStorage()->stream([], [], [], true);
 
         // Report.
         Log::storage('build', 'mentions_user', microtime(true) - $start, $info['rows'], $memory);
@@ -94,9 +91,8 @@ class Flarum extends Postscript
      * The `discussions.post_number_index` is the NEXT number to set for `posts.number`.
      * That means it should be set to the current post count +1.
      *
-     * @param Migration $port
      */
-    protected function numberPosts(Migration $port): void
+    protected function numberPosts(): void
     {
         // Start timer.
         $start = microtime(true);
@@ -104,23 +100,23 @@ class Flarum extends Postscript
         Log::comment("Building 'post number' info for discussions...");
 
         // Get discussion id list (avoiding empty discussions) from output.
-        $posts = $port->postQB()->from('posts')
+        $posts = $this->postQB()->from('posts')
             ->distinct()
             ->get('discussion_id');
         $memory = memory_get_usage();
 
         foreach ($posts as $post) {
             // Update posts with their number, per discussion.
-            $prx = $port->dbPostscript()->getTablePrefix();
-            $port->dbPostscript()->statement("set @num := 0");
-            $count = $port->dbPostscript()->affectingStatement("update `" . "{$prx}posts`
+            $prx = $this->dbPostscript()->getTablePrefix();
+            $this->dbPostscript()->statement("set @num := 0");
+            $count = $this->dbPostscript()->affectingStatement("update `" . "{$prx}posts`
                     set `number` = (@num := @num + 1)
                     where `discussion_id` = " . $post->discussion_id . "
                     order by `created_at` asc");
             $rows += $count;
 
             // Set discussions.post_number_index
-            $port->dbPostscript()->table('discussions')
+            $this->dbPostscript()->table('discussions')
                 ->where('id', '=', $post->discussion_id)
                 ->update(['post_number_index' => ($count + 1)]);
         }
@@ -134,7 +130,7 @@ class Flarum extends Postscript
      *
      * @see QuoteEmbed — '<POSTMENTION discussionid="" displayname="{author}" id="{postid}" number="">'
      */
-    protected function buildPostMentions(Migration $port): void
+    protected function buildPostMentions(): void
     {
         // Start timer.
         $start = microtime(true);
@@ -142,12 +138,12 @@ class Flarum extends Postscript
         $failures = 0;
 
         // Prepare mentions table.
-        $port->outputStorage()->prepare('post_mentions_post', self::DB_STRUCTURE_POST_MENTIONS_POST);
-        $port->ignoreOutputDuplicates('post_mentions_post'); // Primary key forbids more than 1 record per user/post.
+        $this->outputStorage()->prepare('post_mentions_post', self::DB_STRUCTURE_POST_MENTIONS_POST);
+        $this->ignoreOutputDuplicates('post_mentions_post'); // Primary key forbids more than 1 record per user/post.
 
         // Create an OP lookup array.
         // @todo This may fall down around 200K discussions.
-        $posts = $port->postQB()
+        $posts = $this->postQB()
             ->from('posts')
             ->where('number', '=', 1)
             ->get(['id', 'discussion_id'])
@@ -155,7 +151,7 @@ class Flarum extends Postscript
         $discussions = array_combine(array_column($posts, 'discussion_id'), array_column($posts, 'id'));
 
         // Get post data.
-        $posts = $port->postQB()
+        $posts = $this->postQB()
             ->from('posts')
             ->select(['id', 'discussion_id', 'content']);
         $memory = memory_get_usage();
@@ -173,12 +169,12 @@ class Flarum extends Postscript
             // There can be multiple mentioned postids per post.
             foreach (array_filter($mentions['postids']) as $postid) {
                 // Repair the post.
-                if (!$this->repairPostMention($port, $post->id, $post->content, (int)$postid, 'post')) {
+                if (!$this->repairPostMention($post->id, $post->content, (int)$postid, 'post')) {
                     $failures++;
                 }
 
                 // Record post mentions.
-                $info = $port->outputStorage()->stream([
+                $info = $this->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$postid
                 ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info, false);
@@ -187,12 +183,12 @@ class Flarum extends Postscript
             // There can also be multiple mentioned discussionids per post.
             foreach (array_filter($mentions['discussionids']) as $discussionid) {
                 // Repair the post.
-                if (!$this->repairPostMention($port, $post->id, $post->content, (int)$discussionid, 'discussion')) {
+                if (!$this->repairPostMention($post->id, $post->content, (int)$discussionid, 'discussion')) {
                     $failures++;
                 }
 
                 // Record post mentions.
-                $info = $port->outputStorage()->stream([
+                $info = $this->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$discussions[$discussionid] // Use the OP lookup
                 ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info, false);
@@ -200,7 +196,7 @@ class Flarum extends Postscript
         }
 
         // Insert remaining mentions.
-        $port->outputStorage()->stream([], [], [], true);
+        $this->outputStorage()->stream([], [], [], true);
 
         // Log failures.
         if ($failures) {
@@ -216,7 +212,6 @@ class Flarum extends Postscript
      *
      * This adds considerable overheard to the migration.
      *
-     * @param Migration $port
      * @param int $postid Post being updated.
      * @param string $content Content being updated.
      * @param int $quoteID The post referenced in the content.
@@ -224,10 +219,10 @@ class Flarum extends Postscript
      * @return bool Whether the post mention was repaired.
      * @see QuoteEmbed — '<POSTMENTION discussionid="" displayname="{author}" id="{postid}" number="">'
      */
-    protected function repairPostMention(Migration $port, int $postid, string $content, int $quoteID, string $quoteType)
+    protected function repairPostMention(int $postid, string $content, int $quoteID, string $quoteType)
     {
         // Prep a secondary connection for updating markup (main one will be running unbuffered query).
-        $db = $port->dbPostscript();
+        $db = $this->dbPostscript();
 
         // Get missing quote info.
         $quoteQuery = $db->table('posts');
@@ -273,12 +268,11 @@ class Flarum extends Postscript
     /**
      * Flarum won't even show your bookmarks without last_read_post_number being populated. What a diva!
      *
-     * @param Migration $port
      */
-    protected function setLastRead(Migration $port): void
+    protected function setLastRead(): void
     {
         // Verify table exists.
-        if (! $port->hasOutputSchema('discussion_user')) {
+        if (! $this->hasOutputSchema('discussion_user')) {
             return;
         }
 
@@ -288,7 +282,7 @@ class Flarum extends Postscript
         Log::comment("Building 'last read' info for user bookmarks...");
 
         // Calculate & set discussion_user.last_read_post_number.
-        $bookmarks = $port->postQB()
+        $bookmarks = $this->postQB()
             ->from('discussion_user', 'du')
             ->select(['du.user_id', 'du.discussion_id'])
             ->selectRaw('max(number) as last_number')
@@ -303,7 +297,7 @@ class Flarum extends Postscript
             ->get();
         $memory = memory_get_usage(); // @todo This is a memory bottleneck — can it be streamed?
         foreach ($bookmarks as $post) {
-            $count = $port->dbPostscript()->affectingStatement("update `discussion_user`
+            $count = $this->dbPostscript()->affectingStatement("update `discussion_user`
                 set last_read_post_number = " . (int)$post->last_number . "
                 where user_id = " . $post->user_id . "
                     and discussion_id = " . $post->discussion_id);
@@ -323,11 +317,10 @@ class Flarum extends Postscript
     /**
      * Recreate the default groups (1 = Admins, 2 = Guests, 3 = Members).
      *
-     * @param Migration $port
      */
-    protected function addDefaultGroups(Migration $port): void
+    protected function addDefaultGroups(): void
     {
-        $port->dbPostscript()->table('groups')
+        $this->dbPostscript()->table('groups')
             ->insertOrIgnore([
                 ['id' => 1, 'name_singular' => 'Admin', 'name_plural' => 'Admins', 'is_hidden' => 0],
                 ['id' => 2, 'name_singular' => 'Guest', 'name_plural' => 'Guests', 'is_hidden' => 0],
@@ -342,12 +335,11 @@ class Flarum extends Postscript
      *
      * Badges are automatically added to badge_category_id = 1 during import.
      *
-     * @param Migration $port
      */
-    protected function addDefaultBadgeCategory(Migration $port): void
+    protected function addDefaultBadgeCategory(): void
     {
-        if ($port->hasOutputSchema('badge_category')) {
-            $port->dbPostscript()
+        if ($this->hasOutputSchema('badge_category')) {
+            $this->dbPostscript()
                 ->table('badge_category')
                 ->insertOrIgnore(['id' => 1, 'name' => 'Imported Badges', 'created_at' => date('Y-m-d h:m:s')]);
             Log::comment('Added  badge category "Imported Badges".');
@@ -357,19 +349,18 @@ class Flarum extends Postscript
     /**
      * Promote the superadmin to the Flarum admin role.
      *
-     * @param Migration $port
      */
-    protected function promoteAdmin(Migration $port): void
+    protected function promoteAdmin(): void
     {
         // Find the Vanilla superadmin (User.Admin = 1) and make them an Admin.
-        $result = $port->targetQB()
+        $result = $this->outputQB()
             ->from('User')
             ->where('Admin', '>', 0)
             ->first();
 
         if (isset($result->UserID, $result->Name, $result->Email)) {
             // Add the admin.
-            $port->dbPostscript()
+            $this->dbPostscript()
                 ->table('group_user')
                 ->insert(['group_id' => 1, 'user_id' => $result->UserID]);
 
@@ -384,12 +375,11 @@ class Flarum extends Postscript
     /**
      * Empty access tokens for a fresh forum.
      *
-     * @param Migration $port
      */
-    protected function resetAccessTokens(Migration $port): void
+    protected function resetAccessTokens(): void
     {
-        if ($port->dbPostscript()->getSchemaBuilder()->hasTable('access_tokens')) {
-            $port->dbPostscript()->table('access_tokens')->truncate();
+        if ($this->dbPostscript()->getSchemaBuilder()->hasTable('access_tokens')) {
+            $this->dbPostscript()->table('access_tokens')->truncate();
         }
     }
 }

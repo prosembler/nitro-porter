@@ -11,7 +11,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class IpBoard3 extends Source
 {
@@ -44,7 +43,7 @@ class IpBoard3 extends Source
     /**
      * Export avatars into vanilla-compatibles names
      */
-    public function doAvatars(Migration $port): void
+    public function doAvatars(): void
     {
         // Source table
         $sourceTable = 'profile_portal'; //$this->param('users-source', 'profile_portal');
@@ -66,7 +65,7 @@ class IpBoard3 extends Source
 
         switch ($sourceTable) {
             case 'profile_portal':
-                $userList = $port->query(
+                $userList = $this->query(
                     "select
                         pp_member_id as member_id,
                         pp_main_photo as main_photo,
@@ -80,7 +79,7 @@ class IpBoard3 extends Source
 
             case 'member_extra':
             default:
-                $userList = $port->query(
+                $userList = $this->query(
                     "select
                         id as member_id,
                         avatar_location as photo
@@ -166,42 +165,40 @@ class IpBoard3 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
         // Export avatars
         //if ($this->param('avatars')) {
             //$this->doAvatars($ex);
         //}
 
-        if ($port->hasInputSchema('members', 'member_id') === true) {
+        if ($this->hasInputSchema('members', 'member_id') === true) {
             $memberID = 'member_id';
         } else {
             $memberID = 'id';
         }
 
-        $this->users($memberID, $port);
-        $this->roles($port, $memberID);
-        $this->userMeta($port);
+        $this->users($memberID);
+        $this->roles($memberID);
+        $this->userMeta();
 
-        $this->categories($port);
-        $this->discussions($port);
-        $this->tags($port);
-        $this->comments($port);
-        $this->attachments($port);
+        $this->categories();
+        $this->discussions();
+        $this->tags();
+        $this->comments();
+        $this->attachments();
 
-        if ($port->hasInputSchema('message_topic_user_map')) {
-            $this->conversations($port); // v3
+        if ($this->hasInputSchema('message_topic_user_map')) {
+            $this->conversations(); // v3
         } else {
-            $this->conversationsV2($port); // v2
+            $this->conversationsV2(); // v2
         }
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversationsV2(Migration $port): void
+    protected function conversationsV2(): void
     {
         $sql = <<<EOT
             create table tmp_to (
@@ -332,7 +329,7 @@ class IpBoard3 extends Source
             set c.groupid = g.groupid;
 EOT;
 
-        $port->dbInput()->unprepared($sql);
+        $this->dbInput()->unprepared($sql);
 
         // Conversations.
         $conversation_Map = array(
@@ -348,7 +345,7 @@ EOT;
             join tmp_conversation tc
                 on mt.mt_id = tc.id";
         $this->clearFilters('Conversation', $conversation_Map, $sql);
-        $port->export('Conversation', $sql, $conversation_Map);
+        $this->export('Conversation', $sql, $conversation_Map);
 
         // Conversation Message.
         $conversationMessage_Map = array(
@@ -370,7 +367,7 @@ EOT;
             join tmp_conversation tc
                 on mt.mt_id = tc.id";
         $this->clearFilters('ConversationMessage', $conversationMessage_Map, $sql);
-        $port->export('ConversationMessage', $sql, $conversationMessage_Map);
+        $this->export('ConversationMessage', $sql, $conversationMessage_Map);
 
         // User Conversation.
         $userConversation_Map = array(
@@ -383,9 +380,9 @@ EOT;
             from tmp_to t
             join tmp_group g
                 on g.groupid = t.id";
-        $port->export('UserConversation', $sql, $userConversation_Map);
+        $this->export('UserConversation', $sql, $userConversation_Map);
 
-        $port->dbInput()->unprepared(
+        $this->dbInput()->unprepared(
             "drop table tmp_conversation;
             drop table tmp_to;
             drop table tmp_to2;
@@ -394,9 +391,8 @@ EOT;
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         // Conversations.
         $conversation_Map = array(
@@ -407,7 +403,7 @@ EOT;
         );
         $sql = "select * from :_message_topics where mt_is_deleted = 0";
         $this->clearFilters('Conversation', $conversation_Map, $sql);
-        $port->export('Conversation', $sql, $conversation_Map);
+        $this->export('Conversation', $sql, $conversation_Map);
 
         // Conversation Message.
         $conversationMessage_Map = array(
@@ -421,7 +417,7 @@ EOT;
         );
         $sql = "select m.*, 'IPB' as Format from :_message_posts m";
         $this->clearFilters('ConversationMessage', $conversationMessage_Map, $sql);
-        $port->export('ConversationMessage', $sql, $conversationMessage_Map);
+        $this->export('ConversationMessage', $sql, $conversationMessage_Map);
 
         // User Conversation.
         $userConversation_Map = array(
@@ -432,7 +428,7 @@ EOT;
         $sql = "select t.*,
             !map_user_active as Deleted
             from :_message_topic_user_map t";
-        $port->export('UserConversation', $sql, $userConversation_Map);
+        $this->export('UserConversation', $sql, $userConversation_Map);
     }
 
     /**
@@ -505,9 +501,8 @@ EOT;
 
     /**
      * @param string $memberID
-     * @param Migration $port
      */
-    protected function users(string $memberID, Migration $port): void
+    protected function users(string $memberID): void
     {
         $user_Map = array(
             $memberID => 'UserID',
@@ -529,7 +524,7 @@ EOT;
         );
 
         $from = '';
-        if ($port->hasInputSchema('members', 'members_pass_hash') === true) {
+        if ($this->hasInputSchema('members', 'members_pass_hash') === true) {
             $select = ",concat(m.members_pass_hash, '$', m.members_pass_salt) as Password";
         } else {
             $select = ",concat(mc.converge_pass_hash, '$', mc.converge_pass_salt) as Password";
@@ -537,7 +532,7 @@ EOT;
             on m.$memberID = mc.converge_id";
         }
 
-        if ($port->hasInputSchema('members', 'hide_email') === true) {
+        if ($this->hasInputSchema('members', 'hide_email') === true) {
             $showEmail = '!hide_email';
         } else {
             $showEmail = '0';
@@ -545,7 +540,7 @@ EOT;
 
         $cdn = ''; // @todo CDN support
 
-        if ($port->hasInputSchema('member_extra') === true) {
+        if ($this->hasInputSchema('member_extra') === true) {
             $sql = "select m.*,
                 m.joined as firstvisit,
                 'ipb' as HashMethod,
@@ -580,23 +575,22 @@ EOT;
                 $from";
         }
         $this->clearFilters('members', $user_Map, $sql);
-        $port->export('User', $sql, $user_Map);
+        $this->export('User', $sql, $user_Map);
     }
 
     /**
-     * @param Migration $port
      * @param string $memberID
      */
-    protected function roles(Migration $port, string $memberID): void
+    protected function roles(string $memberID): void
     {
         $role_Map = array(
             'g_id' => 'RoleID',
             'g_title' => 'Name'
         );
-        $port->export('Role', "select * from :_groups", $role_Map);
+        $this->export('Role', "select * from :_groups", $role_Map);
 
         // User Role.
-        if ($port->hasInputSchema('members', 'member_group_id') === true) {
+        if ($this->hasInputSchema('members', 'member_group_id') === true) {
             $groupID = 'member_group_id';
         } else {
             $groupID = 'mgroup';
@@ -612,7 +606,7 @@ EOT;
             m.$memberID, m.$groupID
          from :_members m";
 
-        if ($port->hasInputSchema('members', 'mgroup_others')) {
+        if ($this->hasInputSchema('members', 'mgroup_others')) {
             $sql .= "
             union all
             select m.$memberID, g.g_id
@@ -621,13 +615,12 @@ EOT;
                on find_in_set(g.g_id, m.mgroup_others)";
         }
 
-        $port->export('UserRole', $sql, $userRole_Map);
+        $this->export('UserRole', $sql, $userRole_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function userMeta(Migration $port): void
+    protected function userMeta(): void
     {
         $userMeta_Map = array(
             'UserID' => 'UserID',
@@ -635,7 +628,7 @@ EOT;
             'Value' => 'Value'
         );
 
-        if ($port->hasInputSchema('profile_portal', 'signature') === true) {
+        if ($this->hasInputSchema('profile_portal', 'signature') === true) {
             $sql = "
          select
             pp_member_id as UserID,
@@ -651,7 +644,7 @@ EOT;
          from :_profile_portal
          where length(signature) > 1
                ";
-        } elseif ($port->hasInputSchema('member_extra', array('id', 'signature')) === true) {
+        } elseif ($this->hasInputSchema('member_extra', array('id', 'signature')) === true) {
             $sql = "
          select
             id as UserID,
@@ -670,14 +663,13 @@ EOT;
             $sql = false;
         }
         if ($sql) {
-            $port->export('UserMeta', $sql, $userMeta_Map);
+            $this->export('UserMeta', $sql, $userMeta_Map);
         }
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'id' => 'CategoryID',
@@ -687,17 +679,16 @@ EOT;
             'parent_id' => 'ParentCategoryID',
             'position' => 'Sort'
         );
-        $port->export('Category', "select * from :_forums", $category_Map);
+        $this->export('Category', "select * from :_forums", $category_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $descriptionSQL = 'p.post';
-        $hasTopicDescription = ($port->hasInputSchema('topics', array('description')) === true);
-        if ($hasTopicDescription || $port->hasInputSchema('posts', array('description')) === true) {
+        $hasTopicDescription = ($this->hasInputSchema('topics', array('description')) === true);
+        if ($hasTopicDescription || $this->hasInputSchema('posts', array('description')) === true) {
             $description = ($hasTopicDescription) ? 't.description' : 'p.description';
             $descriptionSQL = "case
                 when $description <> '' and p.post is not null
@@ -732,16 +723,15 @@ EOT;
         left join :_posts p
             on t.topic_firstpost = p.pid";
         $this->clearFilters('topics', $discussion_Map, $sql);
-        $port->export('Discussion', $sql, $discussion_Map);
+        $this->export('Discussion', $sql, $discussion_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function tags(Migration $port): void
+    protected function tags(): void
     {
-        $port->query("DROP TABLE IF EXISTS `z_tag` ");
-        $port->query(
+        $this->query("DROP TABLE IF EXISTS `z_tag` ");
+        $this->query(
             "CREATE TABLE `z_tag` (
                 `TagID` int(11) unsigned NOT NULL AUTO_INCREMENT,
                 `FullName` varchar(50) DEFAULT NULL,
@@ -749,7 +739,7 @@ EOT;
                 UNIQUE KEY `FullName` (`FullName`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8;"
         );
-        $port->query("insert into z_tag (FullName) (select distinct t.tag_text as FullName from :_core_tags t)");
+        $this->query("insert into z_tag (FullName) (select distinct t.tag_text as FullName from :_core_tags t)");
 
         $tagDiscussion_Map = array(
             'tag_added' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
@@ -758,20 +748,19 @@ EOT;
             from :_core_tags t
             left join z_tag zt
                 on t.tag_text = zt.FullName";
-        $port->export('TagDiscussion', $sql, $tagDiscussion_Map);
+        $this->export('TagDiscussion', $sql, $tagDiscussion_Map);
 
         $tag_Map = array(
             'FullName' => 'FullName',
             'FullNameToName' => array('Column' => 'Name', 'Filter' => 'formatUrl')
         );
         $sql = "select TagID, FullName, FullName as FullNameToName from z_tag zt";
-        $port->export('Tag', $sql, $tag_Map);
+        $this->export('Tag', $sql, $tag_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'pid' => 'CommentID',
@@ -790,13 +779,12 @@ EOT;
             where p.pid between {from} and {to}
                 and p.pid <> t.topic_firstpost";
         $this->clearFilters('Comment', $comment_Map, $sql);
-        $port->export('Comment', $sql, $comment_Map);
+        $this->export('Comment', $sql, $comment_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $media_Map = array(
             'attach_id' => 'MediaID',
@@ -830,6 +818,6 @@ EOT;
             left join :_attachments_type ty
                on a.attach_ext = ty.atype_extension";
         $this->clearFilters('Media', $media_Map, $sql);
-        $port->export('Media', $sql, $media_Map);
+        $this->export('Media', $sql, $media_Map);
     }
 }

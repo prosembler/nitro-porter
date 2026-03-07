@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Log;
-use Porter\Migration;
 use Porter\Source;
 
 /**
@@ -40,6 +39,8 @@ class Discord extends Source
         ]
     ];
 
+    public const int DISCORD_EPOCH = 1420070400000; // zeroth second of 2015
+
     public const array CHANNEL_TYPE = [
         'GUILD_TEXT' => 0,
         'GUILD_CATEGORY' => 4,
@@ -60,17 +61,17 @@ class Discord extends Source
     ];
 
     /**
-     * @param Migration|null $port
+     * Main operation.
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
         $this->extractUserRoles();
 
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
@@ -82,7 +83,7 @@ class Discord extends Source
         $info = [];
         $this->porterStorage->prepare('discord_user_roles', self::USERROLES_STRUCTURE);
 
-        $users = $this->inputQB()->from('discord_users')->get(['id', 'roles'])->toArray();
+        $users = $this->sourceQB()->from('discord_users')->get(['id', 'roles'])->toArray();
         foreach ($users as $user) {
             $roles = json_decode($user->roles); // Discord's array got auto-collapsed to JSON.
             foreach ($roles as $roleID) {
@@ -95,65 +96,58 @@ class Discord extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $map = [
             'id' => 'UserID',
             'derived_name' => 'Name', // prefer 1) nick 2) global_name 3) username
         ];
-        $filter = ['id' => 'force32bit']; // renumber Snowflake #yolo
-        $query = $port->sourceQB()->from('discord_users')
+        $query = $this->sourceQB()->from('discord_users')
             ->select()
             ->selectRaw('COALESCE(nick, COALESCE(global_name, username)) as derived_name');
-        $port->export('User', $query, $map, $filter);
+        $this->export('User', $query, $map);
     }
 
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         // Roles
         $map = [
             'id' => 'RoleID',
             'name' => 'Name',
         ];
-        $filter = ['id' => 'force32bit'];
-        $query = $this->inputQB()->from('discord_roles')
+        $query = $this->sourceQB()->from('discord_roles')
             ->distinct('id')
             ->select();
-        $port->export('Role', $query, $map, $filter);
+        $this->export('Role', $query, $map);
 
         // UserRoles
         $map = [
             'user_id' => 'UserID',
             'role_id' => 'RoleID',
         ];
-        $filter = [
-            'user_id' => 'force32bit',
-            'role_id' => 'force32bit',
-        ];
-        $query = $this->inputQB()->from('discord_user_roles') // Intermediary table not from Origin.
+        $query = $this->sourceQB()->from('discord_user_roles') // Intermediary table not from Origin.
             ->select();
-        $port->export('UserRole', $query, $map, $filter);
+        $this->export('UserRole', $query, $map);
     }
 
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
+        $this->renumber('Category', 'id');
         $map = [
-            'id' => 'CategoryID',
+            //'id' => 'CategoryID',
             'name' => 'Name',
         ];
-        $filter = ['id' => 'force32bit'];
-        $query = $port->sourceQB()->from('discord_channels')
+        $query = $this->sourceQB()->from('discord_channels')
             ->whereIn('type', [
                 self::CHANNEL_TYPE['GUILD_CATEGORY'],
                 self::CHANNEL_TYPE['GUILD_FORUM'],
                 self::CHANNEL_TYPE['GUILD_TEXT']
             ])->select();
-        $port->export('Category', $query, $map, $filter);
+        $this->export('Category', $query, $map);
     }
 
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $map = [
             'id' => 'DiscussionID',
@@ -161,12 +155,7 @@ class Discord extends Source
             'parent_id' => 'CategoryID',
             'owner_id' => 'InsertUserID',
         ];
-        $filter = [
-            'id' => 'force32bit',
-            'parent_id' => 'force32bit',
-            'owner_id' => 'force32bit',
-        ];
-        $query = $port->sourceQB()->from('discord_channels')
+        $query = $this->sourceQB()->from('discord_channels')
             ->whereIn('type', [
                 self::CHANNEL_TYPE['PUBLIC_THREAD'],
                 self::CHANNEL_TYPE['GUILD_ANNOUNCEMENT']
@@ -174,15 +163,15 @@ class Discord extends Source
             ->select()
             ->selectRaw('id as parent_id');
         // Fold text channels into being both category + the discussion within it.
-        $textChannels = $port->sourceQB()->from('discord_channels')
+        $textChannels = $this->sourceQB()->from('discord_channels')
             ->where('type', '=', self::CHANNEL_TYPE['GUILD_TEXT'])
             ->select()
             ->selectRaw('id as parent_id');
         $query->union($textChannels);
-        $port->export('Discussion', $query, $map, $filter);
+        $this->export('Discussion', $query, $map);
     }
 
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $map = [
             'id' => 'CommentID',
@@ -190,16 +179,11 @@ class Discord extends Source
             'channel_id' => 'DiscussionID',
             'authorid' => 'InsertUserID',
         ];
-        $filter = [
-            'id' => 'force32bit',
-            'channel_id' => 'force32bit',
-            'authorid' => 'force32bit',
-        ];
-        $query = $port->sourceQB()->from('discord_messages')
+        $query = $this->sourceQB()->from('discord_messages')
             ->select()
             ->selectRaw('from_unixtime(timestamp) as DateInserted')
             ->selectRaw('from_unixtime(edited_timestamp) as DateUpdated');
-        $port->export('Comment', $query, $map, $filter);
+        $this->export('Comment', $query, $map);
     }
 
     public function validate(): void

@@ -6,7 +6,6 @@ use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
 use Porter\ConnectionManager;
 use Porter\Log;
-use Porter\Migration;
 use Porter\Storage;
 
 class Database extends Storage

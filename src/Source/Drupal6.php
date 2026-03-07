@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Drupal6 extends Source
 {
@@ -37,23 +36,21 @@ class Drupal6 extends Source
     public array $sourceTables = array();
 
     /**
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->signatures($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->conversations($port);
+        $this->users();
+        $this->signatures();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->conversations();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'uid' => 'UserID',
@@ -64,7 +61,7 @@ class Drupal6 extends Source
             'created' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
             'login' => array('Column' => 'DateLastActive', 'Filter' => 'timestampToDate')
         );
-        $port->export(
+        $this->export(
             'User',
             "select u.*,
                     nullif(concat('drupal/', u.picture), 'drupal/') as photo,
@@ -77,16 +74,15 @@ class Drupal6 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
         $userMeta_Map = array(
             'uid' => 'UserID',
             'Name' => 'Name',
             'signature' => 'Value'
         );
-        $port->export(
+        $this->export(
             'UserMeta',
             "select u.*, 'Plugins.Signatures.Sig' as Name
                 from :_users u
@@ -96,22 +92,21 @@ class Drupal6 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'rid' => 'RoleID',
             'name' => 'Name'
         );
-        $port->export('Role', "select r.* from :_role r", $role_Map);
+        $this->export('Role', "select r.* from :_role r", $role_Map);
 
         // User Role.
         $userRole_Map = array(
             'uid' => 'UserID',
             'rid' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "select * from :_users_roles",
             $userRole_Map
@@ -119,9 +114,8 @@ class Drupal6 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'tid' => 'CategoryID',
@@ -129,7 +123,7 @@ class Drupal6 extends Source
             'description' => 'description',
             'parent' => 'ParentCategoryID'
         );
-        $port->export(
+        $this->export(
             'Category',
             "select t.*, nullif(h.parent, 0) as parent
                  from :_term_data t
@@ -140,9 +134,8 @@ class Drupal6 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'nid' => 'DiscussionID',
@@ -154,7 +147,7 @@ class Drupal6 extends Source
             'sticky' => 'Announce',
             'tid' => 'CategoryID'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select n.*, nullif(n.changed, n.created) as DateUpdated, f.tid, r.body
                  from nodeforum f
@@ -168,9 +161,8 @@ class Drupal6 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'cid' => 'CommentID',
@@ -179,7 +171,7 @@ class Drupal6 extends Source
             'hostname' => 'InsertIPAddress',
             'created' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate')
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     c.cid,
@@ -201,16 +193,15 @@ class Drupal6 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         $conversation_Map = array(
             'thread_id' => 'ConversationID',
             'author' => 'InsertUserID',
             'title' => 'Subject',
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select
                     pmi.thread_id,
@@ -230,7 +221,7 @@ class Drupal6 extends Source
             'thread_id' => 'ConversationID',
             'author' => 'InsertUserID'
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select
                     pmm.mid,
@@ -249,7 +240,7 @@ class Drupal6 extends Source
             'uid' => 'UserID',
             'thread_id' => 'ConversationID'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "select
                     pmi.uid,

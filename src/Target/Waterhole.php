@@ -9,7 +9,6 @@
 namespace Porter\Target;
 
 use Porter\Log;
-use Porter\Migration;
 use Porter\Target;
 
 class Waterhole extends Target
@@ -78,19 +77,17 @@ class Waterhole extends Target
     /**
      * Check for issues that will break the import.
      *
-     * @param Migration $port
      */
-    public function validate(Migration $port): void
+    public function validate(): void
     {
-        $this->uniqueUserNames($port);
-        $this->uniqueUserEmails($port);
+        $this->uniqueUserNames();
+        $this->uniqueUserEmails();
     }
 
     /**
-     * @param Migration $port
      * @return string[]
      */
-    protected function getStructurePosts(Migration $port): array
+    protected function getStructurePosts(): array
     {
         return self::DB_STRUCTURE_POSTS;
     }
@@ -101,10 +98,8 @@ class Waterhole extends Target
      * Unsure this could get automated fix. You'd have to determine which has/have data attached and possibly merge.
      * You'd also need more data from findDuplicates, especially the IDs.
      * Folks are just gonna need to manually edit their existing forum data for now to rectify dupe issues.
-     *
-     * @param Migration $port
      */
-    public function uniqueUserNames(Migration $port): void
+    public function uniqueUserNames(): void
     {
         $allowlist = [
             '[Deleted User]',
@@ -113,7 +108,7 @@ class Waterhole extends Target
             '[Slettet bruker]', // Norwegian
             '[Utilisateur supprimé]', // French
         ]; // @see fixDuplicateDeletedNames()
-        $dupes = array_diff($this->findDuplicates('User', 'Name', $port), $allowlist);
+        $dupes = array_diff($this->findDuplicates('User', 'Name'), $allowlist);
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
@@ -122,13 +117,12 @@ class Waterhole extends Target
     /**
      * Enforce unique emails. Report users skipped (because of `insert ignore`).
      *
-     * @param Migration $port
      * @see uniqueUserNames
      *
      */
-    public function uniqueUserEmails(Migration $port): void
+    public function uniqueUserEmails(): void
     {
-        $dupes = $this->findDuplicates('User', 'Email', $port);
+        $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
@@ -137,22 +131,21 @@ class Waterhole extends Target
     /**
      * Main import process.
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
         // Ignore constraints on tables that block import.
-        $port->ignoreOutputDuplicates('users');
+        $this->ignoreOutputDuplicates('users');
 
-        $this->users($port);
-        $this->roles($port); // 'Groups' in Waterhole
-        $this->categories($port); // 'Channels' in Waterhole
-        $this->discussions($port); // 'Posts' in Waterhole
-        $this->comments($port);
+        $this->users();
+        $this->roles(); // 'Groups' in Waterhole
+        $this->categories(); // 'Channels' in Waterhole
+        $this->discussions(); // 'Posts' in Waterhole
+        $this->comments();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $structure = [
             'id' => 'bigint',
@@ -178,9 +171,9 @@ class Waterhole extends Target
             'Name' => 'fixDuplicateDeletedNames',
             'Email' => 'fixNullEmails',
         ];
-        $query = $port->targetQB()->from('User')->select();
+        $query = $this->porterQB()->from('User')->select();
 
-        $port->import('users', $query, $structure, $map, $filters);
+        $this->import('users', $query, $structure, $map, $filters);
     }
 
     /**
@@ -188,9 +181,8 @@ class Waterhole extends Target
      *
      * This compensates by shifting all RoleIDs +4, rendering any old 'Member' or 'Guest' role useless & deprecated.
      *
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $structure = [
             'id' => 'bigint',
@@ -205,21 +197,21 @@ class Waterhole extends Target
         ];
 
         // Verify support.
-        if (!$port->hasOutputSchema('UserRole')) {
+        if (!$this->hasOutputSchema('UserRole')) {
             Log::comment('Skipping import: Roles (Source lacks support)');
-            $port->importEmpty('groups', $structure);
-            $port->importEmpty('group_user', $structure);
+            $this->importEmpty('groups', $structure);
+            $this->importEmpty('group_user', $structure);
             return;
         }
 
         // Delete orphaned user role associations (deleted users).
-        $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID', $port);
+        $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
-        $query = $port->targetQB()->from('Role')
+        $query = $this->porterQB()->from('Role')
             ->select()
             ->selectRaw('0 as is_public');
 
-        $port->import('groups', $query, $structure, $map);
+        $this->import('groups', $query, $structure, $map);
 
         // User Role.
         $structure = [
@@ -230,16 +222,15 @@ class Waterhole extends Target
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $port->targetQB()->from('UserRole')
+        $query = $this->porterQB()->from('UserRole')
             ->select();
 
-        $port->import('group_user', $query, $structure, $map);
+        $this->import('group_user', $query, $structure, $map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $structure = [
             'id' => 'bigint',
@@ -253,19 +244,18 @@ class Waterhole extends Target
             'UrlCode' => 'slug',
             'Description' => 'description',
         ];
-        $query = $port->targetQB()->from('Category')
+        $query = $this->porterQB()->from('Category')
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
 
-        $port->import('channels', $query, $structure, $map);
+        $this->import('channels', $query, $structure, $map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
-        $structure = $this->getStructurePosts($port);
+        $structure = $this->getStructurePosts();
         $map = [
             'DiscussionID' => 'id',
             'CategoryID' => 'channel_id',
@@ -281,17 +271,16 @@ class Waterhole extends Target
         ];
 
         // CountComments needs to be double-mapped so it's included as an alias also.
-        $query = $port->targetQB()->from('Discussion')
+        $query = $this->porterQB()->from('Discussion')
             ->select()
             ->selectRaw('DiscussionID as slug');
 
-        $port->import('posts', $query, $structure, $map, $filters);
+        $this->import('posts', $query, $structure, $map, $filters);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $map = [
             'CommentID' => 'id',
@@ -301,7 +290,7 @@ class Waterhole extends Target
             'DateUpdated' => 'edited_at',
             'Body' => 'body'
         ];
-        $query = $port->targetQB()->from('Comment')
+        $query = $this->porterQB()->from('Comment')
             ->select(['CommentID',
                 'DiscussionID',
                 'InsertUserID',
@@ -310,6 +299,6 @@ class Waterhole extends Target
                 'Body',
                 'Format']);
 
-        $port->import('comments', $query, self::DB_STRUCTURE_COMMENTS, $map);
+        $this->import('comments', $query, self::DB_STRUCTURE_COMMENTS, $map);
     }
 }

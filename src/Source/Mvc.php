@@ -13,7 +13,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Mvc extends Source
 {
@@ -53,34 +52,32 @@ class Mvc extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->userMeta($port);
-        $this->roles($port);
-        $this->badges($port);
+        $this->users();
+        $this->userMeta();
+        $this->roles();
+        $this->badges();
 
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->tags($port);
-        $this->attachments($port);
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->tags();
+        $this->attachments();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
-        if (!$port->hasInputSchema('MembershipUser', 'UserID')) {
-            $port->query("alter table :_MembershipUser add column UserID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('MembershipUser', 'UserID')) {
+            $this->query("alter table :_MembershipUser add column UserID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_users_id', ':_MembershipUser')) {
-            $port->query("create INDEX mvc_users_id on :_MembershipUser(Id);");
+        if (!$this->indexExists('mvc_users_id', ':_MembershipUser')) {
+            $this->query("create INDEX mvc_users_id on :_MembershipUser(Id);");
         }
-        $port->export(
+        $this->export(
             'User',
             "select
                     UserID,
@@ -98,11 +95,10 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function userMeta(Migration $port): void
+    protected function userMeta(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     UserID,
@@ -121,23 +117,22 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        if (!$port->hasInputSchema('MembershipRole', 'RoleID')) {
-            $port->query("alter table :_MembershipRole add column RoleID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('MembershipRole', 'RoleID')) {
+            $this->query("alter table :_MembershipRole add column RoleID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_role_id', ':_MembershipRole')) {
-            $port->query("create INDEX mvc_role_id on `:_MembershipRole` (Id);");
+        if (!$this->indexExists('mvc_role_id', ':_MembershipRole')) {
+            $this->query("create INDEX mvc_role_id on `:_MembershipRole` (Id);");
         }
-        $port->export(
+        $this->export(
             'Role',
             "select RoleID, RoleName as Name from :_MembershipRole"
         );
 
         // User Role.
-        $port->export(
+        $this->export(
             'UserRole',
             "select
                     u.UserID as UserID,
@@ -148,17 +143,16 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function badges(Migration $port): void
+    protected function badges(): void
     {
-        if (!$port->hasInputSchema('Badge', 'BadgeID')) {
-            $port->query("alter table :_Badge add column BadgeID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('Badge', 'BadgeID')) {
+            $this->query("alter table :_Badge add column BadgeID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_badge_id', ':_Badge')) {
-            $port->query("create INDEX mvc_badge_id on `:_Badge` (Id);");
+        if (!$this->indexExists('mvc_badge_id', ':_Badge')) {
+            $this->query("create INDEX mvc_badge_id on `:_Badge` (Id);");
         }
-        $port->export(
+        $this->export(
             'Badge',
             "select
                     BadgeID,
@@ -170,7 +164,7 @@ class Mvc extends Source
                 from :_Badge"
         );
 
-        $port->export(
+        $this->export(
             'UserBadge',
             "select
                     u.UserID,
@@ -183,17 +177,16 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
-        if (!$port->hasInputSchema('Category', 'CategoryID')) {
-            $port->query("alter table :_Category add column CategoryID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('Category', 'CategoryID')) {
+            $this->query("alter table :_Category add column CategoryID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_category_id', ':_Category')) {
-            $port->query("create INDEX mvc_category_id on `:_Category` (Id);");
+        if (!$this->indexExists('mvc_category_id', ':_Category')) {
+            $this->query("create INDEX mvc_category_id on `:_Category` (Id);");
         }
-        $port->export(
+        $this->export(
             'Category',
             "select
                     m.CategoryID,
@@ -218,23 +211,22 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
-        if (!$port->hasInputSchema('Topic', 'TopicID')) {
-            $port->query("alter table :_Topic add column TopicID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('Topic', 'TopicID')) {
+            $this->query("alter table :_Topic add column TopicID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_topic_id', ':_Topic')) {
-            $port->query("create INDEX mvc_topic_id on `:_Topic` (Id);");
+        if (!$this->indexExists('mvc_topic_id', ':_Topic')) {
+            $this->query("create INDEX mvc_topic_id on `:_Topic` (Id);");
         }
-        if (!$port->indexExists('mvc_topic_id', ':_Topic')) {
-            $port->query("create INDEX mvc_topic_membershipuser_id on `:_Topic` (MembershipUser_Id);");
+        if (!$this->indexExists('mvc_topic_id', ':_Topic')) {
+            $this->query("create INDEX mvc_topic_membershipuser_id on `:_Topic` (MembershipUser_Id);");
         }
-        if (!$port->indexExists('mvc_topic_id', ':_Topic')) {
-            $port->query("create INDEX mvc_topic_category_id on `:_Topic` (Category_Id);");
+        if (!$this->indexExists('mvc_topic_id', ':_Topic')) {
+            $this->query("create INDEX mvc_topic_category_id on `:_Topic` (Category_Id);");
         }
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     m.TopicID as DiscussionID,
@@ -251,23 +243,22 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
-        if (!$port->hasInputSchema('Post', 'PostID')) {
-            $port->query("alter table :_Post add column PostID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('Post', 'PostID')) {
+            $this->query("alter table :_Post add column PostID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_post_id', ':_Post')) {
-            $port->query("create INDEX mvc_post_id on `:_Post` (Id);");
+        if (!$this->indexExists('mvc_post_id', ':_Post')) {
+            $this->query("create INDEX mvc_post_id on `:_Post` (Id);");
         }
-        if (!$port->indexExists('mvc_post_id', ':_Post')) {
-            $port->query("create INDEX mvc_post_topic_id on `:_Post` (Topic_Id);");
+        if (!$this->indexExists('mvc_post_id', ':_Post')) {
+            $this->query("create INDEX mvc_post_topic_id on `:_Post` (Topic_Id);");
         }
-        if (!$port->indexExists('mvc_post_id', ':_Post')) {
-            $port->query("create INDEX mvc_post_membershipuser_id on `:_Post` (MembershipUser_Id);");
+        if (!$this->indexExists('mvc_post_id', ':_Post')) {
+            $this->query("create INDEX mvc_post_membershipuser_id on `:_Post` (MembershipUser_Id);");
         }
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     m.PostID as CommentID,
@@ -284,17 +275,16 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function tags(Migration $port): void
+    protected function tags(): void
     {
-        if (!$port->hasInputSchema('TopicTag', 'TagID')) {
-            $port->query("alter table :_TopicTag add column TagID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('TopicTag', 'TagID')) {
+            $this->query("alter table :_TopicTag add column TagID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_tag_id', ':_TopicTag')) {
-            $port->query("create INDEX mvc_tag_id on `:_TopicTag` (Id);");
+        if (!$this->indexExists('mvc_tag_id', ':_TopicTag')) {
+            $this->query("create INDEX mvc_tag_id on `:_TopicTag` (Id);");
         }
-        $port->export(
+        $this->export(
             'Tag',
             "select
                     TagID,
@@ -306,19 +296,18 @@ class Mvc extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
-        if (!$port->hasInputSchema('UploadedFile', 'MediaID')) {
-            $port->query("alter table :_UploadedFile add column MediaID int(11) primary key auto_increment");
+        if (!$this->hasInputSchema('UploadedFile', 'MediaID')) {
+            $this->query("alter table :_UploadedFile add column MediaID int(11) primary key auto_increment");
         }
-        if (!$port->indexExists('mvc_file_id', ':_UploadedFile')) {
-            $port->query("create INDEX mvc_file_id on `:_UploadedFile` (Id);");
+        if (!$this->indexExists('mvc_file_id', ':_UploadedFile')) {
+            $this->query("create INDEX mvc_file_id on `:_UploadedFile` (Id);");
         }
         // Use of placeholder for Type and Size due to lack of data in db.
         // Will require external script to get the info.
-        $port->export(
+        $this->export(
             'Attachment',
             "select
                     MediaID,

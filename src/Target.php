@@ -2,31 +2,53 @@
 
 namespace Porter;
 
+use Illuminate\Database\Connection;
+use Staudenmeir\LaravelCte\Query\Builder;
+
 abstract class Target extends Package
 {
     /** @var ConnectionManager  */
     public ConnectionManager $connection;
 
-    public function __construct(protected ?Storage $porterStorage = null, protected ?Storage $outputStorage = null)
+    public function __construct(public ?Storage $porterStorage = null, public ?Storage $outputStorage = null)
     {
     }
 
+    /**
+     * Provide the output database connection.
+     */
+    public function dbPorter(): Connection
+    {
+        return $this->porterStorage->getHandle();
+    }
+
+    /**
+     * Provide the output database connection.
+     */
+    public function dbOutput(): Connection
+    {
+        return $this->outputStorage->getHandle();
+    }
+
+    /**
+     * Provide a query builder for the porter database.
+     */
+    public function porterQB(): Builder
+    {
+        return new Builder($this->dbPorter());
+    }
+
     /** Enforce data constraints required by the target platform. */
-    abstract public function validate(Migration $port): void;
+    abstract public function validate(): void;
 
     /**
      * Get current max value of a column on a table in output (target).
      *
      * Do not use porter (PORT_) tables because we may have added records elsewhere.
-     *
-     * @param string $name
-     * @param string $table
-     * @param Migration $ex
-     * @return int
      */
-    protected function getMaxValue(string $name, string $table, Migration $ex): int
+    protected function getMaxValue(string $name, string $table): int
     {
-        $max = $ex->dbOutput()->table($table)
+        $max = $this->dbOutput()->table($table)
             ->selectRaw('max(`' . $name . '`) as id')
             ->limit(1)->get()->pluck('id');
         return $max[0] ?? 0;
@@ -34,16 +56,11 @@ abstract class Target extends Package
 
     /**
      * Find duplicate records on the given table + column.
-     *
-     * @param string $table
-     * @param string $column
-     * @param Migration $port
-     * @return mixed[]
      */
-    protected function findDuplicates(string $table, string $column, Migration $port): array
+    protected function findDuplicates(string $table, string $column): array
     {
         $results = [];
-        $db = $port->dbPorter();
+        $db = $this->dbPorter();
         $duplicates = $db->table($table)
             ->select($column, $db->raw('count(' . $column . ') as found_count'))
             ->groupBy($column)
@@ -61,10 +78,8 @@ abstract class Target extends Package
      * Unsure this could get automated fix. You'd have to determine which has/have data attached and possibly merge.
      * You'd also need more data from findDuplicates, especially the IDs.
      * Folks are just gonna need to manually edit their existing forum data for now to rectify dupe issues.
-     *
-     * @param Migration $port
      */
-    protected function uniqueUserNames(Migration $port): void
+    protected function uniqueUserNames(): void
     {
         $allowlist = [
             '[Deleted User]',
@@ -73,7 +88,7 @@ abstract class Target extends Package
             '[Slettet bruker]', // Norwegian
             '[Utilisateur supprimé]', // French
         ]; // @see fixDuplicateDeletedNames()
-        $dupes = array_diff($this->findDuplicates('User', 'Name', $port), $allowlist);
+        $dupes = array_diff($this->findDuplicates('User', 'Name'), $allowlist);
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
@@ -81,14 +96,12 @@ abstract class Target extends Package
 
     /**
      * Enforce unique emails. Report users skipped (because of `insert ignore`).
-     *
-     * @param Migration $port
      * @see uniqueUserNames
      *
      */
-    protected function uniqueUserEmails(Migration $port): void
+    protected function uniqueUserEmails(): void
     {
-        $dupes = $this->findDuplicates('User', 'Email', $port);
+        $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
@@ -109,11 +122,10 @@ abstract class Target extends Package
         string $table,
         string $column,
         string $fnTable,
-        string $fnColumn,
-        Migration $port
+        string $fnColumn
     ): void {
         // `DELETE FROM $table WHERE $column NOT IN (SELECT $fnColumn FROM $fnTable)`
-        $db = $port->dbPorter();
+        $db = $this->dbPorter();
         $duplicates = $db->table($table)
             ->whereNotIn($column, $db->table($fnTable)->pluck($fnColumn))
             ->delete();
@@ -135,5 +147,61 @@ abstract class Target extends Package
             $folder = rtrim(Config::getInstance()->get('target_webroot'), '/') . '/' . trim($folder, '/');
         }
         return $folder;
+    }
+
+    /**
+     * Check if the output storage schema exists.
+     */
+    public function hasOutputSchema(string $table, array $columns = []): bool
+    {
+        return $this->outputStorage->exists($table, $columns);
+    }
+
+    /**
+     * Ignore duplicates for a SQL storage target table. Adds prefix for you.
+     */
+    public function ignoreOutputDuplicates(string $tableName): void
+    {
+        if (method_exists($this->outputStorage, 'ignoreTable')) {
+            $this->outputStorage->ignoreTable($tableName);
+        }
+    }
+
+    /**
+     * Check if the porter storage schema exists.
+     */
+    public function hasPortSchema(string $table, array $columns = []): bool
+    {
+        return $this->porterStorage->exists($table, $columns);
+    }
+
+    /**
+     * Create empty import tables.
+     */
+    public function importEmpty(string $tableName, array $structure): void
+    {
+        $this->outputStorage->prepare($tableName, $structure);
+    }
+
+    /**
+     * @param string $tableName
+     * @param Builder $exp Connected to porterStorage.
+     * @param array $struct
+     * @param array $map
+     * @param array $filters
+     */
+    public function import(string $tableName, Builder $exp, array $struct, array $map = [], array $filters = []): void
+    {
+        // Start timer.
+        $start = microtime(true);
+
+        // Prepare the storage medium for the incoming structure.
+        $this->outputStorage->prepare($tableName, $struct);
+
+        // Store the data.
+        $info = $this->outputStorage->store($tableName, $map, $struct, $exp, $filters);
+
+        // Report.
+        Log::storage('import', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
     }
 }

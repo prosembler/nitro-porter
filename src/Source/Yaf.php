@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Yaf extends Source
 {
@@ -41,19 +40,18 @@ class Yaf extends Source
     /**
      * Main export method.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->ranks($port);
-        $this->signatures($port);
+        $this->users();
+        $this->roles();
+        $this->ranks();
+        $this->signatures();
 
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->conversations($port);
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->conversations();
     }
 
     public function cleanDate(?string $value): ?string
@@ -84,9 +82,8 @@ class Yaf extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function exportConversationTemps(Migration $port): void
+    protected function exportConversationTemps(): void
     {
         $sql = "
          drop table if exists z_pmto;
@@ -192,13 +189,12 @@ class Yaf extends Source
                  on pm.Title2 = g.Title and pm.UserIDs = g.UserIDs
                set pm.Group_ID = g.Group_ID;";
 
-        $port->dbInput()->unprepared($sql);
+        $this->dbInput()->unprepared($sql);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'UserID' => 'UserID',
@@ -214,7 +210,7 @@ class Yaf extends Source
             'Password2' => array('Column' => 'Password', 'Filter' => array($this, 'convertPassword')),
             'HashMethod' => 'HashMethod'
         );
-        $port->export(
+        $this->export(
             'User',
             "select u.*,
                     m.Password as Password2,
@@ -230,15 +226,14 @@ class Yaf extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'GroupID' => 'RoleID',
             'Name' => 'Name'
         );
-        $port->export(
+        $this->export(
             'Role',
             "select * from :_Group;",
             $role_Map
@@ -249,13 +244,12 @@ class Yaf extends Source
             'UserID' => 'UserID',
             'GroupID' => 'RoleID'
         );
-        $port->export('UserRole', 'select * from :_UserGroup', $userRole_Map);
+        $this->export('UserRole', 'select * from :_UserGroup', $userRole_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function ranks(Migration $port): void
+    protected function ranks(): void
     {
         $rank_Map = array(
             'RankID' => 'RankID',
@@ -263,7 +257,7 @@ class Yaf extends Source
             'Name' => 'Name',
             'Label' => 'Label'
         );
-        $port->export(
+        $this->export(
             'Rank',
             "select r.*,
                     RankID as Level,
@@ -274,11 +268,10 @@ class Yaf extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     UserID,
@@ -297,9 +290,8 @@ class Yaf extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'ForumID' => 'CategoryID',
@@ -309,7 +301,7 @@ class Yaf extends Source
             'SortOrder' => 'Sort'
         );
 
-        $port->export(
+        $this->export(
             'Category',
             "select
                     f.ForumID,
@@ -331,9 +323,8 @@ class Yaf extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'TopicID' => 'DiscussionID',
@@ -344,7 +335,7 @@ class Yaf extends Source
             'Views' => 'CountViews',
             'Announce' => 'Announce'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     case when t.Priority > 0 then 1 else 0 end as Announce,
@@ -357,9 +348,8 @@ class Yaf extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'MessageID' => 'CommentID',
@@ -373,7 +363,7 @@ class Yaf extends Source
             'Edited' => array('Column' => 'DateUpdated', 'Filter' => array($this, 'cleanDate')),
             'EditedBy' => 'UpdateUserID'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select m.*,
                     case when m.Flags & 1 = 1 then 'Html' else 'BBCode' end as Format
@@ -384,11 +374,10 @@ class Yaf extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
-        $this->exportConversationTemps($port);
+        $this->exportConversationTemps();
 
         $conversation_Map = array(
             'PMessageID' => 'ConversationID',
@@ -396,7 +385,7 @@ class Yaf extends Source
             'Created' => 'DateInserted',
             'Title' => array('Column' => 'Subject', 'Type' => 'varchar(512)')
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select pm.*, g.Title
                 from z_pmgroup g
@@ -411,7 +400,7 @@ class Yaf extends Source
             'User_ID' => 'UserID',
             'Deleted' => 'Deleted'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "select pto.*
                 from z_pmto pto
@@ -429,7 +418,7 @@ class Yaf extends Source
             'Body' => 'Body',
             'Format' => 'Format'
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select pm.*,
                     case when pm.Flags & 1 = 1 then 'Html' else 'BBCode' end as Format,

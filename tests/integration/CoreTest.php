@@ -3,7 +3,6 @@
 use Phinx\Config\Config;
 use Phinx\Migration\Manager;
 use PHPUnit\Framework\TestCase;
-use Porter\Migration;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -32,10 +31,8 @@ class CoreTest extends TestCase
      */
     public function testEncodingDetection(): void
     {
-        $port = migrationFactory( // @todo move to Source instead
+        $source = sourceFactory(
             self::ENV_ALIAS,
-            storageFactory(self::ENV_ALIAS),
-            storageFactory(self::ENV_ALIAS),
             storageFactory(self::ENV_ALIAS),
             storageFactory(self::ENV_ALIAS)
         );
@@ -46,7 +43,7 @@ class CoreTest extends TestCase
             'EncodingD' => 'cp1250', // cp1250_general_ci
         ];
         foreach ($tests as $table => $expected) {
-            $encoding = $port->getInputEncoding($table);
+            $encoding = $source->getInputEncoding($table);
             $this->assertEquals($expected, $encoding);
         }
     }

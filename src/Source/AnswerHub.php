@@ -10,7 +10,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class AnswerHub extends Source
 {
@@ -37,17 +36,16 @@ class AnswerHub extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->tags($port);
-        $this->attachments($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->tags();
+        $this->attachments();
     }
 
     /**
@@ -87,14 +85,13 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'c_email' => array('Column' => 'Email', 'Filter' => array($this, 'generateEmail')),
         );
-        $port->export(
+        $this->export(
             'User',
             "select
                     user.c_id as UserID,
@@ -115,11 +112,10 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $result = $port->query("select c_reserved as lastID
+        $result = $this->query("select c_reserved as lastID
             from id_generators
             where c_identifier = 'AUTHORITABLE'");
         if ($row = $result->nextResultRow()) {
@@ -128,7 +124,7 @@ class AnswerHub extends Source
         if (!isset($lastID)) {
             die('Something went wrong :S' . PHP_EOL);
         }
-        $port->export(
+        $this->export(
             'Role',
             "
             select
@@ -146,7 +142,7 @@ class AnswerHub extends Source
         );
 
         // User Role.
-        $port->export(
+        $this->export(
             'UserRole',
             "select
                     user_role.c_groups as RoleID,
@@ -156,12 +152,11 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array();
-        $port->export(
+        $this->export(
             'Category',
             "select containers.c_id as CategoryID,
                     case
@@ -178,13 +173,12 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array();
         // The query works fine but it will probably be slow for big tables
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                 questions.c_id as DiscussionID,
@@ -229,12 +223,11 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array();
-        $port->export(
+        $this->export(
             'Comment',
             "select
                 answers.c_id as CommentID,
@@ -266,11 +259,10 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function tags(Migration $port): void
+    protected function tags(): void
     {
-        $port->export(
+        $this->export(
             'Tags',
             "select
                     c_id as TagID,
@@ -281,7 +273,7 @@ class AnswerHub extends Source
                 where n.c_type = 'topic'"
         );
 
-        $port->export(
+        $this->export(
             'TagDiscussion',
             "select
                     c_topics as TagID,
@@ -294,9 +286,8 @@ class AnswerHub extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $media_Map = array(
             'Name' => array('Column' => 'Name', 'Filter' => array($this, 'getFileName')),
@@ -304,7 +295,7 @@ class AnswerHub extends Source
         $filters = [
             'Type' => 'mimeTypeFromExtension',
         ];
-        $port->export(
+        $this->export(
             'Media',
             "select
                     m.c_id as `MediaID`,

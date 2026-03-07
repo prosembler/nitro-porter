@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class ExpressionEngine extends Source
 {
@@ -35,35 +34,34 @@ class ExpressionEngine extends Source
 
     /**
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->conversations($port);
-        $this->users($port);
-        $this->roles($port);
-        $this->signatures($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->attachments($port);
+        $this->conversations();
+        $this->users();
+        $this->roles();
+        $this->signatures();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->attachments();
     }
 
     /**
      * Private message conversion.
      */
-    public function conversations(Migration $port): void
+    public function conversations(): void
     {
-        $this->exportConversationTemps($port);
+        $this->exportConversationTemps();
 
         // Conversation.
         $conversation_Map = array(
             'message_id' => 'ConversationID',
             'title2' => array('Column' => 'Subject', 'Type' => 'varchar(255)'),
             'sender_id' => 'InsertUserID',
-            'message_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
+            'message_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "SELECT pm.*, g.title AS title2
                 FROM forum_message_data pm
@@ -77,7 +75,7 @@ class ExpressionEngine extends Source
             'group_id' => 'ConversationID',
             'userid' => 'UserID'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "SELECT g.group_id, t.userid
                 FROM z_pmto t
@@ -91,10 +89,10 @@ class ExpressionEngine extends Source
             'group_id' => 'ConversationID',
             'message_id' => 'MessageID',
             'message_body' => 'Body',
-            'message_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
+            'message_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
             'sender_id' => 'InsertUserID'
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "SELECT pm.*, pm2.group_id,
                     'BBCode' AS Format
@@ -108,10 +106,10 @@ class ExpressionEngine extends Source
     /**
      * Create temporary tables for private message conversion.
      */
-    public function exportConversationTemps(Migration $port): void
+    public function exportConversationTemps(): void
     {
-        $port->query('DROP TABLE IF EXISTS z_pmto;');
-        $port->query(
+        $this->query('DROP TABLE IF EXISTS z_pmto;');
+        $this->query(
             'CREATE TABLE z_pmto (
             message_id INT UNSIGNED,
             userid INT UNSIGNED,
@@ -119,7 +117,7 @@ class ExpressionEngine extends Source
             PRIMARY KEY(message_id, userid)
             );'
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (
                 message_id,
                 userid,
@@ -132,17 +130,17 @@ class ExpressionEngine extends Source
             from forum_message_copies;"
         );
 
-        $port->query(
+        $this->query(
             "UPDATE forum_message_data
             SET message_recipients = replace(message_recipients, '|', ',');"
         );
 
-        $port->query(
+        $this->query(
             "UPDATE forum_message_data
             SET message_cc = replace(message_cc, '|', ',');"
         );
 
-        $port->query(
+        $this->query(
             'insert ignore z_pmto (
             message_id,
             userid
@@ -153,7 +151,7 @@ class ExpressionEngine extends Source
           from forum_message_data;'
         );
 
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (
                 message_id,
                 userid
@@ -167,7 +165,7 @@ class ExpressionEngine extends Source
             where m.message_cc <> '';"
         );
 
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (
                 message_id,
                 userid
@@ -181,15 +179,15 @@ class ExpressionEngine extends Source
             where m.message_cc <> '';"
         );
 
-        $port->query("DROP TABLE IF EXISTS z_pmto2;");
-        $port->query(
+        $this->query("DROP TABLE IF EXISTS z_pmto2;");
+        $this->query(
             "CREATE TABLE z_pmto2 (
             message_id INT UNSIGNED,
             userids VARCHAR(250),
             PRIMARY KEY (message_id)
             );"
         );
-        $port->query(
+        $this->query(
             "insert z_pmto2 (
             message_id,
             userids
@@ -201,8 +199,8 @@ class ExpressionEngine extends Source
             group by t.message_id;"
         );
 
-        $port->query("DROP TABLE IF EXISTS z_pmtext;");
-        $port->query(
+        $this->query("DROP TABLE IF EXISTS z_pmtext;");
+        $this->query(
             "CREATE TABLE z_pmtext (
             message_id INT UNSIGNED,
             title VARCHAR(250),
@@ -211,7 +209,7 @@ class ExpressionEngine extends Source
             group_id INT UNSIGNED
             );"
         );
-        $port->query(
+        $this->query(
             "insert z_pmtext (
             message_id,
             title,
@@ -225,23 +223,23 @@ class ExpressionEngine extends Source
             from forum_message_data;"
         );
 
-        $port->query("CREATE INDEX z_idx_pmtext ON z_pmtext (message_id);");
-        $port->query(
+        $this->query("CREATE INDEX z_idx_pmtext ON z_pmtext (message_id);");
+        $this->query(
             "UPDATE z_pmtext pm
             JOIN z_pmto2 t
                 ON pm.message_id = t.message_id
             SET pm.userids = t.userids;"
         );
 
-        $port->query("DROP TABLE IF EXISTS z_pmgroup;");
-        $port->query(
+        $this->query("DROP TABLE IF EXISTS z_pmgroup;");
+        $this->query(
             "CREATE TABLE z_pmgroup (
             group_id INT UNSIGNED,
             title VARCHAR(250),
             userids VARCHAR(250)
             );"
         );
-        $port->query(
+        $this->query(
             "insert z_pmgroup (
             group_id,
             title,
@@ -257,10 +255,10 @@ class ExpressionEngine extends Source
             group by pm.title2, t2.userids;"
         );
 
-        $port->query("CREATE INDEX z_idx_pmgroup ON z_pmgroup (title, userids);");
-        $port->query("CREATE INDEX z_idx_pmgroup2 ON z_pmgroup (group_id);");
+        $this->query("CREATE INDEX z_idx_pmgroup ON z_pmgroup (title, userids);");
+        $this->query("CREATE INDEX z_idx_pmgroup2 ON z_pmgroup (group_id);");
 
-        $port->query(
+        $this->query(
             "UPDATE z_pmtext pm
             JOIN z_pmgroup g
                 ON pm.title2 = g.title AND pm.userids = g.userids
@@ -288,23 +286,22 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'member_id' => 'UserID',
             'username' => array('Column' => 'Username', 'Type' => 'varchar(50)'),
-            'screen_name' => array('Column' => 'Name', 'Filter' => array($port, 'HTMLDecoder')),
+            'screen_name' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
             'Password2' => 'Password',
             'email' => 'Email',
             'ipaddress' => 'InsertIPAddress',
-            'join_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
-            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => array($port, 'timestampToDate')),
+            'join_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => 'timestampToDate'),
             //'timezone' => 'HourOffset',
             'location' => 'Location'
         );
-        $port->export(
+        $this->export(
             'User',
             "SELECT u.*,
                     'django' AS HashMethod,
@@ -319,16 +316,15 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'group_id' => 'RoleID',
             'group_title' => 'Name',
             'group_description' => 'Description'
         );
-        $port->export(
+        $this->export(
             'Role',
             "SELECT * FROM forum_member_groups",
             $role_Map
@@ -339,7 +335,7 @@ class ExpressionEngine extends Source
             'member_id' => 'UserID',
             'group_id' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "SELECT * FROM forum_members u",
             $userRole_Map
@@ -347,11 +343,10 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "SELECT
                     member_id AS UserID,
@@ -363,9 +358,8 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'forum_id' => 'CategoryID',
@@ -374,7 +368,7 @@ class ExpressionEngine extends Source
             'forum_parent' => 'ParentCategoryID',
             'forum_order' => 'Sort'
         );
-        $port->export(
+        $this->export(
             'Category',
             "SELECT * FROM forum_forums",
             $category_Map
@@ -382,23 +376,22 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'author_id' => 'InsertUserID',
-            'title' => array('Column' => 'Name', 'Filter' => array($port, 'HTMLDecoder')),
+            'title' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
             'ip_address' => 'InsertIPAddress',
-            'body' => array('Column' => 'Body', 'Filter' => array($this, 'cleanBodyBrackets')),
-            'body2' => array('Column' => 'Format', 'Filter' => array($this, 'guessFormat')),
-            'topic_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
-            'topic_edit_date' => array('Column' => 'DateUpdated', 'Filter' => array($port, 'timestampToDate')),
+            'body' => array('Column' => 'Body', 'Filter' => 'cleanBodyBrackets'),
+            'body2' => array('Column' => 'Format', 'Filter' => 'guessFormat'),
+            'topic_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'topic_edit_date' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
             'topic_edit_author' => 'UpdateUserID'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "SELECT t.*,
                     CASE WHEN announcement = 'y' THEN 1 WHEN sticky = 'y' THEN 2 ELSE 0 END AS Announce,
@@ -410,22 +403,21 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
             'author_id' => 'InsertUserID',
             'ip_address' => 'InsertIPAddress',
-            'body' => array('Column' => 'Body', 'Filter' => array($this, 'cleanBodyBrackets')),
-            'body2' => array('Column' => 'Format', 'Filter' => array($this, 'guessFormat')),
-            'post_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
-            'post_edit_date' => array('Column' => 'DateUpdated', 'Filter' => array($port, 'timestampToDate')),
+            'body' => array('Column' => 'Body', 'Filter' => 'cleanBodyBrackets'),
+            'body2' => array('Column' => 'Format', 'Filter' => 'guessFormat'),
+            'post_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'post_edit_date' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
             'post_edit_author' => 'UpdateUserID'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "SELECT p.*,
                     'Html' AS Format,
@@ -436,9 +428,8 @@ class ExpressionEngine extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $media_Map = array(
             'filename' => 'Name',
@@ -447,10 +438,10 @@ class ExpressionEngine extends Source
             'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
             'filesize' => 'Size',
             'member_id' => 'InsertUserID',
-            'attachment_date' => array('Column' => 'DateInserted', 'Filter' => array($port, 'timestampToDate')),
+            'attachment_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
             'filehash' => array('Column' => 'FileHash', 'Type' => 'varchar(100)')
         );
-        $port->export(
+        $this->export(
             'Media',
             "SELECT a.*,
                 concat('imported/', filename) AS Path,

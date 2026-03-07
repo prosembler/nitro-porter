@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class CodoForum extends Source
 {
@@ -46,24 +45,22 @@ class CodoForum extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->userMeta($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->users();
+        $this->roles();
+        $this->userMeta();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
-        $port->export(
+        $this->export(
             'User',
             "select
                 u.id as UserID,
@@ -78,11 +75,10 @@ class CodoForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $port->export(
+        $this->export(
             'Role',
             "select
                     r.rid as RolesID,
@@ -91,7 +87,7 @@ class CodoForum extends Source
         );
 
         // User Role.
-        $port->export(
+        $this->export(
             'UserRole',
             "select
                     ur.uid as UserID,
@@ -102,11 +98,10 @@ class CodoForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function userMeta(Migration $port): void
+    protected function userMeta(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     u.id as UserID,
@@ -118,11 +113,10 @@ class CodoForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
-        $port->export(
+        $this->export(
             'Category',
             "select
                     c.cat_id as CategoryID,
@@ -132,11 +126,10 @@ class CodoForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                 t.topic_id as DiscussionID,
@@ -150,11 +143,10 @@ class CodoForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     p.post_id as CommentID,

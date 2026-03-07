@@ -16,7 +16,6 @@ namespace Porter\Source;
 
 use Porter\Config;
 use Porter\Source;
-use Porter\Migration;
 use Staudenmeir\LaravelCte\Query\Builder;
 
 class Xenforo extends Source
@@ -56,25 +55,23 @@ class Xenforo extends Source
     /**
      * Forum-specific export format.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->signatures($port);
+        $this->users();
+        $this->roles();
+        $this->signatures();
 
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->conversations($port);
-        $this->attachments($port);
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->conversations();
+        $this->attachments();
     }
 
     /**
-     * @param Migration $port
      */
-    public function signatures(Migration $port): void
+    public function signatures(): void
     {
         $sql = "select
                 user_id as UserID,
@@ -89,13 +86,12 @@ class Xenforo extends Source
                 'BBCode'
             from :_user_profile
             where nullif(signature, '') is not null";
-        $port->export('UserMeta', $sql);
+        $this->export('UserMeta', $sql);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $map = [
             'user_id' => 'UserID',
@@ -116,8 +112,8 @@ class Xenforo extends Source
             'register_date' => 'timestampToDate',
             'last_activity' => 'timestampToDate',
         ];
-        $prx = $port->dbInput()->getTablePrefix();
-        $query = $port->sourceQB()->from('user', 'u')->select()
+        $prx = $this->dbInput()->getTablePrefix();
+        $query = $this->sourceQB()->from('user', 'u')->select()
             ->selectRaw("'xenforo' as hash_method")
             ->selectRaw("data as password")
             ->selectRaw("case when avatar_date > 0
@@ -133,19 +129,18 @@ class Xenforo extends Source
                 else null end as avatarThumbFullPath")
             ->join('user_authenticate as ua', 'u.user_id', '=', 'ua.user_id');
 
-        $port->export('User', $query, $map, $filter);
+        $this->export('User', $query, $map, $filter);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'user_group_id' => 'RoleID',
             'title' => 'Name'
         );
-        $port->export(
+        $this->export(
             'Role',
             "select * from :_user_group",
             $role_Map
@@ -157,7 +152,7 @@ class Xenforo extends Source
             'user_group_id' => 'RoleID'
         );
 
-        $port->export(
+        $this->export(
             'UserRole',
             "select user_id, user_group_id
                 from :_user
@@ -171,9 +166,8 @@ class Xenforo extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'node_id' => 'CategoryID',
@@ -188,7 +182,7 @@ class Xenforo extends Source
             'display_order' => 'Sort',
             'display_in_list' => array('Column' => 'HideAllDiscussions', 'Filter' => 'NotFilter')
         );
-        $port->export(
+        $this->export(
             'Category',
             "select n.* from :_node n",
             $category_Map
@@ -196,9 +190,8 @@ class Xenforo extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'thread_id' => 'DiscussionID',
@@ -215,7 +208,7 @@ class Xenforo extends Source
             'format' => 'Format',
             'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select t.*,
                 p.message,
@@ -231,9 +224,8 @@ class Xenforo extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
@@ -244,7 +236,7 @@ class Xenforo extends Source
             'format' => 'Format',
             'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select p.*,
                 'BBCode' as format,
@@ -278,11 +270,10 @@ class Xenforo extends Source
      *
      * Xenforo faithfully reimplemented vBulletin's worst ideas here, probably a misguided security effort.
      * Most other platforms don't jank filenames like this, so rebuild Path as {id}-{filename} to avoid conflicts.
-     * @param Migration $port
      *@see self::attachmentsMap() for the `FileTransfer` data to complete the file renaming.
      *
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $map = [
             'attachment_id' => 'MediaID',
@@ -296,9 +287,9 @@ class Xenforo extends Source
         $filters = [
             'Type' => 'mimeTypeFromExtension',
         ];
-        $prx = $port->dbInput()->getTablePrefix();
+        $prx = $this->dbInput()->getTablePrefix();
 
-        $query = $port->sourceQB()
+        $query = $this->sourceQB()
             ->from('attachment', 'a')
             ->join('attachment_data as ad', 'ad.data_id', '=', 'a.data_id')
             ->select(['a.attachment_id',
@@ -332,13 +323,12 @@ class Xenforo extends Source
             ->join('ap', 'post_id', '=', 'a.content_id')
             ->where('a.content_type', '=', "post");
 
-        $port->export('Media', $query, $map, $filters);
+        $this->export('Media', $query, $map, $filters);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         $conversation_Map = array(
             'conversation_id' => 'ConversationID',
@@ -346,7 +336,7 @@ class Xenforo extends Source
             'user_id' => 'InsertUserID',
             'start_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate')
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select *, substring(title, 1, 200) as title from :_conversation_master",
             $conversation_Map
@@ -361,7 +351,7 @@ class Xenforo extends Source
             'format' => 'Format',
             'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select m.*,
                     'BBCode' as format,
@@ -377,7 +367,7 @@ class Xenforo extends Source
             'user_id' => 'UserID',
             'Deleted' => 'Deleted'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "select
                     r.conversation_id,

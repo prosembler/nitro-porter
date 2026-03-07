@@ -26,7 +26,6 @@
 namespace Porter\Origin;
 
 use Porter\Log;
-use Porter\Migration;
 use Porter\Origin;
 
 /**
@@ -162,10 +161,9 @@ class Discord extends Origin
     /**
      * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
      * Current behavior is to REBUILD users & channels on every run, but RESUME messages from last ID.
-     * @param ?Migration $port
      * @see https://discord.com/developers/docs/topics/rate-limits#rate-limits
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
         // Discord-specific setup.
         $this->input->setHeader('Authorization', 'Bot ' . $this->config['token']);

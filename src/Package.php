@@ -36,7 +36,7 @@ abstract class Package
     protected bool $transferFiles = false;
 
     /** Main process. */
-    abstract public function run(?Migration $port = null): void;
+    abstract public function run(): void;
 
     /**
      * Get support info of the target package.

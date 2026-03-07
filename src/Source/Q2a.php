@@ -8,7 +8,6 @@
 
 namespace Porter\Source;
 
-use Porter\Migration;
 use Porter\Source;
 
 class Q2a extends Source
@@ -41,22 +40,20 @@ class Q2a extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->users();
+        $this->roles();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
-        $port->export(
+        $this->export(
             'User',
             "SELECT
                     u.userid as UserID,
@@ -73,16 +70,15 @@ class Q2a extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $port->export(
+        $this->export(
             'Role',
             "select 1 as RolesID, 'Member' as Name"
         );
 
-        $port->export(
+        $this->export(
             'UserRole',
             "select
                     ur.userid as UserID,
@@ -93,18 +89,17 @@ class Q2a extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
-        $port->export('Category', "select 1 as CategoryID, 'Legacy' as Name");
+        $this->export('Category', "select 1 as CategoryID, 'Legacy' as Name");
         $discussion_Map = array(
             'postid' => 'DiscussionID',
             'categoryid' => 'CategoryID',
             'userid' => 'InsertUserID',
             'Subject' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     'Question' as Type,
@@ -126,11 +121,10 @@ class Q2a extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     p.postid as CommentID,

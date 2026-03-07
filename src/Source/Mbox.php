@@ -23,7 +23,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Mbox extends Source
 {
@@ -49,15 +48,14 @@ class Mbox extends Source
     /**
      * Forum-specific export format.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->setup($port); // Here be dragons.
-        $this->users($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->setup(); // Here be dragons.
+        $this->users();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
@@ -93,12 +91,11 @@ class Mbox extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array();
-        $port->export(
+        $this->export(
             'User',
             "select u.*,
                     NOW() as DateInserted,
@@ -109,12 +106,11 @@ class Mbox extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array();
-        $port->export(
+        $this->export(
             'Category',
             "select * from :_mbox_category",
             $category_Map
@@ -122,14 +118,13 @@ class Mbox extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'PostID' => 'DiscussionID'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select p.PostID, p.DateInserted, p.Name, p.Body, p.InsertUserID, p.CategoryID, 'Html' as Format
                 from :_mbox_post p where IsDiscussion = 1",
@@ -138,14 +133,13 @@ class Mbox extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'PostID' => 'CommentID'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select p.*, 'Html' as Format
                 from :_mbox_post p
@@ -155,14 +149,13 @@ class Mbox extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function setup(Migration $port): void
+    protected function setup(): void
     {
         // Temporary user table
-        $port->query('create table :_mbox_user
+        $this->query('create table :_mbox_user
             (UserID int AUTO_INCREMENT, Name varchar(255), Email varchar(255), PRIMARY KEY (UserID))');
-        $result = $port->query('select Sender from :_mbox group by Sender');
+        $result = $this->query('select Sender from :_mbox group by Sender');
 
         // Users, pt 1: Build ref array; Parse name & email out - strip quotes, <, >
         $users = array();
@@ -189,12 +182,12 @@ class Mbox extends Source
 
         // Users, pt 2: loop thru unique emails
         foreach ($users as $email => $name) {
-            $port->query(
+            $this->query(
                 'insert into :_mbox_user (Name, Email)
-                values ("' . $port->dbInput()->escape($name) . '", "' . $port->dbInput()->escape($email) . '")'
+                values ("' . $this->dbInput()->escape($name) . '", "' . $this->dbInput()->escape($email) . '")'
             );
             $userID = 0;
-            $maxRes = $port->query("select max(UserID) as id from :_mbox_user");
+            $maxRes = $this->query("select max(UserID) as id from :_mbox_user");
             while ($max = $maxRes->nextResultRow()) {
                 $userID = $max['id'];
             }
@@ -203,20 +196,20 @@ class Mbox extends Source
         }
 
         // Temporary category table
-        $port->query(
+        $this->query(
             'create table :_mbox_category (CategoryID int AUTO_INCREMENT, Name varchar(255),
             PRIMARY KEY (CategoryID))'
         );
-        $result = $port->query('select Folder from :_mbox group by Folder');
+        $result = $this->query('select Folder from :_mbox group by Folder');
         // Parse name out & build ref array
         $categories = array();
         while ($row = $result->nextResultRow()) {
-            $port->query(
+            $this->query(
                 'insert into :_mbox_category (Name)
-                values ("' . $port->dbInput()->escape($row["Folder"]) . '")'
+                values ("' . $this->dbInput()->escape($row["Folder"]) . '")'
             );
             $categoryID = 0;
-            $maxRes = $port->query("select max(CategoryID) as id from :_mbox_category");
+            $maxRes = $this->query("select max(CategoryID) as id from :_mbox_category");
             while ($max = $maxRes->nextResultRow()) {
                 $categoryID = $max['id'];
             }
@@ -224,12 +217,12 @@ class Mbox extends Source
         }
 
         // Temporary post table
-        $port->query(
+        $this->query(
             'create table :_mbox_post (PostID int AUTO_INCREMENT, DiscussionID int,
             IsDiscussion tinyint default 0, InsertUserID int, Name varchar(255), Body text, DateInserted datetime,
             CategoryID int, PRIMARY KEY (PostID))'
         );
-        $result = $port->query('select * from :_mbox');
+        $result = $this->query('select * from :_mbox');
         // Parse name, body, date, userid, categoryid
         while ($row = $result->nextResultRow()) {
             // Assemble posts into a format we can actually export.
@@ -238,34 +231,34 @@ class Mbox extends Source
             $name = trim(preg_replace('#^\[[0-9a-zA-Z_-]*] #', '', $name));
             $email = $this->parseEmail($row['Sender']);
             $userID = (isset($users[$email])) ? $users[$email] : 0;
-            $port->query(
+            $this->query(
                 'insert into :_mbox_post (Name, InsertUserID, CategoryID, DateInserted, Body)
-                values ("' . $port->dbInput()->escape($name) . '",
+                values ("' . $this->dbInput()->escape($name) . '",
                ' . $userID . ',
                ' . $categories[$row['Folder']] . ',
                from_unixtime(' . strtotime($row['Date']) . '),
-               "' . $port->dbInput()->escape($this->parseBody($row['Body'])) . '")'
+               "' . $this->dbInput()->escape($this->parseBody($row['Body'])) . '")'
             );
         }
 
         // Decide which posts are OPs
-        $result = $port->query(
+        $result = $this->query(
             'select PostID from (select * from :_mbox_post order by DateInserted asc) x group by Name'
         );
         $discussions = array();
         while ($row = $result->nextResultRow()) {
             $discussions[] = $row['PostID'];
         }
-        $port->query('update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')');
+        $this->query('update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')');
 
         // Thread the comments
-        $result = $port->query(
+        $result = $this->query(
             'select c.PostID, d.PostID as DiscussionID from :_mbox_post c
             left join :_mbox_post d on c.Name like d.Name and d.IsDiscussion = 1
             where c.IsDiscussion = 0'
         );
         while ($row = $result->nextResultRow()) {
-            $port->query('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
+            $this->query('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
                 where PostID = ' . $row['PostID']);
         }
     }

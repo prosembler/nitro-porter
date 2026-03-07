@@ -20,34 +20,22 @@ class Formatter
      *
      * @return self Formatter
      */
-    public static function instance(?Migration $ex = null): self
+    public static function instance(): self
     {
         if (null === self::$instance) {
             self::$instance = new self();
-            self::$instance->setup($ex);
         }
         return self::$instance;
-    }
-
-    /**
-     * @return void
-     */
-    public function setup(Migration $port)
-    {
-        $this->userMap = $this->buildUserMap($port);
     }
 
     /**
      * Create an array of `strtolower(name)` => ID for doing lookups later.
      *
      * @todo This strategy likely won't scale past 100K users. 18K users @ +8mb memory use.
-     *
-     * @param Migration $port
-     * @return array
      */
-    public function buildUserMap(Migration $port): array
+    public function buildUserMap(Target $target): void
     {
-        $userMap = $port->dbOutput()
+        $userMap = $target->dbOutput()
             ->table('users')
             ->get(['id', 'username']);
 
@@ -62,7 +50,7 @@ class Formatter
         // Record memory usage from user map.
         Log::comment('Mentions map memory usage at ' . formatBytes(memory_get_usage()));
 
-        return $users;
+        $this->userMap = $users;
     }
 
     /**

@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class FluxBb extends Source
 {
@@ -52,11 +51,10 @@ class FluxBb extends Source
     /**
      * Forum-specific export format
      *
-     * @param Migration $port
      *@todo Project file size / export time and possibly break into multiple files
      *
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
         $this->cdn = ''; //$this->param('cdn', '');
         /*if ($this->avatarPath = '') { //$this->param('avatars-source')) {
@@ -65,14 +63,14 @@ class FluxBb extends Source
             }
         }*/
 
-        $this->users($port);
-        $this->roles($port);
-        $this->signatures($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->tags($port);
-        $this->attachments($port);
+        $this->users();
+        $this->roles();
+        $this->signatures();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->tags();
+        $this->attachments();
     }
 
     /**
@@ -133,14 +131,13 @@ class FluxBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'AvatarID' => array('Column' => 'Photo', 'Filter' => array($this, 'getAvatarByID')),
         );
-        $port->export(
+        $this->export(
             'User',
             "select
                     u.id as UserID,
@@ -158,27 +155,25 @@ class FluxBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $port->export(
+        $this->export(
             'Role',
             "select g_id as RoleID, g_title as Name from :_groups"
         );
         // UserRole
-        $port->export(
+        $this->export(
             'UserRole',
             "select u.id as UserID, u.group_id as RoleID from :_users u"
         );
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     u.id as UserID,
@@ -190,11 +185,10 @@ class FluxBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
-        $port->export(
+        $this->export(
             'Category',
             "select
                     id as CategoryID,
@@ -215,11 +209,10 @@ class FluxBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     t.id as DiscussionID,
@@ -241,11 +234,10 @@ class FluxBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     p.*,
@@ -265,16 +257,15 @@ class FluxBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function tags(Migration $port): void
+    protected function tags(): void
     {
-        if ($port->hasInputSchema('tags')) {
-            $port->export(
+        if ($this->hasInputSchema('tags')) {
+            $this->export(
                 'Tag',
                 "select id as TagID, tag as Name from :_tags"
             );
-            $port->export(
+            $this->export(
                 'TagDiscussion',
                 "select topic_id as DiscussionID, tag_id as TagID from :_topic_tags"
             );
@@ -282,17 +273,16 @@ class FluxBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
-        if ($port->hasInputSchema('attach_files')) {
+        if ($this->hasInputSchema('attach_files')) {
             $media_Map = array(
                 'owner_id' => 'InsertUserID',
                 'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
                 'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
             );
-            $port->export(
+            $this->export(
                 'Media',
                 "select f.*,
                         f.id as MediaID,

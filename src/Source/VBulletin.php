@@ -33,7 +33,6 @@ namespace Porter\Source;
 
 use Porter\Log;
 use Porter\Source;
-use Porter\Migration;
 
 class VBulletin extends Source
 {
@@ -170,20 +169,11 @@ class VBulletin extends Source
     );
 
     /**
-     * @deprecated
-     * @var ?Migration
-     */
-    public ?Migration $port = null;
-
-    /**
      * Export each table one at a time.
      *
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
-        $this->port = $port; // @todo
-
         // Allow limited export of 1 category via ?forumid=ID
         /*$forumID = $this->param('forumid');
         if ($forumID) {
@@ -207,16 +197,16 @@ class VBulletin extends Source
         $minDiscussionWhere = 0;
 
         // Ranks
-        $ranks = $this->ranks($port);
+        $ranks = $this->ranks();
 
-        $this->users($port, $ranks);
-        $this->roles($port);
-        $this->userMeta($port, '');
+        $this->users($ranks);
+        $this->roles();
+        $this->userMeta('');
 
-        $this->discussions($port, $minDiscussionID, '');
-        $this->comments($port, $minDiscussionID, '');
+        $this->discussions($minDiscussionID, '');
+        $this->comments($minDiscussionID, '');
 
-        if ($port->hasInputSchema('threadread', array('readtime')) === true) {
+        if ($this->hasInputSchema('threadread', array('readtime')) === true) {
             $threadReadTime = 'from_unixtime(tr.readtime)';
             $threadReadJoin = 'left join :_threadread as tr on tr.userid = st.userid and tr.threadid = st.threadid';
         } else {
@@ -224,7 +214,7 @@ class VBulletin extends Source
             $threadReadJoin = null;
         }
 
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "
             select
@@ -237,21 +227,21 @@ class VBulletin extends Source
                 $minDiscussionWhere"
         );
 
-        $this->wallPosts($port, $minDiscussionID);
+        $this->wallPosts($minDiscussionID);
 
-        $this->conversations($port);
-        $this->polls($port);
+        $this->conversations();
+        $this->polls();
 
         // Media
-        if ($port->hasInputSchema('attachment') === true) {
-            $this->attachments($port, $minDiscussionID);
+        if ($this->hasInputSchema('attachment') === true) {
+            $this->attachments($minDiscussionID);
         }
 
-        $this->tags($port);
+        $this->tags();
 
         // Reactions
-        if ($port->hasInputSchema('post_thanks') === true) {
-            $this->reactions($port);
+        if ($this->hasInputSchema('post_thanks') === true) {
+            $this->reactions();
         }
     }
 
@@ -274,16 +264,16 @@ class VBulletin extends Source
      * @param bool $attachments   Whether to move attachments.
      * @param bool $customAvatars Whether to move avatars.
      */
-    public function doFileExport(Migration $port, $attachments = true, $customAvatars = true): void
+    public function doFileExport($attachments = true, $customAvatars = true): void
     {
         if ($attachments) {
             $identity = 'f.attachmentid';
             $extension = '';
 
-            if ($port->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
+            if ($this->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
                 $extension = self::fileExtension('a.filename');
                 $identity = 'f.filedataid';
-            } elseif ($port->hasInputSchema('attach') === true) {
+            } elseif ($this->hasInputSchema('attach') === true) {
                 $identity = 'f.filedataid';
             } else {
                 $extension = self::fileExtension('filename');
@@ -296,19 +286,19 @@ class VBulletin extends Source
                from ";
 
             // Table is dependent on vBulletin version (v4+ is filedata, v3 is attachment)
-            if ($port->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
+            if ($this->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
                 $sql .= ":_filedata f left join :_attachment a on a.filedataid = f.filedataid";
-            } elseif ($port->hasInputSchema('attach') === true) {
+            } elseif ($this->hasInputSchema('attach') === true) {
                 $sql .= ":_filedata f left join :_attach a on a.filedataid = f.filedataid";
             } else {
                 $sql .= ":_attachment f";
             }
 
-            $this->exportBlobs($port, $sql, 'filedata', 'Path');
+            $this->exportBlobs($sql, 'filedata', 'Path');
         }
 
         if ($customAvatars) {
-            if ($port->hasInputSchema('customavatar', array('avatardata')) === true) {
+            if ($this->hasInputSchema('customavatar', array('avatardata')) === true) {
                 $avatarDataColumn = 'avatardata';
             } else {
                 $avatarDataColumn = 'filedata';
@@ -323,16 +313,15 @@ class VBulletin extends Source
                    ) as customphoto
                 from :_customavatar a";
             $sql = str_replace('u.userid', 'a.userid', $sql);
-            $this->exportBlobs($port, $sql, $avatarDataColumn, 'customphoto', 80);
+            $this->exportBlobs($sql, $avatarDataColumn, 'customphoto', 80);
         }
 
         // Export the group icons no matter what.
         if (
-            $port->hasInputSchema('socialgroupicon', 'thumbnail_filedata') === true
+            $this->hasInputSchema('socialgroupicon', 'thumbnail_filedata') === true
             && ($attachments || $customAvatars)
         ) {
             $this->exportBlobs(
-                $port,
                 "select
                    i.filedata,
                    concat('vb/groupicons/', i.groupid, '.', i.extension) as path
@@ -346,16 +335,15 @@ class VBulletin extends Source
     /**
      * Convert database blobs into files.
      *
-     * @param Migration $port
      * @param string $sql
      * @param string $blobColumn
      * @param string $pathColumn
      * @param bool|int $thumbnail
      */
-    public function exportBlobs(Migration $port, $sql, $blobColumn, $pathColumn, $thumbnail = false): void
+    public function exportBlobs($sql, $blobColumn, $pathColumn, $thumbnail = false): void
     {
         Log::comment('Exporting blobs...');
-        $result = $port->query($sql);
+        $result = $this->query($sql);
         $count = 0;
         while ($row = $result->nextResultRow()) {
             // vBulletin attachment hack (can't do this in MySQL)
@@ -416,7 +404,7 @@ class VBulletin extends Source
      *
      * In vBulletin 4.x, the filedata table was introduced.
      */
-    public function attachments(Migration $port, false|int $minDiscussionID = false): void
+    public function attachments(false|int $minDiscussionID = false): void
     {
         $instance = $this;
 
@@ -453,7 +441,7 @@ class VBulletin extends Source
 
         // Add hash fields if they exist (from 2.x)
         $attachColumns = array('hash', 'filehash');
-        $hasColumns = $port->hasInputSchema('attachment', $attachColumns);
+        $hasColumns = $this->hasInputSchema('attachment', $attachColumns);
         $attachColumnsString = '';
         foreach ($attachColumns as $columnName) {
             if (!$hasColumns) {
@@ -463,11 +451,11 @@ class VBulletin extends Source
             }
         }
         // Do the export
-        if ($port->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
+        if ($this->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
             // Exporting 4.x with 'filedata' table.
             // Build an index to join on.
-            if (!$port->indexExists('ix_thread_firstpostid', ':_thread')) {
-                $port->query('create index ix_thread_firstpostid on :_thread (firstpostid)');
+            if (!$this->indexExists('ix_thread_firstpostid', ':_thread')) {
+                $this->query('create index ix_thread_firstpostid on :_thread (firstpostid)');
             }
             $mediaSql = "select
                     case
@@ -495,7 +483,7 @@ class VBulletin extends Source
                     left join :_thread t on t.firstpostid = a.contentid and a.contenttypeid = 1
                 where a.contentid > 0
                     $discussionWhere";
-            $port->export('Media', $mediaSql, $media_Map, $filters);
+            $this->export('Media', $mediaSql, $media_Map, $filters);
         } else {
             // Exporting 3.x without 'filedata' table.
             // Do NOT grab every field to avoid 'filedata' blob in 3.x.
@@ -536,7 +524,7 @@ class VBulletin extends Source
                     inner join :_thread t ON p.threadid = t.threadid
                     left join :_attachment a ON a.postid = p.postid
                 where p.postid <> t.firstpostid and a.attachmentid > 0";
-            $port->export('Media', $mediaSql, $media_Map, $filters);
+            $this->export('Media', $mediaSql, $media_Map, $filters);
         }
 
         // files named .attach need to be named properly.
@@ -593,7 +581,7 @@ class VBulletin extends Source
         }*/
     }
 
-    protected function polls(Migration $port): void
+    protected function polls(): void
     {
         $poll_Map = array(
             'pollid' => 'PollID',
@@ -603,7 +591,7 @@ class VBulletin extends Source
             'dateline' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
             'postuserid' => 'InsertUserID'
         );
-        $port->export(
+        $this->export(
             'Poll',
             "select
                     p.*,
@@ -617,8 +605,8 @@ class VBulletin extends Source
 
 
         // Poll options
-        $port->query("drop table if exists zPollOptions;");
-        $port->query(
+        $this->query("drop table if exists zPollOptions;");
+        $this->query(
             "create table zPollOptions (
                 PollOptionID int(11) NOT NULL AUTO_INCREMENT,
                 PollID int(11),
@@ -634,7 +622,7 @@ class VBulletin extends Source
             from :_poll p
             join :_thread t on p.pollid = t.pollid";
 
-        $r = $port->query($sql);
+        $r = $this->query($sql);
         $rowCount = 0;
         $sql  = "replace into zPollOptions (
                     PollOptionID,
@@ -663,10 +651,10 @@ class VBulletin extends Source
         }
 
         if ($rowCount > 0) {
-            $port->query(substr($sql, 0, -1));
+            $this->query(substr($sql, 0, -1));
         }
 
-        $port->export(
+        $this->export(
             'PollOption',
             "select
                 PollOptionID,
@@ -679,7 +667,7 @@ class VBulletin extends Source
             from zPollOptions"
         );
 
-        $port->export(
+        $this->export(
             'PollVote',
             "select
                 pv.userid as UserID,
@@ -691,20 +679,19 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      * @return array
      */
-    public function ranks(Migration $port): iterable
+    public function ranks(): iterable
     {
-        $hasRanks = $port->dbInput()->table('ranks')->select()->get()->count();
+        $hasRanks = $this->dbInput()->table('ranks')->select()->get()->count();
         if ($hasRanks) {
-            $ranks = $port->dbInput()->table('ranks')
+            $ranks = $this->dbInput()->table('ranks')
                 ->select(['minposts'])
                 ->where('minposts', '>', 0)
                 ->orderBy('minposts', 'desc')
                 ->get();
 
-            $port->export(
+            $this->export(
                 'Rank',
                 "select
                     rankid as RankID,
@@ -716,7 +703,7 @@ class VBulletin extends Source
                     where minposts > 0"
             );
         } else {
-            $ranks = $port->dbInput()->table('usertitle')
+            $ranks = $this->dbInput()->table('usertitle')
                 ->select()
                 ->selectRaw('usertitleid as RankID')
                 ->orderBy('minposts', 'desc')
@@ -746,7 +733,7 @@ class VBulletin extends Source
                 )
             );
 
-            $port->export(
+            $this->export(
                 'Rank',
                 "select ut.*,
                         ut.title as title2,
@@ -817,7 +804,7 @@ class VBulletin extends Source
     public function buildMediaDimension($value, $field, $row): mixed
     {
         // Non-images get no height/width
-        if ($this->port->hasInputSchema('attachment', array('extension')) === true) {
+        if ($this->hasInputSchema('attachment', array('extension')) === true) {
             $extension = $row['extension'];
         } else {
             $extension = pathinfo($row['filename'], PATHINFO_EXTENSION);
@@ -852,14 +839,13 @@ class VBulletin extends Source
     /**
      * Retrieve a value from the vBulletin setting table.
      *
-     * @param Migration $port
      * @param string $name Variable for which we want the value.
      * @return mixed Value or FALSE if not found.
      */
-    public function getConfig($port, $name): mixed
+    public function getConfig($name): mixed
     {
         $sql = "select * from :_setting where varname = '$name'";
-        $result = $port->query($sql);
+        $result = $this->query($sql);
         if ($row = $result->nextResultRow()) {
             return $row['value'];
         }
@@ -877,11 +863,10 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function tags(Migration $port): void
+    protected function tags(): void
     {
-        $port->export(
+        $this->export(
             'Tag',
             "
             select
@@ -893,7 +878,7 @@ class VBulletin extends Source
         "
         );
 
-        $port->export(
+        $this->export(
             'TagDiscussion',
             "select
                     tagid as TagID,
@@ -905,12 +890,11 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      * @return void
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
-        $port->export(
+        $this->export(
             'Conversation',
             "select
                 p.parentpmid as ConversationID,
@@ -928,7 +912,7 @@ class VBulletin extends Source
             join :_pmtext t on t.pmtextid = p.pmtextid"
         );
 
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select distinct
                     t.pmtextid,
@@ -947,7 +931,7 @@ class VBulletin extends Source
         );
 
         // User Conversation.
-        $port->export(
+        $this->export(
             'UserConversation',
             "
                 select
@@ -961,12 +945,11 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      * @return void
      */
-    protected function reactions(Migration $port): void
+    protected function reactions(): void
     {
-        $port->export(
+        $this->export(
             'UserTag',
             "select
                     if(t.threadid is not null, 'Discussion', 'Comment') as RecordType,
@@ -991,16 +974,15 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      * @param string $forumWhere
      */
-    protected function categories(Migration $port, string $forumWhere): void
+    protected function categories(string $forumWhere): void
     {
         $category_Map = array(
             'title' => array('Column' => 'Name', 'Filter' => array($this, 'htmlDecode')),
             'displayorder' => array('Column' => 'Sort', 'Type' => 'int'),
         );
-        $port->export(
+        $this->export(
             'Category',
             "select
                     f.forumid as CategoryID,
@@ -1015,29 +997,29 @@ class VBulletin extends Source
         );
     }
 
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'usergroupid' => 'RoleID',
             'title' => 'Name',
             'description' => 'Description'
         );
-        $port->export('Role', 'select * from :_usergroup', $role_Map);
+        $this->export('Role', 'select * from :_usergroup', $role_Map);
 
         // UserRoles
         $userRole_Map = array(
             'userid' => 'UserID',
             'usergroupid' => 'RoleID'
         );
-        $port->query("drop table if exists VbulletinRoles");
-        $port->query(
+        $this->query("drop table if exists VbulletinRoles");
+        $this->query(
             "create table VbulletinRoles (
             userid int unsigned not null, usergroupid int unsigned not null)"
         );
         // Put primary groups into tmp table
-        $port->query("insert into VbulletinRoles (userid, usergroupid) select userid, usergroupid from :_user");
+        $this->query("insert into VbulletinRoles (userid, usergroupid) select userid, usergroupid from :_user");
         // Put stupid CSV column into tmp table
-        $secondaryRoles = $port->query("select userid, usergroupid, membergroupids from :_user");
+        $secondaryRoles = $this->query("select userid, usergroupid, membergroupids from :_user");
         if (is_object($secondaryRoles)) {
             while ($row = $secondaryRoles->nextResultRow()) {
                 if ($row['membergroupids'] != '') {
@@ -1046,7 +1028,7 @@ class VBulletin extends Source
                         if (!$groupID) {
                             continue;
                         }
-                        $port->query(
+                        $this->query(
                             "insert into VbulletinRoles (userid, usergroupid)
                             values({$row['userid']},{$groupID})"
                         );
@@ -1055,15 +1037,14 @@ class VBulletin extends Source
             }
         }
         // Export from our tmp table and drop
-        $port->export('UserRole', 'select distinct userid, usergroupid from VbulletinRoles', $userRole_Map);
-        $port->query("drop table if exists VbulletinRoles");
+        $this->export('UserRole', 'select distinct userid, usergroupid from VbulletinRoles', $userRole_Map);
+        $this->query("drop table if exists VbulletinRoles");
     }
 
     /**
-     * @param Migration $port
      * @param mixed $ranks
      */
-    protected function users(Migration $port, mixed $ranks): void
+    protected function users(mixed $ranks): void
     {
         $cdn = '';
         $user_Map = array(
@@ -1088,13 +1069,13 @@ class VBulletin extends Source
         );
 
         // Use file avatar or the result of our blob export?
-        if ($this->getConfig($port, 'usefileavatar')) {
+        if ($this->getConfig('usefileavatar')) {
             $user_Map['filephoto'] = 'Photo';
         } else {
             $user_Map['customphoto'] = 'Photo';
         }
 
-        $port->export(
+        $this->export(
             'User',
             "select
                 u.userid as UserID,
@@ -1130,13 +1111,12 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      * @param string $forumWhere
      */
-    protected function userMeta(Migration $port, string $forumWhere): void
+    protected function userMeta(string $forumWhere): void
     {
-        $port->query("drop table if exists VbulletinUserMeta");
-        $port->query("
+        $this->query("drop table if exists VbulletinUserMeta");
+        $this->query("
             create table VbulletinUserMeta(
                 `UserID` int not null,
                 `Name` varchar(255) not null,
@@ -1149,12 +1129,12 @@ class VBulletin extends Source
             'styleid' => 'StyleID'
         );
 
-        if ($port->hasInputSchema('user', array('skype')) === true) {
+        if ($this->hasInputSchema('user', array('skype')) === true) {
             $userFields['skype'] = 'Skype';
         }
 
         foreach ($userFields as $field => $insertAs) {
-            $port->query(
+            $this->query(
                 "insert into VbulletinUserMeta (UserID, Name, Value)
                     select
                         userid,
@@ -1177,9 +1157,9 @@ class VBulletin extends Source
             );
         }
 
-        if ($port->hasInputSchema('phrase', array('product', 'fieldname')) === true) {
+        if ($this->hasInputSchema('phrase', array('product', 'fieldname')) === true) {
             // Dynamic vB user data (userfield)
-            $profileFields = $port->query(
+            $profileFields = $this->query(
                 "select distinct
                     varname,
                     text
@@ -1204,13 +1184,13 @@ class VBulletin extends Source
                         where " . $column . " != ''";
                 }
                 foreach ($profileQueries as $query) {
-                    $port->query($query);
+                    $this->query($query);
                 }
             }
         }
 
         // Users meta informations
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     userid as UserID,
@@ -1228,15 +1208,14 @@ class VBulletin extends Source
                 union
                 select * from VbulletinUserMeta"
         );
-        $this->categories($port, $forumWhere);
+        $this->categories($forumWhere);
     }
 
     /**
-     * @param Migration $port
      * @param int $minDiscussionID
      * @param string $forumWhere
      */
-    protected function comments(Migration $port, $minDiscussionID, string $forumWhere): void
+    protected function comments($minDiscussionID, string $forumWhere): void
     {
         $comment_Map = array(
             'pagetext' => array('Column' => 'Body', 'Filter' => function ($value) {
@@ -1258,7 +1237,7 @@ class VBulletin extends Source
             $joinThreads = 'inner join :_thread as t on p.threadid = t.threadid';
         }
 
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     p.postid as CommentID,
@@ -1281,14 +1260,13 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      * @param int $minDiscussionID
      */
-    protected function wallPosts(Migration $port, $minDiscussionID): void
+    protected function wallPosts($minDiscussionID): void
     {
         // Activity (from visitor messages in vBulletin 3.8+)
         $minDiscussionWhere = '';
-        if ($port->hasInputSchema('visitormessage') === true) {
+        if ($this->hasInputSchema('visitormessage') === true) {
             if ($minDiscussionID) {
                 $minDiscussionWhere = "and dateline > $minDiscussionID";
             }
@@ -1300,7 +1278,7 @@ class VBulletin extends Source
                 'NotifyUserID' => 'NotifyUserID',
                 'Format' => 'Format'
             );
-            $port->export(
+            $this->export(
                 'Activity',
                 "select
                     vm.*,
@@ -1321,11 +1299,10 @@ class VBulletin extends Source
     }
 
     /**
-     * @param Migration $port
      * @param int $minDiscussionID
      * @param string $forumWhere
      */
-    protected function discussions(Migration $port, $minDiscussionID, string $forumWhere): void
+    protected function discussions($minDiscussionID, string $forumWhere): void
     {
         $discussion_Map = array(
             'title' => array('Column' => 'Name', 'Filter' => array($this, 'htmlDecode')),
@@ -1340,7 +1317,7 @@ class VBulletin extends Source
             $minDiscussionWhere = "and t.threadid > $minDiscussionID";
         }
 
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     t.threadid as DiscussionID,

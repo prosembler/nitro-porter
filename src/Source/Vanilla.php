@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Vanilla extends Source
 {
@@ -49,9 +48,8 @@ class Vanilla extends Source
     public array $sourceTables = array();
 
     /**
-     * @param Migration $port
      */
-    public function run(?Migration $port = null): void
+    public function run(): void
     {
         // Core tables essentially map to our intermediate format as-is.
         $tables = [
@@ -72,41 +70,39 @@ class Vanilla extends Source
             'UserRole',
         ];
         foreach ($tables as $tableName) {
-            if ($port->hasInputSchema($tableName)) {
-                $port->export($tableName, "select * from :_{$tableName}");
+            if ($this->hasInputSchema($tableName)) {
+                $this->export($tableName, "select * from :_{$tableName}");
             }
         }
 
-        $this->users($port);
-        $this->badges($port);
-        $this->ranks($port);
-        $this->reactions($port);
-        $this->polls($port);
+        $this->users();
+        $this->badges();
+        $this->ranks();
+        $this->reactions();
+        $this->polls();
     }
 
     /**
-     * @param Migration $port
      */
-    public function users(Migration $port): void
+    public function users(): void
     {
         $map = [
             'Photo' => ['Column' => 'Photo', 'Type' => 'string', 'Filter' => 'vanillaPhoto'],
         ];
-        $port->export('User', "select * from :_User u", $map);
+        $this->export('User', "select * from :_User u", $map);
     }
 
     /**
      * Badges support for cloud + Yaga.
      *
-     * @param Migration $port
      */
-    public function badges(Migration $port): void
+    public function badges(): void
     {
-        if ($port->hasInputSchema('Badge')) {
+        if ($this->hasInputSchema('Badge')) {
             // Vanilla Cloud
-            $port->export('Badge', "select * from :_Badge");
-            $port->export('UserBadge', "select * from :_UserBadge");
-        } elseif ($port->hasInputSchema('YagaBadge')) {
+            $this->export('Badge', "select * from :_Badge");
+            $this->export('UserBadge', "select * from :_UserBadge");
+        } elseif ($this->hasInputSchema('YagaBadge')) {
             // https://github.com/bleistivt/yaga
             $map = [
                 'Description' => 'Body',
@@ -116,13 +112,13 @@ class Vanilla extends Source
                 'Enabled' => 'Active',
             ];
             // Yaga is missing a couple columns we need.
-            $port->export('Badge', "select *,
+            $this->export('Badge', "select *,
                 NOW() as DateInserted,
                 1 as InsertUserID,
                 Description as Body,
                 Enabled as Visible
                 from :_YagaBadge", $map);
-            $port->export('UserBadge', "select *,
+            $this->export('UserBadge', "select *,
                 DateInserted as DateCompleted
                 from :_YagaBadgeAward");
         }
@@ -131,44 +127,42 @@ class Vanilla extends Source
     /**
      * Ranks support for cloud + Yaga.
      *
-     * @param Migration $port
      */
-    public function ranks(Migration $port): void
+    public function ranks(): void
     {
-        if ($port->hasInputSchema('Rank')) {
+        if ($this->hasInputSchema('Rank')) {
             // Vanilla Cloud
-            $port->export('Rank', "select * from :_Rank");
-        } elseif ($port->hasInputSchema('YagaRank')) {
+            $this->export('Rank', "select * from :_Rank");
+        } elseif ($this->hasInputSchema('YagaRank')) {
             // https://github.com/bleistivt/yaga
             $map = [
                 'Description' => 'Body',
                 'Sort' => 'Level',
                 // Use 'Name' as both 'Name' and 'Label' (via SQL below)
             ];
-            $port->export('Rank', "select *, Name as Label from :_YagaRank", $map);
+            $this->export('Rank', "select *, Name as Label from :_YagaRank", $map);
         }
     }
 
     /**
      * Reactions support for cloud + Yaga.
      *
-     * @param Migration $port
      */
-    public function reactions(Migration $port): void
+    public function reactions(): void
     {
-        if ($port->hasInputSchema('ReactionType')) {
+        if ($this->hasInputSchema('ReactionType')) {
             // Vanilla Cloud & later open source
-            $port->export('ReactionType', "select * from :_ReactionType");
+            $this->export('ReactionType', "select * from :_ReactionType");
             //$ex->export('Reaction', "select * from :_Tag where Type='Reaction'");
-            $port->export('UserTag', "select * from :_UserTag");
-        } elseif ($port->hasInputSchema('YagaReaction')) {
+            $this->export('UserTag', "select * from :_UserTag");
+        } elseif ($this->hasInputSchema('YagaReaction')) {
             // https://github.com/bleistivt/yaga
             // Shortcut use of Tag table by setting ActionID = TagID.
             // This wouldn't work for exporting a Yaga-based Vanilla install to a "standard" reactions Vanilla install,
             // but I have to assume no one is using Porter for that anyway.
             // Other Targets should probably directly join ReactionType & UserTag on TagID anyway.
             // Yaga also lacks an 'active/enabled' field so assume they're all 'on'.
-            $port->export('ReactionType', "select *,
+            $this->export('ReactionType', "select *,
                 ActionID as TagID,
                 1 as Active
                 from :_YagaAction"); // Name & Description only
@@ -179,23 +173,22 @@ class Vanilla extends Source
                 'ParentScore' => 'Total',
                 'ActionID' => 'TagID',
             ];
-            $port->export('UserTag', "select * from :_YagaReaction", $map);
+            $this->export('UserTag', "select * from :_YagaReaction", $map);
         }
     }
 
     /**
      * Polls support for cloud + "DiscussionPolls".
      *
-     * @param Migration $port
      */
-    public function polls(Migration $port): void
+    public function polls(): void
     {
-        if ($port->hasInputSchema('Poll')) {
+        if ($this->hasInputSchema('Poll')) {
             // SaaS
-            $port->export('Poll', "select * from :_Poll");
-            $port->export('PollOption', "select * from :_PollOption");
-            $port->export('PollVote', "select * from :_PollVote");
-        } elseif ($port->hasInputSchema('DiscussionPolls')) {
+            $this->export('Poll', "select * from :_Poll");
+            $this->export('PollOption', "select * from :_PollOption");
+            $this->export('PollVote', "select * from :_PollVote");
+        } elseif ($this->hasInputSchema('DiscussionPolls')) {
             // @todo https://github.com/hgtonight/Plugin-DiscussionPolls
             //$ex->export('Poll', "select * from :_DiscussionPollQuestions");
             //$ex->export('PollOption', "select * from :_DiscussionPollQuestionOptions");

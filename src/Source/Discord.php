@@ -39,8 +39,6 @@ class Discord extends Source
         ]
     ];
 
-    public const int DISCORD_EPOCH = 1420070400000; // zeroth second of 2015
-
     public const array CHANNEL_TYPE = [
         'GUILD_TEXT' => 0,
         'GUILD_CATEGORY' => 4,
@@ -57,7 +55,7 @@ class Discord extends Source
     protected const array FLAGS = [
         'hasDiscussionBody' => false,
         //'fileTransferSupport' => true,
-        'hasSnowflakeIDs' => true,  // @todo respect this flag
+        'renumberIndices' => true,  // @todo respect this flag
     ];
 
     /**
@@ -133,9 +131,8 @@ class Discord extends Source
 
     protected function categories(): void
     {
-        $this->renumber('Category', 'id');
         $map = [
-            //'id' => 'CategoryID',
+            'id' => 'CategoryID',
             'name' => 'Name',
         ];
         $query = $this->sourceQB()->from('discord_channels')
@@ -184,10 +181,5 @@ class Discord extends Source
             ->selectRaw('from_unixtime(timestamp) as DateInserted')
             ->selectRaw('from_unixtime(edited_timestamp) as DateUpdated');
         $this->export('Comment', $query, $map);
-    }
-
-    public function validate(): void
-    {
-        // @todo Check if kludged SnowflakeIDs caused duplication in future primary keys.
     }
 }

@@ -12,7 +12,7 @@ use Porter\Storage;
 class Database extends Storage
 {
     /** @var int How many rows to insert at once. */
-    public const int INSERT_BATCH = 1000;
+    public const int INSERT_BATCH = 1000; // Set this to 1 for debugging SQL inserts.
 
     /** @var int When to start reporting on incremental storage (in the logs). */
     public const int LOG_THRESHOLD = 100000;

@@ -413,17 +413,6 @@ function notFilter(mixed $value): int
 }
 
 /**
- * Convert a 64bit int to positive 32bit via truncation & absolute value.
- *
- * @param mixed $value
- * @return int
- */
-function force32bit(mixed $value): int
-{
-    return abs(unpack('l', pack('i', (int)$value & 0xFFFFFFFF))[1]);
-}
-
-/**
  * Convert empty values to zero.
  *
  * Useful for 'not null' columns with default=0.

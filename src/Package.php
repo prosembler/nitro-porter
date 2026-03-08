@@ -19,7 +19,15 @@ abstract class Package
     ];
 
     /** @var array Settings that change Target behavior. */
-    protected const FLAGS = [];
+    protected const array FLAGS = [
+        // Whether content/body is stored on the discussion/thread record. If both are true,
+        // skip joins & renumbering keys since it's going to get undone by the target.
+        'hasDiscussionBody' => false,
+        // If both packages have file transfer support, they get synced up.
+        'fileTransferSupport' => false,
+        // Whether SOURCE keys are invalid ints (e.g. Discord SnowflakeIDs) — no effect for targets.
+        'renumberIndices' => false,
+    ];
 
     /**
      * If this is 'false', skip extract first post content from `Discussions.Body`.

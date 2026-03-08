@@ -288,6 +288,9 @@ class Database extends Storage
                 } elseif (strpos($type, 'varbinary') === 0) {
                     // Handle varbinary as blobs.
                     $table->binary($columnName)->nullable();
+                } elseif ($type === 'increments') {
+                    // Auto-increment (int)
+                    $table->increments($columnName);
                 } else {
                     // Handle everything else.
                     // But first, un-abbreviate 'int' (e.g. `bigint`, `tinyint(1)`).

@@ -62,6 +62,8 @@ class Controller
     /**
      * Do some intelligent configuration of the migration process.
      *
+     * This is the ONLY opportunity for the source & target to "coordinate."
+     *
      * @param Source $source
      * @param Target $target
      */

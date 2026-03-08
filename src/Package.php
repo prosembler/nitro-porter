@@ -19,7 +19,7 @@ abstract class Package
     ];
 
     /** @var array Settings that change Target behavior. */
-    protected const array FLAGS = [
+    protected const FLAGS = [
         // Whether content/body is stored on the discussion/thread record. If both are true,
         // skip joins & renumbering keys since it's going to get undone by the target.
         'hasDiscussionBody' => false,

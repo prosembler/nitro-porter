@@ -68,6 +68,22 @@ class Config
     }
 
     /**
+     * @todo Allow 'merge' command to be passed down.
+     */
+    public function mergeEnabled(): bool
+    {
+        return false;
+    }
+
+    /**
+     * @todo Allow start IDs per key to be set in config.
+     */
+    public function getOffsets(): array
+    {
+        return [];
+    }
+
+    /**
      * Get designated test connection.
      *
      * @return mixed[]

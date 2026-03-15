@@ -126,7 +126,10 @@ class Discord extends Origin
         ],
     ];
 
-    /** @var array  */
+    /**
+     * @var array Name => column type
+     * @see \Porter\Source::renumber() for why an index is important.
+     */
     protected const array DB_STRUCTURE_MESSAGES = [
         'id' => 'varchar(100)',
         'channel_id' => 'varchar(100)', //@todo key?
@@ -150,7 +153,7 @@ class Discord extends Origin
         'mentions' => 'text',
         'mention_roles' => 'text',
         'mention_channels' => 'text',
-        'keys' => [
+        'keys' => [ //  Index any keys that may require renumbering (for auto-joins).
             'discord_messages_id_primary' => [
                 'type' => 'primary',
                 'columns' => ['id'],

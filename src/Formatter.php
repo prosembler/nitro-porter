@@ -41,6 +41,11 @@ class Formatter
 
         $users = [];
         foreach ($userMap as $user) {
+            if (!$user->username) {
+                Log::comment('UserID ' . $user->id . ' has a blank name.');
+                continue;
+            }
+
             // Use the first found ID for each name in case of duplicates.
             if (!isset($users[strtolower($user->username)])) {
                 $users[strtolower($user->username)] = $user->id;

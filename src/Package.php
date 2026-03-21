@@ -29,6 +29,31 @@ abstract class Package
         'renumberIndices' => false,
     ];
 
+    protected const array MANIFEST = [
+        // users
+        'users', // inc. usermeta, signatures
+        'roles',
+        'badges',
+        // taxonomy
+        'categories',
+        'groups',
+        // content
+        'discussions',
+        'comments',
+        'conversations',
+        'wallposts', // public profile posts
+        'usernotes', // private profile posts
+        // meta
+        'tags',
+        'reactions',
+        'bookmarks',
+        'polls',
+        // files
+        'avatars',
+        'attachments',
+        'emoji',
+    ];
+
     /**
      * If this is 'false', skip extract first post content from `Discussions.Body`.
      *
@@ -44,7 +69,14 @@ abstract class Package
     protected bool $transferFiles = false;
 
     /** Main process. */
-    abstract public function run(): void;
+    public function run(): void
+    {
+        foreach (self::MANIFEST as $step) {
+            if (method_exists($this, $step)) {
+                $this->$step();
+            }
+        }
+    }
 
     /**
      * Get support info of the target package.

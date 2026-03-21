@@ -9,20 +9,8 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Source extends Package
 {
-    /**
-     * @var array Required tables, columns set per exporter
-     */
-    public array $sourceTables = [];
-
-    /**
-     * @var array Table structures that define the format of the intermediary export tables.
-     */
-    protected array $porterStructure = [];
-
-    /**
-     * @var array Table names to limit the export to. Full export is an empty array.
-     */
-    public array $limitedTables = [];
+    /** @var string Name prefix for tables used in renumbering. */
+    public const string RENUMBER_PX = 'PORT_ZNUM_';
 
     /** @var array|string[] List of PORT_ tables with primary keys. */
     public const array FK_TABLES = [
@@ -61,24 +49,27 @@ abstract class Source extends Package
     ];
 
     /**
-     * Activity.RecordID
-     * Attachment.ForeignID
-     * Attachment.SourceID
-     * Comment.parentRecordID
-     * Conversation.ForeignID
-     * Discussion.ForeignID
-     * Discussion.RegardingID
-     * Event.ParentRecordID
-     * Media.ForeignID
-     * UserNote.RecordID
-     * UserTag.RecordID
+     * Foreign key words that indicate they map to multiple tables.
+     *
+     * Activity.RecordID, Attachment.ForeignID, Attachment.SourceID
+     * Comment.parentRecordID, Conversation.ForeignID, Discussion.ForeignID, Discussion.RegardingID
+     * Event.ParentRecordID, Media.ForeignID, UserNote.RecordID, UserTag.RecordID
      */
-    public const array VARIABLE_KEYS = [
-        'ForeignID',
-        'RecordID',
-        'SourceID',
-        'RegardingID',
+    public const array FK_MULTIPLE = [
+        'Foreign',
+        'Record',
+        'Source',
+        'Regarding',
     ];
+
+    /** @var array Required tables, columns set per exporter */
+    public array $sourceTables = [];
+
+    /** @var array Table structures that define the format of the intermediary export tables. */
+    protected array $porterStructure = [];
+
+    /** @var array Table names to limit the export to. Full export is an empty array. */
+    public array $limitedTables = [];
 
     /**
      * @var DbFactory Instance DbFactory
@@ -122,9 +113,6 @@ abstract class Source extends Package
         $this->legacyDatabase = $inputDB;
     }
 
-    /**
-     * @return string
-     */
     public static function getCharsetTable(): string
     {
         $charset = '';
@@ -136,10 +124,6 @@ abstract class Source extends Package
 
     /**
      * Return the requested path (without a trailing slash).
-     *
-     * @param string $type
-     * @param bool $addFullPath
-     * @return string
      */
     public function getPath(string $type, bool $addFullPath = false): string
     {
@@ -217,9 +201,9 @@ abstract class Source extends Package
 
             // Join src ON srcID = portID to overwrite the primary key / map on the fly
             // If your ORIGIN lacks an index on its primary key, it will be painfully long to execute.
-            $table1 = 'PORT_ZNUM_' . $tableName . '.' . $sourceKey;
+            $table1 = self::RENUMBER_PX . $tableName . '.' . $sourceKey;
             $table2 = $query->from . '.' . $sourceKey;
-            $query->leftJoin('PORT_ZNUM_' . $tableName, $table1, '=', $table2)
+            $query->leftJoin(self::RENUMBER_PX . $tableName, $table1, '=', $table2)
                 ->addSelect($portKey);
                 //->selectRaw('PORT_ZNUM_' . $tableName . '.id' . ' as ' . $portKey);
 
@@ -235,10 +219,10 @@ abstract class Source extends Package
             }
             if ($baseTable = $this->mapFK($portName)) {
                 //Log::comment("Found fk table '$baseTable' from '$portName'");
-                $table1 = 'PORT_ZNUM_' . $baseTable . '.id';
+                $table1 = self::RENUMBER_PX . $baseTable . '.id';
                 $table2 = $query->from . '.' . $sourceName;
-                $query->leftJoin('PORT_ZNUM_' . $baseTable, $table1, '=', $table2)
-                    ->selectRaw('PORT_ZNUM_' . $baseTable . '.' . $baseTable . 'ID as ' . $portName);
+                $query->leftJoin(self::RENUMBER_PX . $baseTable, $table1, '=', $table2)
+                    ->selectRaw(self::RENUMBER_PX . $baseTable . '.' . $baseTable . 'ID as ' . $portName);
                 // Drop the renumbered key from the map (or the addSelect is overwritten)
                 unset($map[$sourceName]);
             }
@@ -432,8 +416,6 @@ abstract class Source extends Package
      * 2. Trim off the whitespace
      * 3. Normalize case to lower
      * 4. Save to the Migration instance
-     *
-     * @param ?string $tables
      */
     public function limitTables(?string $tables): void
     {

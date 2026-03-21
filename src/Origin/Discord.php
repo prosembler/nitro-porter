@@ -174,7 +174,7 @@ class Discord extends Origin
     public function run(): void
     {
         // Discord-specific setup.
-        $this->input->setHeader('Authorization', 'Bot ' . $this->config['token']);
+        $this->inputStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
 
         // Users
         $this->users();
@@ -315,17 +315,17 @@ class Discord extends Origin
     {
         $start = microtime(true);
         $info = [];
-        $this->porterStorage->prepare('discord_user_roles', self::DB_STRUCTURE_USERROLES);
+        $this->outputStorage->prepare('discord_user_roles', self::DB_STRUCTURE_USERROLES);
 
-        $users = $this->sourceQB()->from('discord_users')->get(['id', 'roles'])->toArray();
+        $users = $this->outputQB()->from('discord_users')->get(['id', 'roles'])->toArray();
         foreach ($users as $user) {
             $roles = json_decode($user->roles); // Discord's array got auto-collapsed to JSON.
             foreach ($roles as $roleID) {
                 $row = ['user_id' => $user->id, 'role_id' => $roleID];
-                $info = $this->porterStorage->stream($row, self::DB_STRUCTURE_USERROLES, $info);
+                $info = $this->outputStorage->stream($row, self::DB_STRUCTURE_USERROLES, $info);
             }
         }
-        $this->porterStorage->stream([], [], $info, true);
+        $this->outputStorage->stream([], [], $info, true);
         Log::storage('extract', 'discord_user_roles', (microtime(true) - $start), $info['rows'], $info['memory'] ?? 0);
     }
 

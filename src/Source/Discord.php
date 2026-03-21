@@ -102,7 +102,7 @@ class Discord extends Source
             'derived_name' => 'Name', // prefer 1) nick 2) global_name 3) username
         ];
         $query = $this->sourceQB()->from('discord_users')
-            ->select()
+            ->select('discord_users.*')
             ->selectRaw('COALESCE(nick, COALESCE(global_name, username)) as derived_name');
         $this->export('User', $query, $map);
     }
@@ -125,7 +125,7 @@ class Discord extends Source
             'role_id' => 'RoleID',
         ];
         $query = $this->sourceQB()->from('discord_user_roles') // Intermediary table not from Origin.
-            ->select();
+            ->select('discord_user_roles.*');
         $this->export('UserRole', $query, $map);
     }
 
@@ -140,7 +140,7 @@ class Discord extends Source
                 self::CHANNEL_TYPE['GUILD_CATEGORY'],
                 self::CHANNEL_TYPE['GUILD_FORUM'],
                 self::CHANNEL_TYPE['GUILD_TEXT']
-            ])->select();
+            ])->select('discord_channels.*');
         $this->export('Category', $query, $map);
     }
 
@@ -152,20 +152,18 @@ class Discord extends Source
             'parent_id' => 'CategoryID',
             'owner_id' => 'InsertUserID',
         ];
+        $filters = [
+            'parent_id' => fn($val, $col, $row) // Text channels use 'id' as 'parent_id' — they are their own category.
+                => (Discord::CHANNEL_TYPE['GUILD_TEXT'] === $row['type']) ? $row['id'] : $row['parent_id']
+        ];
         $query = $this->sourceQB()->from('discord_channels')
             ->whereIn('type', [
                 self::CHANNEL_TYPE['PUBLIC_THREAD'],
-                self::CHANNEL_TYPE['GUILD_ANNOUNCEMENT']
+                self::CHANNEL_TYPE['GUILD_ANNOUNCEMENT'],
+                self::CHANNEL_TYPE['GUILD_TEXT']
             ])
-            ->select()
-            ->selectRaw('id as parent_id');
-        // Fold text channels into being both category + the discussion within it.
-        $textChannels = $this->sourceQB()->from('discord_channels')
-            ->where('type', '=', self::CHANNEL_TYPE['GUILD_TEXT'])
-            ->select()
-            ->selectRaw('id as parent_id');
-        $query->union($textChannels);
-        $this->export('Discussion', $query, $map);
+            ->select('discord_channels.*');
+        $this->export('Discussion', $query, $map, $filters);
     }
 
     protected function comments(): void
@@ -177,9 +175,9 @@ class Discord extends Source
             'authorid' => 'InsertUserID',
         ];
         $query = $this->sourceQB()->from('discord_messages')
-            ->select()
-            ->selectRaw('from_unixtime(timestamp) as DateInserted')
-            ->selectRaw('from_unixtime(edited_timestamp) as DateUpdated');
+            ->select('discord_messages.*')
+            ->selectRaw('timestamp(timestamp) as DateInserted')
+            ->selectRaw('timestamp(edited_timestamp) as DateUpdated');
         $this->export('Comment', $query, $map);
     }
 }

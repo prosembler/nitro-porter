@@ -24,6 +24,62 @@ abstract class Source extends Package
      */
     public array $limitedTables = [];
 
+    /** @var array|string[] List of PORT_ tables with primary keys. */
+    public const array FK_TABLES = [
+        'Activity',
+        'ActivityComment',
+        'ActivityType',
+        'Attachment',
+        'Badge',
+        'Category',
+        'Comment',
+        'Conversation',
+        'ConversationMessage', // Non-standard key name: 'MessageID'
+        'Discussion',
+        'Event',
+        'Group',
+        'GroupApplicant',
+        'Media',
+        'Poll',
+        'PollOption',
+        'Rank',
+        'Role',
+        'Status',
+        'Tag',
+        'User'
+    ];
+
+    /** @var array|string[] List of words that precede foreign key names (e.g. "InsertUserID") in Porter schema. */
+    public const array FK_ACTIONS = [
+        'Insert',
+        'Update',
+        'Delete',
+        'Invite',
+        'First',
+        'Last',
+        'parent',
+    ];
+
+    /**
+     * Activity.RecordID
+     * Attachment.ForeignID
+     * Attachment.SourceID
+     * Comment.parentRecordID
+     * Conversation.ForeignID
+     * Discussion.ForeignID
+     * Discussion.RegardingID
+     * Event.ParentRecordID
+     * Media.ForeignID
+     * UserNote.RecordID
+     * UserTag.RecordID
+     */
+    public const array VARIABLE_KEYS = [
+        'ForeignID',
+        'RecordID',
+        'SourceID',
+        'RegardingID',
+    ];
+
     /**
      * @var DbFactory Instance DbFactory
      * @deprecated
@@ -94,12 +150,104 @@ abstract class Source extends Package
         return $folder;
     }
 
-    // Source: translation table PORT_{table.nameID}
-    // join sourcetable ON srcID = portID
-    // map normally
-    public function renumber(string $table, string $column): void
+    /**
+     * Every primary key in Porter schema is named predictably except one. :-/
+     */
+    public function getPK(string $table): string
     {
-        // flag for export()
+        if ('ConversationMessage' === $table) {
+            return 'MessageID';
+        }
+        return $table . 'ID';
+    }
+
+    /**
+     * Get associated Porter schema table being referenced by a foreign key.
+     */
+    public function mapFK(string $foreignKey): string
+    {
+        // All FKs end in 'ID' — bail if not found, or remove it.
+        if (!str_ends_with($foreignKey, 'ID')) {
+            return '';
+        }
+        $base = substr($foreignKey, 0, -2);
+
+        // Handle then ConversationMessage edge case (assumes 'Message' appears in no other column).
+        $base = str_replace('Message', 'ConversationMessage', $base);
+
+        // $base is perhaps now one of:
+        //  - Simple {table}ID names: `UserID`, `DiscussionID`, `CommentID`
+        //  - Compound {action}{table}ID names: `InsertUserID`, `InviteUserID`, `parentCategoryID`
+        // so if we simply strip action words, we cover both cases
+        $base = str_replace(self::FK_ACTIONS, '', $base);
+
+        // ...but let's be sure it's valid because that logic is highly dependent on Porter's current schema.
+        if (in_array($base, self::FK_TABLES)) {
+            return $base;
+        }
+
+        Log::comment("Found invalid base table '$base' from foreign key '$foreignKey'");
+        return '';
+    }
+
+    /**
+     * Create & join index renumbering maps (from '1' or using the offsets provided).
+     */
+    public function renumber(string $tableName, Builder $query, array $map, array $filters, array $offsets): array
+    {
+        // PRIMARY KEYS
+        $portKey = $this->getPK($tableName);
+        if ($sourceKey = array_search($portKey, $map, true)) {
+            $start = microtime(true);
+
+            // Create PORT_ZNUM_{table} with `id` (indexed for joining) & `tableID` (auto-increment).
+            $keys = ['znum_index_' . $tableName . '_' . $sourceKey => [
+                'type' => 'index',
+                'columns' => [$sourceKey],
+            ]];
+            $structure = [$sourceKey => 'varchar(200)', $portKey => 'increments', 'keys' => $keys];
+            $this->porterStorage->prepare('ZNUM_' . $tableName, $structure);
+
+            // @todo Resepct the offsets
+
+            // Fill the translation table
+            $qb = $this->sourceQB()->from($query->from)->select($sourceKey)->orderBy($sourceKey);
+            $info = $this->porterStorage->store($tableName, [], $structure, $qb, []);
+            Log::storage('renumber', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
+
+            // Join src ON srcID = portID to overwrite the primary key / map on the fly
+            // If your ORIGIN lacks an index on its primary key, it will be painfully long to execute.
+            $table1 = 'PORT_ZNUM_' . $tableName . '.' . $sourceKey;
+            $table2 = $query->from . '.' . $sourceKey;
+            $query->leftJoin('PORT_ZNUM_' . $tableName, $table1, '=', $table2)
+                ->addSelect($portKey);
+                //->selectRaw('PORT_ZNUM_' . $tableName . '.id' . ' as ' . $portKey);
+
+            // Drop the renumbered key from the map (or the addSelect is overwritten)
+            unset($map[$sourceKey]);
+        }
+
+        // FOREIGN KEYS
+        // 1. Join consistent FKs.
+        foreach ($map as $sourceName => $portName) {
+            if ($portName === $portKey) {
+                continue; // It's a primary key not a foreign one.
+            }
+            if ($baseTable = $this->mapFK($portName)) {
+                //Log::comment("Found fk table '$baseTable' from '$portName'");
+                $table1 = 'PORT_ZNUM_' . $baseTable . '.id';
+                $table2 = $query->from . '.' . $sourceName;
+                $query->leftJoin('PORT_ZNUM_' . $baseTable, $table1, '=', $table2)
+                    ->selectRaw('PORT_ZNUM_' . $baseTable . '.' . $baseTable . 'ID as ' . $portName);
+                // Drop the renumbered key from the map (or the addSelect is overwritten)
+                unset($map[$sourceName]);
+            }
+        }
+
+        // 2. Join self::VARIABLE_KEYS by determining which PK we want
+        // @todo dynamically build IFs in SQL or add $filters.
+
+        return [$query, $map];
     }
 
     /**
@@ -126,22 +274,32 @@ abstract class Source extends Package
         // Start timer.
         $start = microtime(true);
 
-        // Validate table for export.
+        // Validate table structure exists.
         if (!array_key_exists($tableName, $this->porterStructure)) {
-            Log::comment("Error: $tableName is not a valid export.");
+            Log::comment("Error: $tableName is not a valid table for export.");
             return;
         }
+        $structure = $this->porterStructure[$tableName];
 
-        // Run the export query only if we got raw SQL from a legacy Source.
-        if (is_string($query)) {
+        // Pre-run the export query if it's raw SQL from a legacy Source.
+        if (is_string($query)) { // @todo remove this support after Sources are updated
             $data = $this->query($query);
             if (empty($data)) {
                 Log::comment("Error: No data found in $tableName.");
                 return;
             }
+            // NOT possible to renumber automatically for a legacy Source.
+            if ($this->getFlag('renumberIndices') === true) {
+                Log::comment("Notice: Cannot renumber index in $tableName.");
+            }
+            if (Config::getInstance()->mergeEnabled()) {
+                Log::comment("Notice: Cannot prepare merge for $tableName.");
+            }
+        } elseif ($this->getFlag('renumberIndices') === true || Config::getInstance()->mergeEnabled()) {
+            // Non-legacy Sources can get renumbered automatically if enabled.
+            $offsets = Config::getInstance()->getOffsets();
+            list($query, $map) = $this->renumber($tableName, $query, $map, $filters, $offsets);
         }
-
-        $structure = $this->porterStructure[$tableName];
 
         // Reconcile data structure to be written to storage.
         list($map, $legacyFilter) = $this->porterStorage->normalizeDataMap($map); // @todo Remove legacy filter usage.

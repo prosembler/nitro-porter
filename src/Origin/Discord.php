@@ -161,6 +161,11 @@ class Discord extends Origin
         ],
     ];
 
+    protected const array DB_STRUCTURE_USERROLES = [
+        'user_id' => 'bigint',
+        'role_id' => 'bigint',
+    ];
+
     /**
      * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
      * Current behavior is to REBUILD users & channels on every run, but RESUME messages from last ID.
@@ -174,6 +179,7 @@ class Discord extends Origin
         // Users
         $this->users();
         $this->roles();
+        $this->extractUserRoles();
 
         // Channels
         $this->channels();
@@ -300,6 +306,27 @@ class Discord extends Origin
     {
         $guildId = $this->getGuildId();
         $this->pull("guilds/$guildId", self::DB_STRUCTURE_ROLES, 'discord_roles', 'roles');
+    }
+
+    /**
+     * Generate intermediary table to unpack user role associations before 'normal' export.
+     */
+    protected function extractUserRoles(): void
+    {
+        $start = microtime(true);
+        $info = [];
+        $this->porterStorage->prepare('discord_user_roles', self::DB_STRUCTURE_USERROLES);
+
+        $users = $this->sourceQB()->from('discord_users')->get(['id', 'roles'])->toArray();
+        foreach ($users as $user) {
+            $roles = json_decode($user->roles); // Discord's array got auto-collapsed to JSON.
+            foreach ($roles as $roleID) {
+                $row = ['user_id' => $user->id, 'role_id' => $roleID];
+                $info = $this->porterStorage->stream($row, self::DB_STRUCTURE_USERROLES, $info);
+            }
+        }
+        $this->porterStorage->stream([], [], $info, true);
+        Log::storage('extract', 'discord_user_roles', (microtime(true) - $start), $info['rows'], $info['memory'] ?? 0);
     }
 
     /**

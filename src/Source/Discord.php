@@ -47,11 +47,6 @@ class Discord extends Source
         'GUILD_FORUM' => 15,
     ];
 
-    protected const array USERROLES_STRUCTURE = [
-        'user_id' => 'bigint',
-        'role_id' => 'bigint',
-    ];
-
     protected const array FLAGS = [
         'hasDiscussionBody' => false,
         //'fileTransferSupport' => true,
@@ -63,8 +58,6 @@ class Discord extends Source
      */
     public function run(): void
     {
-        $this->extractUserRoles();
-
         $this->users();
         $this->roles();
         $this->categories();
@@ -72,29 +65,6 @@ class Discord extends Source
         $this->comments();
     }
 
-    /**
-     * Generate intermediary table to unpack user role associations before 'normal' export.
-     */
-    public function extractUserRoles(): void
-    {
-        $start = microtime(true);
-        $info = [];
-        $this->porterStorage->prepare('discord_user_roles', self::USERROLES_STRUCTURE);
-
-        $users = $this->sourceQB()->from('discord_users')->get(['id', 'roles'])->toArray();
-        foreach ($users as $user) {
-            $roles = json_decode($user->roles); // Discord's array got auto-collapsed to JSON.
-            foreach ($roles as $roleID) {
-                $row = ['user_id' => $user->id, 'role_id' => $roleID];
-                $info = $this->porterStorage->stream($row, self::USERROLES_STRUCTURE, $info);
-            }
-        }
-        $this->porterStorage->stream([], [], $info, true);
-        Log::storage('extract', 'discord_user_roles', (microtime(true) - $start), $info['rows'], $info['memory'] ?? 0);
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $map = [

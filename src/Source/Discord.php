@@ -53,18 +53,6 @@ class Discord extends Source
         'renumberIndices' => true,  // @todo respect this flag
     ];
 
-    /**
-     * Main operation.
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-    }
-
     protected function users(): void
     {
         $map = [

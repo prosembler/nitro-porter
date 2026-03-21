@@ -53,8 +53,6 @@ class Discord extends Origin
 
     public const int MAX_CHANNEL_QUERIES = 10000; // Channels + threads.
 
-    public const int MAX_MESSAGE_QUERIES = 1000; // Per channel.
-
     public const array TEXT_CHANNEL_TYPES = [
         0 => 'GUILD_TEXT',
         5 => 'GUILD_ANNOUNCEMENT',
@@ -62,7 +60,6 @@ class Discord extends Origin
         15 => 'GUILD_FORUM',
     ];
 
-    /** @var array  */
     protected const array DB_STRUCTURE_USERS = [
         'nick' => 'varchar(100)',
         'avatar' => 'varchar(100)',
@@ -86,7 +83,6 @@ class Discord extends Origin
         ],
     ];
 
-    /** @var array */
     protected const array DB_STRUCTURE_ROLES = [
         'id' => 'varchar(100)',
         'name' => 'varchar(100)',
@@ -95,7 +91,6 @@ class Discord extends Origin
         'mentionable' => 'tinyint',
     ];
 
-    /** @var array  */
     protected const array DB_STRUCTURE_EMOJIS = [
         'id' => 'varchar(100)',
         'name' => 'varchar(100)',
@@ -103,7 +98,6 @@ class Discord extends Origin
         'animated' => 'tinyint',
     ];
 
-    /** @var array  */
     protected const array DB_STRUCTURE_CHANNELS = [
         'id' => 'varchar(100)',
         'type' => 'int', //@todo key?
@@ -197,19 +191,12 @@ class Discord extends Origin
         //$this->attachments();
     }
 
-    /**
-     * @return string
-     */
     private function getGuildId(): string
     {
         return $this->config['extra']['guild_id'];
     }
 
-    /**
-     * @param array $headers
-     * @param int $replySeconds
-     * @see Https::get() for handling of 429s via `retry-after` header.
-     */
+    /** @see Https::get() for handling of 429s via `retry-after` header. */
     private function rateLimit(array $headers, int $replySeconds = 0): void
     {
         // Get header info.
@@ -242,7 +229,6 @@ class Discord extends Origin
 
     /**
      * Get channel id list.
-     * @return array
      */
     private function getTextChannels(): array
     {
@@ -261,8 +247,6 @@ class Discord extends Origin
 
     /**
      * Get oldest message imported.
-     * @param int $channelID
-     * @return int
      */
     private function getLastMessageId(int $channelID): int
     {
@@ -273,15 +257,12 @@ class Discord extends Origin
         return $message->id ?? 0;
     }
 
-    /** @return array */
     private function getUserIDs(): array
     {
         return $this->outputQB()->from('discord_users')->get('id')->toArray();
     }
 
-    /**
-     * @see https://discord.com/developers/docs/resources/guild#list-guild-members
-     */
+    /** @see https://discord.com/developers/docs/resources/guild#list-guild-members */
     protected function users(): void
     {
         $query = ['limit' => '1000'];

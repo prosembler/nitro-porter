@@ -13,8 +13,8 @@ abstract class Origin extends Package
      * @throws \Exception
      */
     public function __construct(
-        protected Storage\Https $input, // Where the source data is from (read-only).
-        protected Storage\Database $output, // Where the data is being written.
+        protected Storage\Https $inputStorage, // Where the source data is from (read-only).
+        protected Storage\Database $outputStorage, // Where the data is being written.
         string $connectionAlias,
     ) {
         $this->config = Config::getInstance()->getConnectionAlias($connectionAlias);
@@ -27,7 +27,7 @@ abstract class Origin extends Package
      */
     protected function outputQB(): Builder
     {
-        return new Builder($this->output->getHandle());
+        return new Builder($this->outputStorage->getHandle());
     }
 
     /**
@@ -52,13 +52,13 @@ abstract class Origin extends Package
         $start = microtime(true);
 
         // Prepare the storage medium for the incoming structure.
-        $this->output->protectTable($tableName); // Do not reset data from origins every run.
-        $this->output->ignoreTable($tableName);  // Allow duplicate inserts.
-        $this->output->prepare($tableName, $fields);
+        $this->outputStorage->protectTable($tableName); // Do not reset data from origins every run.
+        $this->outputStorage->ignoreTable($tableName);  // Allow duplicate inserts.
+        $this->outputStorage->prepare($tableName, $fields);
 
         // Retrieve data from the origin.
         $split_send = microtime(true);
-        list($response, $headers) = $this->input->get($endpoint, $query);
+        list($response, $headers) = $this->inputStorage->get($endpoint, $query);
         $split_reply = microtime(true);
 
         // Discard the rest of the response if we only want a key's contents.
@@ -67,7 +67,7 @@ abstract class Origin extends Package
         }
 
         // Store the data.
-        $info = $this->output->store($tableName, $map, $fields, $response, []);
+        $info = $this->outputStorage->store($tableName, $map, $fields, $response, []);
 
         // Get first/last records for downstream logic.
         $info['last'] = end($response);

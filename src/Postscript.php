@@ -17,9 +17,6 @@ abstract class Postscript extends Package
     {
     }
 
-    /** Main process, custom per package. */
-    abstract public function run(): void;
-
     /**
      * Provide the output database connection.
      */

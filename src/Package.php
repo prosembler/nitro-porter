@@ -29,6 +29,7 @@ abstract class Package
         'renumberIndices' => false,
     ];
 
+    /** @var array|string[] Auto-run() this list of methods unless overwritten per-package. */
     protected const array MANIFEST = [
         // users
         'users', // inc. usermeta, signatures
@@ -68,7 +69,7 @@ abstract class Package
 
     protected bool $transferFiles = false;
 
-    /** Main process. */
+    /** Main process. Run the MANIFEST methods if not overridden. */
     public function run(): void
     {
         foreach (self::MANIFEST as $step) {

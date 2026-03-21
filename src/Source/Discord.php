@@ -82,7 +82,7 @@ class Discord extends Source
             'user_id' => 'UserID',
             'role_id' => 'RoleID',
         ];
-        $query = $this->sourceQB()->from('discord_user_roles') // Intermediary table not from Origin.
+        $query = $this->sourceQB()->from('discord_user_roles')
             ->select('discord_user_roles.*');
         $this->export('UserRole', $query, $map);
     }

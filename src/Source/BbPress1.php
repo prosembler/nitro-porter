@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class BbPress1 extends Source
 {
@@ -44,22 +43,20 @@ class BbPress1 extends Source
     /**
      * Forum-specific export format.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->conversations($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->conversations();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'ID' => 'UserID',
@@ -68,15 +65,14 @@ class BbPress1 extends Source
             'user_email' => 'Email',
             'user_registered' => 'DateInserted'
         );
-        $port->export('User', "select * from :_users", $user_Map);
+        $this->export('User', "select * from :_users", $user_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $port->export(
+        $this->export(
             'Role',
             "select 1 as RoleID, 'Guest' as Name
                  union select 2, 'Key Master'
@@ -91,7 +87,7 @@ class BbPress1 extends Source
         $userRole_Map = array(
             'user_id' => 'UserID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "select distinct user_id,
                 case when locate('keymaster', meta_value) <> 0 then 2
@@ -108,9 +104,8 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'forum_id' => 'CategoryID',
@@ -119,7 +114,7 @@ class BbPress1 extends Source
             'forum_slug' => 'UrlCode',
             'left_order' => 'Sort'
         );
-        $port->export(
+        $this->export(
             'Category',
             "select *,
                     lower(forum_slug) as forum_slug,
@@ -130,9 +125,8 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'topic_id' => 'DiscussionID',
@@ -143,7 +137,7 @@ class BbPress1 extends Source
             'topic_start_time' => 'DateInserted',
             'topic_sticky' => 'Announce'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select t.*,
                     'Html' as Format,
@@ -155,9 +149,8 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
@@ -167,7 +160,7 @@ class BbPress1 extends Source
             'poster_id' => 'InsertUserID',
             'post_time' => 'DateInserted'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select p.*,
                     'Html' as Format
@@ -178,18 +171,17 @@ class BbPress1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         // The export is different depending on the table layout.
-        $PM = $port->hasInputSchema('bbpm', ['ID', 'pm_title', 'pm_from', 'pm_to', 'pm_text', 'sent_on', 'pm_thread']);
+        $PM = $this->hasInputSchema('bbpm', ['ID', 'pm_title', 'pm_from', 'pm_to', 'pm_text', 'sent_on', 'pm_thread']);
         $conversationVersion = '';
 
         if ($PM === true) {
             // This is from an old version of the plugin.
             $conversationVersion = 'old';
-        } elseif ($port->hasInputSchema('bbpm', array('ID', 'pm_from', 'pm_text', 'sent_on', 'pm_thread'))) {
+        } elseif ($this->hasInputSchema('bbpm', array('ID', 'pm_from', 'pm_text', 'sent_on', 'pm_thread'))) {
             // This is from a newer version of the plugin.
             $conversationVersion = 'new';
         }
@@ -199,7 +191,7 @@ class BbPress1 extends Source
                 'pm_thread' => 'ConversationID',
                 'pm_from' => 'InsertUserID'
             );
-            $port->export(
+            $this->export(
                 'Conversation',
                 "select *, from_unixtime(sent_on) as DateInserted
             from :_bbpm
@@ -214,7 +206,7 @@ class BbPress1 extends Source
                 'pm_from' => 'InsertUserID',
                 'pm_text' => array('Column' => 'Body', 'Filter' => 'bbPressTrim')
             );
-            $port->export(
+            $this->export(
                 'ConversationMessage',
                 'select *, from_unixtime(sent_on) as DateInserted
                     from :_bbpm',
@@ -222,10 +214,10 @@ class BbPress1 extends Source
             );
 
             // UserConversation.
-            $port->query("create temporary table bbpmto (UserID int, ConversationID int)");
+            $this->query("create temporary table bbpmto (UserID int, ConversationID int)");
 
             if ($conversationVersion == 'new') {
-                $to = $port->query(
+                $to = $this->query(
                     "select object_id, meta_value
                         from :_meta
                         where object_type = 'bbpm_thread' and meta_key = 'to'"
@@ -240,17 +232,17 @@ class BbPress1 extends Source
                         }
                         $toIns = trim($toIns, ',');
 
-                        $port->query("insert bbpmto (UserID, ConversationID) values $toIns");
+                        $this->query("insert bbpmto (UserID, ConversationID) values $toIns");
                     }
 
-                    $port->export('UserConversation', 'select * from bbpmto');
+                    $this->export('UserConversation', 'select * from bbpmto');
                 }
             } else {
                 $conUser_Map = array(
                     'pm_thread' => 'ConversationID',
                     'pm_from' => 'UserID'
                 );
-                $port->export(
+                $this->export(
                     'UserConversation',
                     'select distinct
                             pm_thread,

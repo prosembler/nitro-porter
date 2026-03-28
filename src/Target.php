@@ -2,117 +2,53 @@
 
 namespace Porter;
 
-abstract class Target
+use Illuminate\Database\Connection;
+use Staudenmeir\LaravelCte\Query\Builder;
+
+abstract class Target extends Package
 {
-    public const SUPPORTED = [
-        'name' => '',
-        'defaultTablePrefix' => '',
-        'passwordHashMethod' => '',
-        'avatarsPrefix' => '',
-        'avatarThumbPrefix' => '',
-        'avatarPath' => '',
-        'avatarThumbPath' => '',
-        'attachmentPath' => '',
-        'attachmentThumbPath' => '',
-        'features' => [],
-    ];
-
-    /** @var array Settings that change Target behavior. */
-    protected const FLAGS = [];
-
-    /**
-     * If this is 'false', skip moving first post content to `Discussions.Body`.
-     *
-     * Do not change this default in child Targets.
-     * Use `'hasDiscussionBody' => false` in FLAGS to declare your Target can skip this step.
-     *
-     * @var bool
-     * @see Target::getDiscussionBodyMode()
-     * @see Target::skipDiscussionBody()
-     */
-    protected bool $useDiscussionBody = true;
-
+    /** @var ConnectionManager  */
     public ConnectionManager $connection;
 
-    /**
-     * Get support info of the target package.
-     *
-     * @return array
-     * @see Target::setSources()
-     */
-    public static function getSupport(): array
+    public function __construct(public ?Storage $porterStorage = null, public ?Storage $outputStorage = null)
     {
-        return static::SUPPORTED;
     }
 
     /**
-     * Get name of the target package.
-     *
-     * @return string
+     * Provide the output database connection.
      */
-    public static function getName(): string
+    public function dbPorter(): Connection
     {
-        return static::SUPPORTED['name'];
+        return $this->porterStorage->getHandle();
     }
 
     /**
-     * Get default table prefix of the target package.
-     *
-     * @return string
+     * Provide the output database connection.
      */
-    public static function getPrefix(): string
+    public function dbOutput(): Connection
     {
-        return static::SUPPORTED['defaultTablePrefix'];
+        return $this->outputStorage->getHandle();
     }
 
     /**
-     * Retrieve characteristics of the package.
-     *
-     * @param string $name
-     * @return mixed|null
+     * Provide a query builder for the porter database.
      */
-    public static function getFlag(string $name)
+    public function porterQB(): Builder
     {
-        return (isset(static::FLAGS[$name])) ? static::FLAGS[$name] : null;
+        return new Builder($this->dbPorter());
     }
-
-    /**
-     * @return bool
-     */
-    public function getDiscussionBodyMode(): bool
-    {
-        return $this->useDiscussionBody;
-    }
-
-    /**
-     * Set `useDiscussionBody` to false.
-     *
-     * @return void
-     */
-    public function skipDiscussionBody()
-    {
-        $this->useDiscussionBody = false;
-    }
-
-    /** Do the main process for imports, table by table. */
-    abstract public function run(Migration $port): void;
 
     /** Enforce data constraints required by the target platform. */
-    abstract public function validate(Migration $port): void;
+    abstract public function validate(): void;
 
     /**
      * Get current max value of a column on a table in output (target).
      *
      * Do not use porter (PORT_) tables because we may have added records elsewhere.
-     *
-     * @param string $name
-     * @param string $table
-     * @param Migration $ex
-     * @return int
      */
-    protected function getMaxValue(string $name, string $table, Migration $ex): int
+    protected function getMaxValue(string $name, string $table): int
     {
-        $max = $ex->dbOutput()->table($table)
+        $max = $this->dbOutput()->table($table)
             ->selectRaw('max(`' . $name . '`) as id')
             ->limit(1)->get()->pluck('id');
         return $max[0] ?? 0;
@@ -120,16 +56,11 @@ abstract class Target
 
     /**
      * Find duplicate records on the given table + column.
-     *
-     * @param string $table
-     * @param string $column
-     * @param Migration $port
-     * @return mixed[]
      */
-    protected function findDuplicates(string $table, string $column, Migration $port): array
+    protected function findDuplicates(string $table, string $column): array
     {
         $results = [];
-        $db = $port->dbPorter();
+        $db = $this->dbPorter();
         $duplicates = $db->table($table)
             ->select($column, $db->raw('count(' . $column . ') as found_count'))
             ->groupBy($column)
@@ -139,6 +70,41 @@ abstract class Target
             $results[] = $dupe->$column;
         }
         return $results;
+    }
+
+    /**
+     * Enforce unique usernames. Report users skipped (because of `insert ignore`).
+     *
+     * Unsure this could get automated fix. You'd have to determine which has/have data attached and possibly merge.
+     * You'd also need more data from findDuplicates, especially the IDs.
+     * Folks are just gonna need to manually edit their existing forum data for now to rectify dupe issues.
+     */
+    protected function uniqueUserNames(): void
+    {
+        $allowlist = [
+            '[Deleted User]',
+            '[DeletedUser]',
+            '-Deleted-User-',
+            '[Slettet bruker]', // Norwegian
+            '[Utilisateur supprimé]', // French
+        ]; // @see fixDuplicateDeletedNames()
+        $dupes = array_diff($this->findDuplicates('User', 'Name'), $allowlist);
+        if (!empty($dupes)) {
+            Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+        }
+    }
+
+    /**
+     * Enforce unique emails. Report users skipped (because of `insert ignore`).
+     * @see uniqueUserNames
+     *
+     */
+    protected function uniqueUserEmails(): void
+    {
+        $dupes = $this->findDuplicates('User', 'Email');
+        if (!empty($dupes)) {
+            Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+        }
     }
 
     /**
@@ -156,11 +122,10 @@ abstract class Target
         string $table,
         string $column,
         string $fnTable,
-        string $fnColumn,
-        Migration $port
+        string $fnColumn
     ): void {
         // `DELETE FROM $table WHERE $column NOT IN (SELECT $fnColumn FROM $fnTable)`
-        $db = $port->dbPorter();
+        $db = $this->dbPorter();
         $duplicates = $db->table($table)
             ->whereNotIn($column, $db->table($fnTable)->pluck($fnColumn))
             ->delete();
@@ -182,5 +147,61 @@ abstract class Target
             $folder = rtrim(Config::getInstance()->get('target_webroot'), '/') . '/' . trim($folder, '/');
         }
         return $folder;
+    }
+
+    /**
+     * Check if the output storage schema exists.
+     */
+    public function hasOutputSchema(string $table, array $columns = []): bool
+    {
+        return $this->outputStorage->exists($table, $columns);
+    }
+
+    /**
+     * Ignore duplicates for a SQL storage target table. Adds prefix for you.
+     */
+    public function ignoreOutputDuplicates(string $tableName): void
+    {
+        if (method_exists($this->outputStorage, 'ignoreTable')) {
+            $this->outputStorage->ignoreTable($tableName);
+        }
+    }
+
+    /**
+     * Check if the porter storage schema exists.
+     */
+    public function hasPortSchema(string $table, array $columns = []): bool
+    {
+        return $this->porterStorage->exists($table, $columns);
+    }
+
+    /**
+     * Create empty import tables.
+     */
+    public function importEmpty(string $tableName, array $structure): void
+    {
+        $this->outputStorage->prepare($tableName, $structure);
+    }
+
+    /**
+     * @param string $tableName
+     * @param Builder $exp Connected to porterStorage.
+     * @param array $struct
+     * @param array $map
+     * @param array $filters
+     */
+    public function import(string $tableName, Builder $exp, array $struct, array $map = [], array $filters = []): void
+    {
+        // Start timer.
+        $start = microtime(true);
+
+        // Prepare the storage medium for the incoming structure.
+        $this->outputStorage->prepare($tableName, $struct);
+
+        // Store the data.
+        $info = $this->outputStorage->store($tableName, $map, $struct, $exp, $filters);
+
+        // Report.
+        Log::storage('import', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
     }
 }

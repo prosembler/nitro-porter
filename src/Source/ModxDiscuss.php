@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class ModxDiscuss extends Source
 {
@@ -53,24 +52,22 @@ class ModxDiscuss extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->userMeta($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->users();
+        $this->roles();
+        $this->userMeta();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
-        $port->export(
+        $this->export(
             'User',
             "select
                     u.user as UserID,
@@ -93,12 +90,11 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         // Roles do not exist in Discuss. Really simple matchup.
-        $port->export(
+        $this->export(
             'UserRole',
             "select
                     u.user as UserID,
@@ -109,11 +105,10 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function userMeta(Migration $port): void
+    protected function userMeta(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     user as UserID,
@@ -146,11 +141,10 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
-        $port->export(
+        $this->export(
             'Category',
             "select
                     id as CategoryID,
@@ -173,15 +167,14 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'title2' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
         );
         // It's easier to convert between Unix time and MySQL datestamps during the db query.
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     t.id as `DiscussionID`,
@@ -205,11 +198,10 @@ class ModxDiscuss extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
-        $port->export(
+        $this->export(
             'Comment',
             'select
                     p.id as CommentID,

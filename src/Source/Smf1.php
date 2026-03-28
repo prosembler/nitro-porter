@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Smf1 extends Source
 {
@@ -57,17 +56,16 @@ class Smf1 extends Source
     /**
      * Forum-specific export format.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->attachments($port);
-        $this->conversations($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->attachments();
+        $this->conversations();
     }
 
     public function decodeNumericEntity(string $text): array|false|string|null
@@ -121,9 +119,8 @@ class Smf1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'ID_MEMBER' => 'UserID',
@@ -139,7 +136,7 @@ class Smf1 extends Source
             'DateLastActive' => 'DateLastActive',
             'DateUpdated' => 'DateUpdated'
         );
-        $port->export(
+        $this->export(
             'User',
             "select m.*,
                     from_unixtime(dateRegistered) as DateInserted,
@@ -155,33 +152,31 @@ class Smf1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'ID_GROUP' => 'RoleID',
             'groupName' => 'Name'
         );
-        $port->export('Role', "select * from :_membergroups", $role_Map);
+        $this->export('Role', "select * from :_membergroups", $role_Map);
 
         // UserRoles
         $userRole_Map = array(
             'ID_MEMBER' => 'UserID',
             'ID_GROUP' => 'RoleID'
         );
-        $port->export('UserRole', "select * from :_members", $userRole_Map);
+        $this->export('UserRole', "select * from :_members", $userRole_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'Name' => array('Column' => 'Name', 'Filter' => array($this, 'decodeNumericEntity')),
         );
-        $port->export(
+        $this->export(
             'Category',
             "select
                     (`ID_CAT` + 1000000) as `CategoryID`,
@@ -203,9 +198,8 @@ class Smf1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'ID_TOPIC' => 'DiscussionID',
@@ -227,7 +221,7 @@ class Smf1 extends Source
             'LastCommentUserID' => 'LastCommentUserID',
             'ID_LAST_MSG' => 'LastCommentID'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select t.*,
                     (t.numReplies + 1) as CountComments,
@@ -249,9 +243,8 @@ class Smf1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'ID_MSG' => 'CommentID',
@@ -261,7 +254,7 @@ class Smf1 extends Source
             'ID_MEMBER' => 'InsertUserID',
             'DateInserted' => 'DateInserted'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select m.*,
                     from_unixtime(m.posterTime) AS DateInserted,
@@ -274,9 +267,8 @@ class Smf1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $media_Map = array(
             'ID_ATTACH' => 'MediaID',
@@ -293,7 +285,7 @@ class Smf1 extends Source
             'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
             'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
         );
-        $port->export(
+        $this->export(
             'Media',
             "select a.*,
                     concat('attachments/', a.filename) as Path,
@@ -311,12 +303,11 @@ class Smf1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
 // Conversations need a bit more conversion so execute a series of queries for that.
-        $port->query(
+        $this->query(
             'create table :_smfpmto (
                 id int,
                 to_id int,
@@ -324,7 +315,7 @@ class Smf1 extends Source
                 primary key(id, to_id)
             )'
         );
-        $port->query(
+        $this->query(
             'insert :_smfpmto (
                 id,
                 to_id,
@@ -336,7 +327,7 @@ class Smf1 extends Source
                 deletedBySender
             from :_personal_messages'
         );
-        $port->query(
+        $this->query(
             'insert ignore :_smfpmto (
                 id,
                 to_id,
@@ -349,7 +340,7 @@ class Smf1 extends Source
             from :_pm_recipients'
         );
 
-        $port->query(
+        $this->query(
             'create table :_smfpmto2 (
                 id int,
                 to_ids varchar(255),
@@ -357,7 +348,7 @@ class Smf1 extends Source
             )'
         );
 
-        $port->query(
+        $this->query(
             'insert :_smfpmto2 (
                 id,
                 to_ids
@@ -370,7 +361,7 @@ class Smf1 extends Source
             group by id'
         );
 
-        $port->query(
+        $this->query(
             'create table :_smfpm (
                 id int,
                 group_id int,
@@ -381,10 +372,10 @@ class Smf1 extends Source
             )'
         );
 
-        $port->query('create index :_idx_smfpm2 on :_smfpm (subject2, from_id)');
-        $port->query('create index :_idx_smfpmg on :_smfpm (group_id)');
+        $this->query('create index :_idx_smfpm2 on :_smfpm (subject2, from_id)');
+        $this->query('create index :_idx_smfpmg on :_smfpm (group_id)');
 
-        $port->query(
+        $this->query(
             'insert :_smfpm (
                 id,
                 subject,
@@ -403,7 +394,7 @@ class Smf1 extends Source
                 on pm.ID_PM = to2.id'
         );
 
-        $port->query(
+        $this->query(
             'create table :_smfgroups (
               id int primary key,
               subject2 varchar(200),
@@ -411,7 +402,7 @@ class Smf1 extends Source
             )'
         );
 
-        $port->query(
+        $this->query(
             'insert :_smfgroups
             select
                 min(id) as group_id, subject2, to_ids
@@ -419,9 +410,9 @@ class Smf1 extends Source
             group by subject2, to_ids'
         );
 
-        $port->query('create index :_idx_smfgroups on :_smfgroups (subject2, to_ids)');
+        $this->query('create index :_idx_smfgroups on :_smfgroups (subject2, to_ids)');
 
-        $port->query(
+        $this->query(
             'update :_smfpm pm
                 join :_smfgroups g
                     on pm.subject2 = g.subject2 and pm.to_ids = g.to_ids
@@ -435,7 +426,7 @@ class Smf1 extends Source
             'DateInserted' => 'DateInserted',
             'subject2' => array('Column' => 'Subject', 'Type' => 'varchar(255)')
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select
                     pm.group_id,
@@ -457,7 +448,7 @@ class Smf1 extends Source
             'from_id' => 'InsertUserID',
             'body' => array('Column' => 'Body')
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select
                 pm.id,
@@ -478,7 +469,7 @@ class Smf1 extends Source
             'group_id' => 'ConversationID',
             'deleted' => 'Deleted'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "select
                     pm.group_id,
@@ -490,9 +481,9 @@ class Smf1 extends Source
             $userConv_Map
         );
 
-        $port->query('drop table :_smfpm');
-        $port->query('drop table :_smfpmto');
-        $port->query('drop table :_smfpmto2');
-        $port->query('drop table :_smfgroups');
+        $this->query('drop table :_smfpm');
+        $this->query('drop table :_smfpmto');
+        $this->query('drop table :_smfpmto2');
+        $this->query('drop table :_smfgroups');
     }
 }

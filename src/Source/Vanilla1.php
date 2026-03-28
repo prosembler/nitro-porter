@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Vanilla1 extends Source
 {
@@ -68,17 +67,16 @@ class Vanilla1 extends Source
     /**
      * Forum-specific export format
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->conversations($port);
-        $this->comments($port);
-        $this->attachments($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->conversations();
+        $this->comments();
+        $this->attachments();
     }
 
     /**
@@ -108,9 +106,8 @@ class Vanilla1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'UserID' => 'UserID',
@@ -121,16 +118,15 @@ class Vanilla1 extends Source
             'CountComments' => 'CountComments',
             'Discovery' => 'DiscoveryText'
         );
-        $port->export('User', "SELECT * FROM :_User", $user_Map);  // ":_" will be replaced by database prefix
+        $this->export('User', "SELECT * FROM :_User", $user_Map);  // ":_" will be replaced by database prefix
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         // Since the zero role is a valid role in Vanilla 1 then we'll have to reassign it.
-        $r = $port->query('select max(RoleID) as RoleID from :_Role');
+        $r = $this->query('select max(RoleID) as RoleID from :_Role');
         $zeroRoleID = 0;
         if (is_object($r)) {
             while ($row = $r->nextResultRow()) {
@@ -144,7 +140,7 @@ class Vanilla1 extends Source
             'Name' => 'Name',
             'Description' => 'Description'
         );
-        $port->export(
+        $this->export(
             'Role',
             "select RoleID, Name, Description
                 from :_Role
@@ -158,7 +154,7 @@ class Vanilla1 extends Source
             'UserID' => 'UserID',
             'RoleID' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "select UserID, case RoleID when 0 then $zeroRoleID else RoleID end as RoleID from :_User",
             $userRole_Map
@@ -166,22 +162,20 @@ class Vanilla1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'CategoryID' => 'CategoryID',
             'Name' => 'Name',
             'Description' => 'Description'
         );
-        $port->export('Category', "select CategoryID, Name, Description from :_Category", $category_Map);
+        $this->export('Category', "select CategoryID, Name, Description from :_Category", $category_Map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'DiscussionID' => 'DiscussionID',
@@ -198,7 +192,7 @@ class Vanilla1 extends Source
             'Sink' => 'Sink',
             'LastUserID' => 'LastCommentUserID'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "SELECT d.*,
                     d.LastUserID as LastCommentUserID,
@@ -212,7 +206,7 @@ class Vanilla1 extends Source
             $discussion_Map
         );
 
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "SELECT
                     w.UserID,
@@ -227,9 +221,8 @@ class Vanilla1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'CommentID' => 'CommentID',
@@ -241,7 +234,7 @@ class Vanilla1 extends Source
             'Body' => 'Body',
             'FormatType' => 'Format'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "SELECT c.*
                  FROM :_Comment c
@@ -256,33 +249,32 @@ class Vanilla1 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         // These mapping tables are used to group comments that a) are in the same discussion
         // and b) are from and to the same users.
-        $port->query("drop table if exists z_pmto");
-        $port->query(
+        $this->query("drop table if exists z_pmto");
+        $this->query(
             "create table z_pmto (
                     CommentID int,
                     UserID int,
                 primary key(CommentID, UserID)
             )"
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (CommentID, UserID)
                 select distinct CommentID, AuthUserID
                 from :_Comment
                 where coalesce(WhisperUserID, 0) <> 0"
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (CommentID, UserID)
                 select distinct CommentID, WhisperUserID
                 from :_Comment
                 where coalesce(WhisperUserID, 0) <> 0"
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (CommentID, UserID)
                 select distinct c.CommentID, d.AuthUserID
                 from :_Discussion d
@@ -290,7 +282,7 @@ class Vanilla1 extends Source
                     on c.DiscussionID = d.DiscussionID
                 where coalesce(d.WhisperUserID, 0) <> 0"
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (CommentID, UserID)
                 select distinct c.CommentID, d.WhisperUserID
                 from :_Discussion d
@@ -298,7 +290,7 @@ class Vanilla1 extends Source
                     on c.DiscussionID = d.DiscussionID
                 where coalesce(d.WhisperUserID, 0) <> 0"
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pmto (CommentID, UserID)
                 select distinct c.CommentID, c.AuthUserID
                 from :_Discussion d
@@ -307,23 +299,23 @@ class Vanilla1 extends Source
                 where coalesce(d.WhisperUserID, 0) <> 0"
         );
 
-        $port->query("drop table if exists z_pmto2");
-        $port->query(
+        $this->query("drop table if exists z_pmto2");
+        $this->query(
             "create table z_pmto2 (
               CommentID int,
               UserIDs varchar(250),
               primary key (CommentID)
             )"
         );
-        $port->query(
+        $this->query(
             "insert z_pmto2 (CommentID, UserIDs)
                 select CommentID, group_concat(UserID order by UserID)
                 from z_pmto
                 group by CommentID"
         );
 
-        $port->query("drop table if exists z_pm");
-        $port->query(
+        $this->query("drop table if exists z_pm");
+        $this->query(
             "create table z_pm (
               CommentID int,
               DiscussionID int,
@@ -331,13 +323,13 @@ class Vanilla1 extends Source
               GroupID int
             )"
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pm (CommentID, DiscussionID)
                 select CommentID, DiscussionID
                 from :_Comment
                 where coalesce(WhisperUserID, 0) <> 0"
         );
-        $port->query(
+        $this->query(
             "insert ignore z_pm (CommentID, DiscussionID)
                 select c.CommentID, c.DiscussionID
                 from :_Discussion d
@@ -345,22 +337,22 @@ class Vanilla1 extends Source
                     on c.DiscussionID = d.DiscussionID
                 where coalesce(d.WhisperUserID, 0) <> 0"
         );
-        $port->query(
+        $this->query(
             "update z_pm pm
                 join z_pmto2 t
                     on t.CommentID = pm.CommentID
                 set pm.UserIDs = t.UserIDs"
         );
 
-        $port->query("drop table if exists z_pmgroup");
-        $port->query(
+        $this->query("drop table if exists z_pmgroup");
+        $this->query(
             "create table z_pmgroup (
                 GroupID int,
                 DiscussionID int,
                 UserIDs varchar(250)
             )"
         );
-        $port->query(
+        $this->query(
             "insert z_pmgroup (GroupID, DiscussionID, UserIDs)
                 select min(pm.CommentID), pm.DiscussionID, t2.UserIDs
                 from z_pm pm
@@ -369,10 +361,10 @@ class Vanilla1 extends Source
                 group by pm.DiscussionID, t2.UserIDs"
         );
 
-        $port->query("create index z_idx_pmgroup on z_pmgroup (DiscussionID, UserIDs)");
-        $port->query("create index z_idx_pmgroup2 on z_pmgroup (GroupID)");
+        $this->query("create index z_idx_pmgroup on z_pmgroup (DiscussionID, UserIDs)");
+        $this->query("create index z_idx_pmgroup2 on z_pmgroup (GroupID)");
 
-        $port->query(
+        $this->query(
             "update z_pm pm
                 join z_pmgroup g
                     on pm.DiscussionID = g.DiscussionID and pm.UserIDs = g.UserIDs
@@ -386,7 +378,7 @@ class Vanilla1 extends Source
             'CommentID' => 'ConversationID',
             'Name' => array('Column' => 'Subject', 'Type' => 'varchar(255)')
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select c.*, d.Name
                 from :_Comment c
@@ -406,7 +398,7 @@ class Vanilla1 extends Source
             'AuthUserID' => 'InsertUserID',
             'DateCreated' => 'DateInserted'
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select c.*, pm.GroupID
                 from z_pm pm
@@ -420,7 +412,7 @@ class Vanilla1 extends Source
             'UserID' => 'UserID',
             'GroupID' => 'ConversationID'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "select distinct
                     pm.GroupID,
@@ -431,18 +423,17 @@ class Vanilla1 extends Source
             $userConversation_Map
         );
 
-        $port->query("drop table z_pmto");
-        $port->query("drop table z_pmto2");
-        $port->query("drop table z_pm");
-        $port->query("drop table z_pmgroup");
+        $this->query("drop table z_pmto");
+        $this->query("drop table z_pmto2");
+        $this->query("drop table z_pm");
+        $this->query("drop table z_pmgroup");
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
-        if ($port->hasInputSchema('Attachment')) {
+        if ($this->hasInputSchema('Attachment')) {
             $media_Map = array(
                 'AttachmentID' => 'MediaID',
                 'Name' => 'Name',
@@ -454,7 +445,7 @@ class Vanilla1 extends Source
                 'CommentID' => 'ForeignID'
                 //'ForeignTable'
             );
-            $port->export(
+            $this->export(
                 'Media',
                 "select a.*, 'comment' as ForeignTable from :_Attachment a",
                 $media_Map

@@ -15,7 +15,6 @@ namespace Porter\Source;
 
 use Porter\Log;
 use Porter\Source;
-use Porter\Migration;
 
 class FuseTalk extends Source
 {
@@ -51,18 +50,17 @@ class FuseTalk extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->createIndices($port); // Speed up the export.
-        $this->users($port);
-        $this->signatures($port);
-        $this->roles($port);
-        $this->conversations($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->createIndices(); // Speed up the export.
+        $this->users();
+        $this->signatures();
+        $this->roles();
+        $this->conversations();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
@@ -90,44 +88,42 @@ class FuseTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function createIndices(Migration $port): void
+    protected function createIndices(): void
     {
         Log::comment("Creating indexes... ");
 
-        if (!$port->indexExists('ix_users_userid', ':_users')) {
-            $port->query('create index ix_users_userid on :_users (iuserid)');
+        if (!$this->indexExists('ix_users_userid', ':_users')) {
+            $this->query('create index ix_users_userid on :_users (iuserid)');
         }
-        if (!$port->indexExists('ix_banning_banstring', ':_banning')) {
-            $port->query('create index ix_banning_banstring on :_banning (vchbanstring)');
+        if (!$this->indexExists('ix_banning_banstring', ':_banning')) {
+            $this->query('create index ix_banning_banstring on :_banning (vchbanstring)');
         }
-        if (!$port->indexExists('ix_forumusers_userid', ':_forumusers')) {
-            $port->query('create index ix_forumusers_userid on :_forumusers (iuserid)');
+        if (!$this->indexExists('ix_forumusers_userid', ':_forumusers')) {
+            $this->query('create index ix_forumusers_userid on :_forumusers (iuserid)');
         }
-        if (!$port->indexExists('ix_groupusers_userid', ':_groupusers')) {
-            $port->query('create index ix_groupusers_userid on :_groupusers (iuserid)');
+        if (!$this->indexExists('ix_groupusers_userid', ':_groupusers')) {
+            $this->query('create index ix_groupusers_userid on :_groupusers (iuserid)');
         }
-        if (!$port->indexExists('ix_privatemessages_vchusagestatus', ':_privatemessages')) {
-            $port->query('create index ix_privatemessages_vchusagestatus on :_privatemessages (vchusagestatus)');
+        if (!$this->indexExists('ix_privatemessages_vchusagestatus', ':_privatemessages')) {
+            $this->query('create index ix_privatemessages_vchusagestatus on :_privatemessages (vchusagestatus)');
         }
-        if (!$port->indexExists('ix_threads_id_pollflag', ':_threads')) {
-            $port->query('create index ix_threads_id_pollflag on :_threads (ithreadid, vchpollflag)');
+        if (!$this->indexExists('ix_threads_id_pollflag', ':_threads')) {
+            $this->query('create index ix_threads_id_pollflag on :_threads (ithreadid, vchpollflag)');
         }
-        if (!$port->indexExists('ix_threads_poll', ':_threads')) {
-            $port->query('create index ix_threads_poll on :_threads (vchpollflag)');
+        if (!$this->indexExists('ix_threads_poll', ':_threads')) {
+            $this->query('create index ix_threads_poll on :_threads (vchpollflag)');
         }
 
         Log::comment("Indexes done!");
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array();
-        $port->export(
+        $this->export(
             'User',
             "select
                     user.iuserid as UserID,
@@ -152,11 +148,10 @@ class FuseTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     user.iuserid as UserID,
@@ -175,18 +170,17 @@ class FuseTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $memberRoleID = 1;
-        $result = $port->query("select max(igroupid) as maxRoleID from :_groups");
+        $result = $this->query("select max(igroupid) as maxRoleID from :_groups");
         if ($row = $result->nextResultRow()) {
             $memberRoleID += $row['maxRoleID'];
         }
 
         // Role.
-        $port->export(
+        $this->export(
             'Role',
             "select
                     groups.igroupid as RoleID,
@@ -200,7 +194,7 @@ class FuseTalk extends Source
         );
 
         // User Role.
-        $port->export(
+        $this->export(
             'UserRole',
             "select
                     user.iuserid as UserID,
@@ -211,12 +205,11 @@ class FuseTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
-        $port->query("drop table if exists zConversations;");
-        $port->query(
+        $this->query("drop table if exists zConversations;");
+        $this->query(
             "
             create table zConversations(
                 `ConversationID` int(11) not null AUTO_INCREMENT,
@@ -228,7 +221,7 @@ class FuseTalk extends Source
             );
         "
         );
-        $port->query(
+        $this->query(
             "insert into zConversations(`User1`, `User2`, `DateInserted`)
                 select
                     if (pm.iuserid < pm.iownerid, pm.iuserid, pm.iownerid) as User1,
@@ -241,7 +234,7 @@ class FuseTalk extends Source
         );
 
         // Conversations.
-        $port->export(
+        $this->export(
             'Conversation',
             "select
                     c.ConversationID as ConversationID,
@@ -254,7 +247,7 @@ class FuseTalk extends Source
         $conversationMessage_Map = array(
             'txmessage' => array('Column' => 'Body', 'Filter' => array($this, 'fixSmileysURL')),
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select
                     pm.imessageid as MessageID,
@@ -281,7 +274,7 @@ class FuseTalk extends Source
         );
 
         // User Conversation.
-        $port->export(
+        $this->export(
             'UserConversation',
             "select
                     c.ConversationID,
@@ -298,11 +291,10 @@ class FuseTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
-        $port->export(
+        $this->export(
             'Category',
             "select
                     categories.icategoryid as CategoryID,
@@ -314,13 +306,12 @@ class FuseTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         // Skip "Body". It will be fixed at import.
         // The first comment is going to be used to fill the missing data and will then be deleted
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     threads.ithreadid as DiscussionID,
@@ -336,16 +327,15 @@ class FuseTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         // The iparentid column doesn't make any sense since the display is ordered by date only
         // (there are no "sub" comment)
         $comment_Map = array(
             'txmessage' => array('Column' => 'Body', 'Filter' => array($this, 'fixSmileysURL')),
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     messages.imessageid as CommentID,

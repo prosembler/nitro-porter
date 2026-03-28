@@ -12,35 +12,40 @@ namespace Porter;
 class Controller
 {
     /**
-     * Export workflow.
-     *
-     * @param Source $source
-     * @param Migration $port
+     * @var bool Whether to capture SQL without executing.
      */
-    protected function doExport(Source $source, Migration $port): void
+    public bool $captureOnly = false;
+
+    /**
+     * Export workflow.
+     */
+    protected function doExport(Source $source): void
     {
-        $port->verifySource($source->sourceTables);
+        $source->verifySource($source->sourceTables);
         if (!defined('PORTER_INPUT_ENCODING')) {
-            define('PORTER_INPUT_ENCODING', $port->getInputEncoding($source::getCharsetTable()));
+            define('PORTER_INPUT_ENCODING', $source->getInputEncoding($source::getCharsetTable()));
         }
 
-        $port->begin();
-        $source->run($port);
-        $port->end();
+        if (!$this->captureOnly) {
+            $source->porterStorage->begin();
+        }
+
+        $source->run();
+        if (method_exists($source, 'validate')) {
+            $source->validate(); // New; no need for $port & not required via abstract for bc.
+        }
+        $source->porterStorage->end();
     }
 
     /**
      * Import workflow.
-     *
-     * @param Target $target
-     * @param Migration $port
      */
-    protected function doImport(Target $target, Migration $port): void
+    protected function doImport(Target $target): void
     {
-        $port->begin();
-        $target->validate($port);
-        $target->run($port);
-        $port->end();
+        $target->outputStorage->begin();
+        $target->validate();
+        $target->run();
+        $target->outputStorage->end();
     }
 
     /**
@@ -48,17 +53,16 @@ class Controller
      *
      * Use a separate database connection since re-querying data may be necessary.
      *    -> "Cannot execute queries while other unbuffered queries are active."
-     *
-     * @param Postscript $postscript
-     * @param Migration $port
      */
-    protected function doPostscript(Postscript $postscript, Migration $port): void
+    protected function doPostscript(Postscript $postscript): void
     {
-        $postscript->run($port);
+        $postscript->run();
     }
 
     /**
      * Do some intelligent configuration of the migration process.
+     *
+     * This is the ONLY opportunity for the source & target to "coordinate."
      *
      * @param Source $source
      * @param Target $target
@@ -73,6 +77,15 @@ class Controller
         ) {
             $source->skipDiscussionBody();
             $target->skipDiscussionBody();
+        }
+
+        // Evaluate if both packages have file transfer support and sync them.
+        if (
+            $source::getFlag('fileTransferSupport') === true &&
+            $target::getFlag('fileTransferSupport') === true
+        ) {
+            $source->enableFileTransfer();
+            $target->enableFileTransfer();
         }
     }
 
@@ -94,11 +107,23 @@ class Controller
         $dataTypes = $request->getDatatypes();
 
         // Create new migration artifacts.
-        $port = migrationFactory($inputName, $outputName, $sourcePrefix, $targetPrefix, $dataTypes);
-        $source = sourceFactory($sourceName);
-        $target = targetFactory($targetName);
-        $postscript = postscriptFactory($targetName);
+        $inputStorage = storageFactory($inputName, $sourcePrefix);
+        $porterStorage = storageFactory($outputName, 'PORT_');
+        $outputStorage = storageFactory($outputName, $targetPrefix);
+        $postscriptStorage = storageFactory($outputName, $targetPrefix);
+
+        $source = sourceFactory($sourceName, $inputStorage, $porterStorage);
+        $target = targetFactory($targetName, $porterStorage, $outputStorage);
+        $postscript = postscriptFactory($targetName, $outputStorage, $postscriptStorage);
         $fileTransfer = fileTransferFactory($source, $target, $outputName);
+
+        // Set constraints.
+        $source->limitTables($dataTypes);
+        $this->captureOnly = ($outputName === 'sql');
+
+        // Add legacy database support to Sources.
+        $inputDB = new \Porter\Database\DbFactory(new ConnectionManager($inputName)->connection()->getPDO());
+        $source->addLegacySupport($inputDB);
 
         // Report on request.
         Log::comment("NITRO PORTER RUNNING...");
@@ -124,14 +149,14 @@ class Controller
         ) . "\n");
 
         // Export (Source -> `PORT_`).
-        $this->doExport($source, $port);
+        $this->doExport($source);
 
         // Import (`PORT_` -> Target).
         if ($target) {
-            $this->doImport($target, $port);
+            $this->doImport($target);
             // Postscript names must match target names currently.
             if ($postscript) {
-                $this->doPostscript($postscript, $port);
+                $this->doPostscript($postscript);
             }
         }
 
@@ -150,5 +175,47 @@ class Controller
         ));
         Log::comment("[ After testing, you may delete any `PORT_` database tables. ]");
         Log::comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
+    }
+
+    /**
+     * Data pull from origin workflow.
+     *
+     * @param Request $request
+     * @throws \Exception
+     */
+    public function pull(Request $request): void
+    {
+        // Break down the Request.
+        $originName = $request->getOrigin();
+        $inputName = $request->getInput();
+
+        // Create new migration artifacts.
+        $inputStorage = new Storage\Database(new ConnectionManager($inputName));
+        $originStorage = new Storage\Https(new ConnectionManager($originName)); // @todo non-API origins
+        $origin = originFactory($originName, $originStorage, $inputStorage);
+
+        // Report on request.
+        Log::comment("NITRO PORTER PULLING...");
+        Log::comment("Pulling " . $originName . " into " . $inputName);
+
+        // Setup.
+        set_time_limit(0);
+
+        // Report start.
+        $start = microtime(true);
+        Log::comment("\n" . sprintf(
+            '[ STARTED at %s ]',
+            date('H:i:s e')
+        ) . "\n");
+
+        // Do the pull.
+        $origin->run();
+
+        // Report finished.
+        Log::comment("\n" . sprintf(
+            '[ FINISHED at %s after running for %s ]',
+            date('H:i:s e'),
+            formatElapsed(microtime(true) - $start)
+        ));
     }
 }

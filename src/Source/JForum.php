@@ -10,7 +10,6 @@ namespace Porter\Source;
 
 use Porter\Log;
 use Porter\Source;
-use Porter\Migration;
 
 class JForum extends Source
 {
@@ -52,34 +51,32 @@ class JForum extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->userMeta($port);
+        $this->users();
+        $this->roles();
+        $this->userMeta();
 
-        $this->categories($port);
-        if ($port->hasInputSchema(':_posts_text')) {
+        $this->categories();
+        if ($this->hasInputSchema(':_posts_text')) {
             $postTextColumm = 't.post_text as Body';
             $postTextSource = 'left join :_posts_text t on p.post_id = t.post_id';
         } else {
             $postTextColumm = 'p.post_text as Body';
             $postTextSource = '';
         }
-        $this->discussions($port, $postTextColumm, $postTextSource);
-        $this->comments($port, $postTextColumm, $postTextSource);
-        $this->bookmarks($port);
-        $this->conversations($port);
+        $this->discussions($postTextColumm, $postTextSource);
+        $this->comments($postTextColumm, $postTextSource);
+        $this->bookmarks();
+        $this->conversations();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
-        $port->export(
+        $this->export(
             'User',
             "select
                     u.user_id as UserID,
@@ -98,11 +95,10 @@ class JForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $port->export(
+        $this->export(
             'Role',
             "
             select
@@ -113,7 +109,7 @@ class JForum extends Source
         );
 
         // User Role.
-        $port->export(
+        $this->export(
             'UserRole',
             "
             select
@@ -124,11 +120,10 @@ class JForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function userMeta(Migration $port): void
+    protected function userMeta(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     user_id as UserID,
@@ -168,13 +163,12 @@ class JForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
 // _categories is tier 1, _forum is tier 2.
         // Overlapping IDs, so fast-forward _categories by 1000.
-        $port->export(
+        $this->export(
             'Category',
             "select
                     c.categories_id+1000 as CategoryID,
@@ -197,17 +191,16 @@ class JForum extends Source
     }
 
     /**
-     * @param Migration $port
      * @param string $postTextColumm
      * @param string $postTextSource
      */
-    protected function discussions(Migration $port, string $postTextColumm, string $postTextSource): void
+    protected function discussions(string $postTextColumm, string $postTextSource): void
     {
         $discussion_Map = array(
             'topic_title' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
         );
         // It's easier to convert between Unix time and MySQL datestamps during the db query.
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     t.topic_id as DiscussionID,
@@ -229,13 +222,12 @@ class JForum extends Source
     }
 
     /**
-     * @param Migration $port
      * @param string $postTextColumm
      * @param string $postTextSource
      */
-    protected function comments(Migration $port, string $postTextColumm, string $postTextSource): void
+    protected function comments(string $postTextColumm, string $postTextSource): void
     {
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     p.post_id as CommentID,
@@ -254,16 +246,15 @@ class JForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function bookmarks(Migration $port): void
+    protected function bookmarks(): void
     {
         // Guessing table is called "_watch" because they are all bookmarks.
         $userDiscussion_Map = array(
             'topic_id' => 'DiscussionID',
             'user_id' => 'UserID',
         );
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "select
                     w.topic_id as DiscussionID,
@@ -276,17 +267,16 @@ class JForum extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         // Thread using tmp table based on the pair of users talking.
-        if (!$port->indexExists('ix_zconversation_from_to', ':_privmsgs')) {
-            $port->query('create index ix_zconversation_from_to
+        if (!$this->indexExists('ix_zconversation_from_to', ':_privmsgs')) {
+            $this->query('create index ix_zconversation_from_to
                 on :_privmsgs (privmsgs_from_userid, privmsgs_to_userid)');
         }
-        $port->query("drop table if exists z_conversation;");
-        $port->query(
+        $this->query("drop table if exists z_conversation;");
+        $this->query(
             "create table z_conversation (
                 ConversationID int unsigned not null auto_increment,
                 LowUserID int unsigned,
@@ -295,7 +285,7 @@ class JForum extends Source
                 index idx_lowuser_highuser (LowUserID, HighUserID)
             ) engine=InnoDB default charset=utf8 collate=utf8_unicode_ci;"
         );
-        $port->query(
+        $this->query(
             "insert into z_conversation (LowUserID, HighUserID)
                 select
                     least(privmsgs_from_userid, privmsgs_to_userid),
@@ -312,7 +302,7 @@ class JForum extends Source
             'privmsgs_date' => 'DateInserted',
             'privmsgs_subject' => 'Subject',
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select
                     p.privmsgs_from_userid as InsertUserID,
@@ -338,7 +328,7 @@ class JForum extends Source
             'privmsgs_date' => 'DateInserted',
             'privmsgs_text' => 'Body',
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select
                     p.privmsgs_id as MessageID,
@@ -356,7 +346,7 @@ class JForum extends Source
         );
 
         // UserConversation
-        $port->export(
+        $this->export(
             'UserConversation',
             "select
                     ConversationID,

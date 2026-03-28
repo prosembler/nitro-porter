@@ -20,39 +20,32 @@ class Formatter
      *
      * @return self Formatter
      */
-    public static function instance(?Migration $ex = null): self
+    public static function instance(): self
     {
         if (null === self::$instance) {
             self::$instance = new self();
-            self::$instance->setup($ex);
         }
         return self::$instance;
-    }
-
-    /**
-     * @return void
-     */
-    public function setup(Migration $port)
-    {
-        $this->userMap = $this->buildUserMap($port);
     }
 
     /**
      * Create an array of `strtolower(name)` => ID for doing lookups later.
      *
      * @todo This strategy likely won't scale past 100K users. 18K users @ +8mb memory use.
-     *
-     * @param Migration $port
-     * @return array
      */
-    public function buildUserMap(Migration $port): array
+    public function buildUserMap(Target $target): void
     {
-        $userMap = $port->dbOutput()
+        $userMap = $target->dbOutput()
             ->table('users')
             ->get(['id', 'username']);
 
         $users = [];
         foreach ($userMap as $user) {
+            if (!$user->username) {
+                Log::comment('UserID ' . $user->id . ' has a blank name.');
+                continue;
+            }
+
             // Use the first found ID for each name in case of duplicates.
             if (!isset($users[strtolower($user->username)])) {
                 $users[strtolower($user->username)] = $user->id;
@@ -62,7 +55,7 @@ class Formatter
         // Record memory usage from user map.
         Log::comment('Mentions map memory usage at ' . formatBytes(memory_get_usage()));
 
-        return $users;
+        $this->userMap = $users;
     }
 
     /**
@@ -74,6 +67,9 @@ class Formatter
      */
     public function toTextFormatter(?string $format, ?string $text): string
     {
+        if ($text === null) {
+            return '';
+        }
         switch ($format) {
             case 'Html':
             case 'Wysiwyg':

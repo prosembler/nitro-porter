@@ -8,7 +8,6 @@
 namespace Porter\Target;
 
 use Porter\Log;
-use Porter\Migration;
 use Porter\Formatter;
 use Porter\Target;
 
@@ -46,8 +45,9 @@ class Flarum extends Target
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => false,
+        'fileTransferSupport' => true,
     ];
 
     /**
@@ -117,28 +117,25 @@ class Flarum extends Target
 
     /**
      * Check for issues that will break the import.
-     *
-     * @param Migration $port
      */
-    public function validate(Migration $port): void
+    public function validate(): void
     {
-        $this->uniqueUserNames($port);
-        $this->uniqueUserEmails($port);
+        $this->uniqueUserNames();
+        $this->uniqueUserEmails();
     }
 
     /**
-     * @param Migration $port
      * @return array
      */
-    protected function getStructureDiscussions(Migration $port)
+    protected function getStructureDiscussions()
     {
         $structure = self::DB_STRUCTURE_DISCUSSIONS;
         // fof/gamification — no data, just prevent failure (no default values are set)
-        if ($port->hasOutputSchema('discussions', ['votes'])) {
+        if ($this->hasOutputSchema('discussions', ['votes'])) {
             $structure['votes'] = 'int';
             $structure['hotness'] = 'double';
         }
-        if ($port->hasOutputSchema('discussions', ['view_count'])) {
+        if ($this->hasOutputSchema('discussions', ['view_count'])) {
             $structure['view_count'] = 'int'; // flarumite/simple-discussion-views
         }
         return $structure;
@@ -151,10 +148,9 @@ class Flarum extends Target
      * You'd also need more data from findDuplicates, especially the IDs.
      * Folks are just gonna need to manually edit their existing forum data for now to rectify dupe issues.
      *
-     * @param Migration $port
      * @throws \Exception
      */
-    public function uniqueUserNames(Migration $port): void
+    public function uniqueUserNames(): void
     {
         $allowlist = [
             '[Deleted User]',
@@ -163,7 +159,7 @@ class Flarum extends Target
             '[Slettet bruker]', // Norwegian
             '[Utilisateur supprimé]', // French
         ]; // @see fixDuplicateDeletedNames()
-        $dupes = array_diff($this->findDuplicates('User', 'Name', $port), $allowlist);
+        $dupes = array_diff($this->findDuplicates('User', 'Name'), $allowlist);
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
@@ -172,14 +168,13 @@ class Flarum extends Target
     /**
      * Flarum must have unique emails. Report users skipped (because of `insert ignore`).
      *
-     * @param Migration $port
      * @throws \Exception
      * @see uniqueUserNames
      *
      */
-    public function uniqueUserEmails(Migration $port): void
+    public function uniqueUserEmails(): void
     {
-        $dupes = $this->findDuplicates('User', 'Email', $port);
+        $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
@@ -188,38 +183,37 @@ class Flarum extends Target
     /**
      * Main import process.
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
         // Ignore constraints on tables that block import.
-        $port->ignoreOutputDuplicates('users');
+        $this->ignoreOutputDuplicates('users');
 
         // Map a file transfer.
-        $this->mapFileTransfer($port);
+        $this->mapFileTransfer();
 
-        $this->users($port);
-        $this->roles($port); // 'Groups' in Flarum
-        $this->categories($port); // 'Tags' in Flarum
+        $this->users();
+        $this->roles(); // 'Groups' in Flarum
+        $this->categories(); // 'Tags' in Flarum
 
         // Singleton factory; big timing issue; depends on Users being done.
-        Formatter::instance($port); // @todo Hook for pre-UGC import?
+        Formatter::instance()->buildUserMap($this); // @todo Hook for pre-UGC import?
 
-        $this->discussions($port);
-        $this->bookmarks($port); // Requires addon `flarum/subscriptions`
-        $this->comments($port); // 'Posts' in Flarum
+        $this->discussions();
+        $this->bookmarks(); // Requires addon `flarum/subscriptions`
+        $this->comments(); // 'Posts' in Flarum
 
-        $this->badges($port); // Requires addon `17development/flarum-user-badges`
-        $this->polls($port); // Requires addon `fof/pollsx`
-        $this->reactions($port); // Requires addon `fof/reactions`
+        $this->badges(); // Requires addon `17development/flarum-user-badges`
+        $this->polls(); // Requires addon `fof/pollsx`
+        $this->reactions(); // Requires addon `fof/reactions`
 
-        $this->privateMessages($port); // Requires addon `fof/byobu`
+        $this->privateMessages(); // Requires addon `fof/byobu`
 
-        $this->attachments($port); // Requires discussions, comments, and PMs have imported.
+        $this->attachments(); // Requires discussions, comments, and PMs have imported.
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $structure = [
             'id' => 'int',
@@ -241,7 +235,6 @@ class Flarum extends Target
             'Photo' => 'avatar_url',
             'DateInserted' => 'joined_at',
             'DateLastActive' => 'last_seen_at',
-            'Confirmed' => 'is_email_confirmed',
             'CountDiscussions' => 'discussion_count',
             'CountComments' => 'comment_count',
         ];
@@ -249,12 +242,12 @@ class Flarum extends Target
             'Name' => 'fixDuplicateDeletedNames',
             'Email' => 'fixNullEmails',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('User')
             ->select()
             ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
 
-        $port->import('users', $query, $structure, $map, $filters);
+        $this->import('users', $query, $structure, $map, $filters);
     }
 
     /**
@@ -263,9 +256,8 @@ class Flarum extends Target
      * This compensates by shifting all RoleIDs +4, rendering any old 'Member' or 'Guest' role useless & deprecated.
      * @see https://docs.flarum.org/extend/permissions/
      *
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $structure = [
             'id' => 'int',
@@ -278,17 +270,17 @@ class Flarum extends Target
         $map = [];
 
         // Verify support.
-        if (!$port->hasPortSchema('UserRole')) {
+        if (!$this->hasPortSchema('UserRole')) {
             Log::comment('Skipping import: Roles (Source lacks support)');
-            $port->importEmpty('groups', $structure);
-            $port->importEmpty('group_user', $structure);
+            $this->importEmpty('groups', $structure);
+            $this->importEmpty('group_user', $structure);
             return;
         }
 
         // Delete orphaned user role associations (deleted users).
-        $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID', $port);
+        $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Role')
             // Flarum reserves 1-3 & uses 4 for mods by default.
             ->selectRaw("(RoleID + 4) as id")
@@ -298,7 +290,7 @@ class Flarum extends Target
             // Hiding roles is an uncommon feature; hide none.
             ->selectRaw('0 as is_hidden');
 
-        $port->import('groups', $query, $structure, $map);
+        $this->import('groups', $query, $structure, $map);
 
         // User Role.
         $structure = [
@@ -309,18 +301,17 @@ class Flarum extends Target
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('UserRole')
             ->select()
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
 
-        $port->import('group_user', $query, $structure, $map);
+        $this->import('group_user', $query, $structure, $map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $structure = [
             'id' => 'int',
@@ -344,7 +335,7 @@ class Flarum extends Target
         $filters = [
             'CountDiscussions' => 'emptyToZero',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Category')
             ->select()
             ->selectRaw('COALESCE(Name, CONCAT("category", CategoryID)) as name') // Cannot be null.
@@ -354,15 +345,14 @@ class Flarum extends Target
             ->selectRaw("0 as is_restricted")
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
 
-        $port->import('tags', $query, $structure, $map, $filters);
+        $this->import('tags', $query, $structure, $map, $filters);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
-        $structure = $this->getStructureDiscussions($port);
+        $structure = $this->getStructureDiscussions();
         $map = [
             'DiscussionID' => 'id',
             'InsertUserID' => 'user_id',
@@ -383,14 +373,14 @@ class Flarum extends Target
         ];
 
         // flarumite/simple-discussion-views
-        if ($port->hasOutputSchema('discussions', ['view_count'])) {
+        if ($this->hasOutputSchema('discussions', ['view_count'])) {
             $structure['view_count'] = 'int';
             $map['CountViews'] = 'view_count';
             $filters['CountViews'] = 'emptyToZero';
         }
 
         // CountComments needs to be double-mapped so it's included as an alias also.
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Discussion')
             ->select()
             ->selectRaw('COALESCE(CountComments, 0) as post_number_index')
@@ -400,7 +390,7 @@ class Flarum extends Target
             ->selectRaw('0 as hotness')
             ->selectRaw('1 as best_answer_notified');
 
-        $port->import('discussions', $query, $structure, $map, $filters);
+        $this->import('discussions', $query, $structure, $map, $filters);
 
         // Flarum has a separate pivot table for discussion tags.
         $structure = [
@@ -411,12 +401,12 @@ class Flarum extends Target
             'DiscussionID' => 'discussion_id',
             'CategoryID' => 'tag_id',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Discussion')
             ->select(['DiscussionID', 'CategoryID'])
             ->union(
                 // Also tag discussion with the parent category.
-                $port->dbPorter()
+                $this->dbPorter()
                     ->table('Discussion')
                     ->select(['DiscussionID'])
                     ->selectRaw('ParentCategoryID as CategoryID')
@@ -424,16 +414,15 @@ class Flarum extends Target
                     ->whereNotNull('ParentCategoryID')
             );
 
-        $port->import('discussion_tag', $query, $structure, $map, $filters);
+        $this->import('discussion_tag', $query, $structure, $map, $filters);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function bookmarks(Migration $port): void
+    protected function bookmarks(): void
     {
         // Verify support.
-        if (!$port->hasPortSchema('UserDiscussion')) {
+        if (!$this->hasPortSchema('UserDiscussion')) {
             Log::comment('Skipping import: Bookmarks (Source lacks support)');
             return;
         }
@@ -456,19 +445,18 @@ class Flarum extends Target
             'UserID' => 'user_id',
             'DateLastViewed' => 'last_read_at',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('UserDiscussion')
             ->select()
             ->selectRaw("if (Bookmarked > 0, 'follow', null) as subscription")
             ->where('UserID', '>', 0); // Vanilla can have zeroes here, can't remember why.
 
-        $port->import('discussion_user', $query, $structure, $map);
+        $this->import('discussion_user', $query, $structure, $map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $map = [
             'CommentID' => 'id',
@@ -482,7 +470,7 @@ class Flarum extends Target
         $filters = [
             'Body' => 'filterFlarumContent',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Comment')
             // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
             ->select([
@@ -500,7 +488,7 @@ class Flarum extends Target
         // Extract OP from the discussion.
         if ($this->getDiscussionBodyMode()) {
             // Get highest CommentID.
-            $result = $port->targetQB()
+            $result = $this->porterQB()
                 ->from('Comment')
                 ->selectRaw('max(CommentID) as LastCommentID')
                 ->first();
@@ -509,7 +497,7 @@ class Flarum extends Target
             $this->discussionPostOffset = $result->LastCommentID ?? 0;
 
             // Use DiscussionID but fast-forward it past highest CommentID to insure it's unique.
-            $discussions = $port->targetQB()->from('Discussion')
+            $discussions = $this->porterQB()->from('Discussion')
                 ->select([
                     'DiscussionID',
                     'InsertUserID',
@@ -526,7 +514,7 @@ class Flarum extends Target
             $query->union($discussions);
         }
 
-        $port->import('posts', $query, self::DB_STRUCTURE_POSTS, $map, $filters);
+        $this->import('posts', $query, self::DB_STRUCTURE_POSTS, $map, $filters);
     }
 
     /**
@@ -534,12 +522,11 @@ class Flarum extends Target
      *
      * @todo Support for `fof_upload_files.discussion_id` field, likely in Postscript (it's derived data).
      *
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         // Verify support.
-        if (!$port->hasPortSchema('Media')) {
+        if (!$this->hasPortSchema('Media')) {
             Log::comment('Skipping import: Attachments (Source lacks support)');
             return;
         }
@@ -565,7 +552,7 @@ class Flarum extends Target
             'DateInserted' => 'created_at',
             'Size' => 'size',
         ];
-        $query = $port->targetQB()->from('Media')
+        $query = $this->porterQB()->from('Media')
             ->select()
             ->selectRaw('0 as discussion_id')
             ->selectRaw("concat('imported/', Path) as path")
@@ -583,22 +570,23 @@ class Flarum extends Target
             ->selectRaw('"local" as upload_method')
             // MIME type cannot be null, so default to "application/octet-stream" as most generic default.
             ->selectRaw('COALESCE(Type, "application/octet-stream") as type')
+            // fof_upload_files disallows null for base_name.
+            ->selectRaw('COALESCE(Name, "untitled") as base_name')
             // @see packages/upload/src/Providers/DownloadProvider.php
             ->selectRaw("case
                 when Type like 'image/%' then 'image-preview'
                 else 'file'
                 end as tag");
 
-        $port->import('fof_upload_files', $query, $structure, $map);
+        $this->import('fof_upload_files', $query, $structure, $map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function badges(Migration $port): void
+    protected function badges(): void
     {
         // Verify support.
-        if (!$port->hasPortSchema('Badge')) {
+        if (!$this->hasPortSchema('Badge')) {
             Log::comment('Skipping import: Badges (Source lacks support)');
             return;
         }
@@ -628,11 +616,11 @@ class Flarum extends Target
             'DateLastViewed' => 'last_read_at',
             'Visible' => 'is_visible',
         ];
-        $query = $port->targetQB()->from('Badge')
+        $query = $this->porterQB()->from('Badge')
             ->select()
             ->selectRaw('1 as badge_category_id');
 
-        $port->import('badges', $query, $structure, $map);
+        $this->import('badges', $query, $structure, $map);
 
         // User Badges
         $structure = [
@@ -647,18 +635,17 @@ class Flarum extends Target
             'Reason' => 'description',
             'DateCompleted' => 'assigned_at',
         ];
-        $query = $port->targetQB()->from('UserBadge')->select('*');
+        $query = $this->porterQB()->from('UserBadge')->select('*');
 
-        $port->import('badge_user', $query, $structure, $map);
+        $this->import('badge_user', $query, $structure, $map);
     }
 
     /**
-     * @param Migration $port
      */
-    protected function polls(Migration $port): void
+    protected function polls(): void
     {
         // Verify support.
-        if (!$port->hasPortSchema('Poll')) {
+        if (!$this->hasPortSchema('Poll')) {
             Log::comment('Skipping import: Polls (Source lacks support)');
             return;
         }
@@ -684,13 +671,13 @@ class Flarum extends Target
             'DateUpdated' => 'updated_at',
             'CountVotes' => 'vote_count',
         ];
-        $query = $port->targetQB()->from('Poll')
+        $query = $this->porterQB()->from('Poll')
             ->select('*')
             ->select('DateInserted as end_date')
                 // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');
 
-        $port->import('polls', $query, $structure, $map);
+        $this->import('polls', $query, $structure, $map);
 
         // Poll Options
         $structure = [
@@ -709,9 +696,9 @@ class Flarum extends Target
             'DateUpdated' => 'updated_at',
             'CountVotes' => 'vote_count',
         ];
-        $query = $port->targetQB()->from('PollOption')->select('*');
+        $query = $this->porterQB()->from('PollOption')->select('*');
 
-        $port->import('poll_options', $query, $structure, $map);
+        $this->import('poll_options', $query, $structure, $map);
 
         // Poll Votes
         $structure = [
@@ -726,23 +713,22 @@ class Flarum extends Target
             'PollOptionID' => 'option_id',
             'UserID' => 'user_id',
         ];
-        $query = $port->targetQB()->from('PollVote')
+        $query = $this->porterQB()->from('PollVote')
             ->leftJoin('PollOption', 'PollVote.PollOptionID', '=', 'PollOption.PollOptionID')
             ->select(['PollVote.*',
                 'PollOption.PollID as poll_id',
                 'PollOption.DateInserted as created_at', // Total hack for approximate vote dates.
                 'PollOption.DateUpdated as updated_at']);
 
-        $port->import('poll_votes', $query, $structure, $map);
+        $this->import('poll_votes', $query, $structure, $map);
     }
 
     /**
-     * @param Migration $port
      */
-    public function reactions(Migration $port): void
+    public function reactions(): void
     {
         // Verify support.
-        if (!$port->hasPortSchema('ReactionType')) {
+        if (!$this->hasPortSchema('ReactionType')) {
             Log::comment('Skipping import: Reactions (Source lacks support)');
             return;
         }
@@ -760,12 +746,12 @@ class Flarum extends Target
             'Name' => 'identifier',
             'Active' => 'enabled',
         ];
-        $query = $port->targetQB()->from('ReactionType')
+        $query = $this->porterQB()->from('ReactionType')
             // @todo Setting type='emoji' is a kludge since it won't render Vanilla defaults that way.
             ->select('*')
             ->selectRaw('"emoji" as type');
 
-        $port->import('reactions', $query, $structure, $map);
+        $this->import('reactions', $query, $structure, $map);
 
         // Post Reactions
         $structure = [
@@ -783,7 +769,7 @@ class Flarum extends Target
             'DateInserted' => 'created_at',
         ];
         // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
-        $query = $port->targetQB()->from('UserTag')
+        $query = $this->porterQB()->from('UserTag')
             ->select(['UserID', 'TagID'])
             ->selectRaw('RecordID as RecordID')
             ->selectRaw('TIMESTAMP(DateInserted) as DateInserted')
@@ -793,14 +779,14 @@ class Flarum extends Target
         // Get reactions for discussions (OPs).
         if ($this->getDiscussionBodyMode()) {
             // Get highest CommentID.
-            $result = $port->targetQB()
+            $result = $this->porterQB()
                 ->from('Comment')
                 ->selectRaw('max(CommentID) as LastCommentID')
                 ->first();
             $lastCommentID = $result->LastCommentID ?? 0;
 
             /* @see Target\Flarum::comments() —  replicate our math in the post split */
-            $discussionReactions = $port->targetQB()->from('UserTag')
+            $discussionReactions = $this->porterQB()->from('UserTag')
                 ->select(['UserID', 'TagID'])
                 ->selectRaw('(RecordID + ' . $lastCommentID . ') as RecordID')
                 ->selectRaw('TIMESTAMP(DateInserted) as DateInserted')
@@ -811,32 +797,31 @@ class Flarum extends Target
             $query->union($discussionReactions);
         }
 
-        $port->import('post_reactions', $query, $structure, $map);
+        $this->import('post_reactions', $query, $structure, $map);
     }
 
     /**
      * Export PMs to fof/byobu format, which uses the `posts` & `discussions` tables.
      *
-     * @param Migration $port
      */
-    protected function privateMessages(Migration $port): void
+    protected function privateMessages(): void
     {
         // Verify source support.
-        if (!$port->hasPortSchema('Conversation')) {
+        if (!$this->hasPortSchema('Conversation')) {
             Log::comment('Skipping import: Private messages (Source lacks support)');
             return;
         }
 
         // Verify target support.
-        if (!$port->hasOutputSchema('recipients')) {
+        if (!$this->hasOutputSchema('recipients')) {
             Log::comment('Skipping import: Private messages (Target lacks support - Enable the plugin first)');
             return;
         }
 
         // Messages — Discussions
-        $MaxDiscussionID = $this->messageDiscussionOffset = $this->getMaxValue('id', 'discussions', $port);
+        $MaxDiscussionID = $this->messageDiscussionOffset = $this->getMaxValue('id', 'discussions');
         Log::comment('Discussions offset for PMs is ' . $MaxDiscussionID);
-        $structure = $this->getStructureDiscussions($port);
+        $structure = $this->getStructureDiscussions();
         $map = [
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
@@ -846,11 +831,11 @@ class Flarum extends Target
         ];
 
         // fof/gamification — no data, just prevent failure (no default value is set)
-        if ($port->hasOutputSchema('discussions', ['votes'])) {
+        if ($this->hasOutputSchema('discussions', ['votes'])) {
             $structure['votes'] = 'int';
         }
 
-        $query = $port->targetQB()->from('Conversation')
+        $query = $this->porterQB()->from('Conversation')
             ->select(['InsertUserID', 'DateInserted'])
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as id')
             ->selectRaw('DateInserted as last_posted_at') // @todo Orders old PMs by OP instead of last comment.
@@ -863,10 +848,10 @@ class Flarum extends Target
             ->selectRaw('ifnull(Subject,
                 concat("Private discussion ", (ConversationID + ' . $MaxDiscussionID . '))) as title');
 
-        $port->import('discussions', $query, $structure, $map, $filters);
+        $this->import('discussions', $query, $structure, $map, $filters);
 
         // Messages — Comments
-        $MaxCommentID = $this->messagePostOffset = $this->getMaxValue('id', 'posts', $port);
+        $MaxCommentID = $this->messagePostOffset = $this->getMaxValue('id', 'posts');
         Log::comment('Posts offset for PMs is ' . $MaxCommentID);
         $map = [
             'Body' => 'content',
@@ -876,14 +861,14 @@ class Flarum extends Target
         $filters = [
             'Body' => 'filterFlarumContent',
         ];
-        $query = $port->targetQB()->from('ConversationMessage')
+        $query = $this->porterQB()->from('ConversationMessage')
             ->select(['Body', 'Format', 'InsertUserID', 'DateInserted'])
             ->selectRaw('(MessageID + ' . $MaxCommentID . ') as id')
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as discussion_id')
             ->selectRaw('1 as is_private')
             ->selectRaw('"comment" as type');
 
-        $port->import('posts', $query, self::DB_STRUCTURE_POSTS, $map, $filters);
+        $this->import('posts', $query, self::DB_STRUCTURE_POSTS, $map, $filters);
 
         // Recipients
         $structure = [
@@ -899,24 +884,25 @@ class Flarum extends Target
             'UserID' => 'user_id',
             'DateConversationUpdated' => 'updated_at',
         ];
-        $query = $port->targetQB()->from('UserConversation')
+        $query = $this->porterQB()->from('UserConversation')
             ->select(['UserID', 'DateConversationUpdated'])
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as discussion_id');
 
-        $port->import('recipients', $query, $structure, $map);
+        $this->import('recipients', $query, $structure, $map);
     }
 
     /**
      * Setup the destination values for FileTransfer.
      *
      * Set PORT_Media.TargetFullPath and PORT_User.TargetAvatarFullPath
-     * @todo Skip if !FileTransfer::isSupported()
      *
-     * @param Migration $port
      */
-    public function mapFileTransfer(Migration $port): void
+    public function mapFileTransfer(): void
     {
-        $prx = $port->dbPorter()->getTablePrefix();
+        // Abort if we lack support.
+        if (!$this->getFileTransferSupport()) {
+            return;
+        }
 
         // Start timer.
         $start = microtime(true);
@@ -925,7 +911,7 @@ class Flarum extends Target
 
         // Media.Path
         if ($fileTarget = $this->getPath('attachment', 'full')) {
-            $attachments = $port->targetQB()->from('Media')
+            $attachments = $this->porterQB()->from('Media')
                 ->select(['MediaID'])
                 // Reuse the filename in `Path` (not `Name`) in case it's been made guaranteed-unique.
                 ->selectRaw("concat('{$fileTarget}/', Path) as TargetFullPath")
@@ -934,8 +920,8 @@ class Flarum extends Target
                 ->get();
             $memory = memory_get_usage();
             foreach ($attachments as $attachment) {
-                $rows += $port->dbPostscript()->affectingStatement("update `PORT_Media`
-                    set TargetFullPath = " . $port->dbPostscript()->escape($attachment->TargetFullPath) . "
+                $rows += $this->dbOutput()->affectingStatement("update `PORT_Media`
+                    set TargetFullPath = " . $this->dbOutput()->escape($attachment->TargetFullPath) . "
                     where MediaID = {$attachment->MediaID}");  // @todo index needed?
             }
             // Report.
@@ -955,7 +941,7 @@ class Flarum extends Target
 
         // User.Photo
         if ($fileTarget = $this->getPath('avatar', 'full')) {
-            $avatars = $port->targetQB()->from('User')
+            $avatars = $this->porterQB()->from('User')
                 ->select(['UserID'])
                 ->selectRaw("concat('{$fileTarget}', Photo) as TargetAvatarFullPath")
                     // Local-file Photo should begin with a slash.
@@ -963,8 +949,8 @@ class Flarum extends Target
                 ->get();
             $memory = memory_get_usage();
             foreach ($avatars as $avatar) {
-                $rows += $port->dbPostscript()->affectingStatement("update `PORT_User`
-                    set TargetAvatarFullPath = " . $port->dbPostscript()->escape($avatar->TargetAvatarFullPath) . "
+                $rows += $this->dbOutput()->affectingStatement("update `PORT_User`
+                    set TargetAvatarFullPath = " . $this->dbOutput()->escape($avatar->TargetAvatarFullPath) . "
                     where UserID = {$avatar->UserID}"); // @todo index needed?
             }
             // Report.

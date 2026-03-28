@@ -10,7 +10,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class EsoTalk extends Source
 {
@@ -35,23 +34,21 @@ class EsoTalk extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->bookmarks($port);
-        $this->conversations($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->bookmarks();
+        $this->conversations();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'memberId' => 'UserID',
@@ -60,7 +57,7 @@ class EsoTalk extends Source
             'confirmed' => 'Verified',
             'password' => 'Password',
         );
-        $port->export(
+        $this->export(
             'User',
             "select u.*, 'crypt' as HashMethod,
                     FROM_UNIXTIME(joinTime) as DateInserted,
@@ -72,15 +69,14 @@ class EsoTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'groupId' => 'RoleID',
             'name' => 'Name',
         );
-        $port->export(
+        $this->export(
             'Role',
             "select groupId, name
                 from :_group
@@ -95,7 +91,7 @@ class EsoTalk extends Source
             'groupId' => 'RoleID',
         );
         // Create fake 'member' and 'administrator' roles to account for them being set separately on member table.
-        $port->export(
+        $this->export(
             'UserRole',
             "select u.memberId, u.groupId
                 from :_member_group u
@@ -108,9 +104,8 @@ class EsoTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'channelId' => 'CategoryID',
@@ -121,7 +116,7 @@ class EsoTalk extends Source
             'countConversations' => 'CountDiscussions',
             //'countPosts' => 'CountComments',
         );
-        $port->export(
+        $this->export(
             'Category',
             "select * from :_channel c",
             $category_Map
@@ -129,9 +124,8 @@ class EsoTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'conversationId' => 'DiscussionID',
@@ -145,7 +139,7 @@ class EsoTalk extends Source
             'content' => 'Body',
         );
         // The body of the OP is in the post table.
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     c.conversationId,
@@ -170,9 +164,8 @@ class EsoTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'postId' => 'CommentID',
@@ -182,7 +175,7 @@ class EsoTalk extends Source
             'editMemberId' => 'UpdateUserID',
         );
         // Now we need to omit the comments we used as the OP.
-        $port->export(
+        $this->export(
             'Comment',
             "select p.*,
                     'BBCode' as Format,
@@ -202,15 +195,14 @@ class EsoTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function bookmarks(Migration $port): void
+    protected function bookmarks(): void
     {
         $userDiscussion_Map = array(
             'id' => 'UserID',
             'conversationId' => 'DiscussionID',
         );
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "select *
                 from :_member_conversation
@@ -220,16 +212,15 @@ class EsoTalk extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         $conversation_map = array(
             'conversationId' => 'ConversationID',
             'countPosts' => 'CountMessages',
             'startMemberId' => 'InsertUserID',
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select p.*,
                     'BBCode' as Format,
@@ -246,7 +237,7 @@ class EsoTalk extends Source
             'memberId' => 'UserID',
 
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             "select distinct a.fromMemberId as memberId, a.type, c.private, c.conversationId from :_activity a
                 inner join :_conversation c on c.conversationId = a.conversationId
@@ -265,7 +256,7 @@ class EsoTalk extends Source
             'memberId' => 'InsertUserID',
 
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             "select p.*,
                     'BBCode' as Format,

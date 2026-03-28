@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Kunena extends Source
 {
@@ -35,17 +34,16 @@ class Kunena extends Source
     ];
 
     /**
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->bookmarks($port);
-        $this->attachments($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->bookmarks();
+        $this->attachments();
     }
 
     /**
@@ -66,9 +64,8 @@ class Kunena extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'id' => 'UserID',
@@ -84,7 +81,7 @@ class Kunena extends Source
             'admin' => array('Column' => 'Admin', 'Type' => 'tinyint(1)'),
             'Photo' => 'Photo'
         );
-        $port->export(
+        $this->export(
             'User',
             "SELECT
                     u.*,
@@ -101,22 +98,21 @@ class Kunena extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'rank_id' => 'RoleID',
             'rank_title' => 'Name',
         );
-        $port->export('Role', "select * from :_kunena_ranks", $role_Map);
+        $this->export('Role', "select * from :_kunena_ranks", $role_Map);
 
         // UserRole.
         $userRole_Map = array(
             'id' => 'UserID',
             'rank' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "select * from :_users u",
             $userRole_Map
@@ -124,9 +120,8 @@ class Kunena extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'id' => 'CategoryID',
@@ -136,7 +131,7 @@ class Kunena extends Source
             'description' => 'Description',
 
         );
-        $port->export(
+        $this->export(
             'Category',
             "select * from :_kunena_categories",
             $category_Map
@@ -144,9 +139,8 @@ class Kunena extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'id' => 'DiscussionID',
@@ -162,7 +156,7 @@ class Kunena extends Source
             'message' => 'Body',
             'Format' => 'Format'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select t.*,
                     txt.message,
@@ -176,9 +170,8 @@ class Kunena extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'id' => 'CommentID',
@@ -191,7 +184,7 @@ class Kunena extends Source
             'message' => 'Body',
             'Format' => 'Format'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select t.*,
                     txt.message,
@@ -205,15 +198,14 @@ class Kunena extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function bookmarks(Migration $port): void
+    protected function bookmarks(): void
     {
         $userDiscussion_Map = array(
             'thread' => 'DiscussionID',
             'userid' => 'UserID'
         );
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "select t.*, 1 as Bookmarked from :_kunena_user_topics t",
             $userDiscussion_Map
@@ -221,9 +213,8 @@ class Kunena extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $media_Map = array(
             'id' => 'MediaID',
@@ -237,7 +228,7 @@ class Kunena extends Source
             'filename' => array('Column' => 'Name', 'Filter' => 'urlDecode'),
             'time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
         );
-        $port->export(
+        $this->export(
             'Media',
             "select a.*,
                     concat(a.folder, '/', a.filename) as path2,

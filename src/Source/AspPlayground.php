@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class AspPlayground extends Source
 {
@@ -33,24 +32,22 @@ class AspPlayground extends Source
     ];
 
     /**
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->signatures($port);
+        $this->users();
+        $this->signatures();
 
-        $this->categories($port);
+        $this->categories();
 
-        $this->discussions($port);
-        $this->comments($port);
-        $this->bookmarks($port);
+        $this->discussions();
+        $this->comments();
+        $this->bookmarks();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $map = [
             'Mem' => 'UserID',
@@ -63,7 +60,7 @@ class AspPlayground extends Source
             'lastLogin' => 'DateLastActive',
             'location' => 'Location',
         ];
-        $port->export(
+        $this->export(
             'User',
             "select m.*, 'Text' as HashMethod
                 from :_Members m",
@@ -72,11 +69,10 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select Mem, 'Plugin.Signatures.Sig' as `Name`, signature as `Value`
             from :_Members
@@ -91,9 +87,8 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $map = [
             'ForumID' => 'CategoryID',
@@ -105,7 +100,7 @@ class AspPlayground extends Source
             'Topics' => 'CountDiscussions',
             'parent' => 'ParentCategoryID',
         ];
-        $port->export(
+        $this->export(
             'Category',
             "select f.*
                 from :_Forums f
@@ -115,9 +110,8 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $map = [
             'messageID' => 'DiscussionID',
@@ -128,7 +122,7 @@ class AspPlayground extends Source
             'hits' => 'CountViews',
             'lastupdate' => 'DateLastComment',
         ];
-        $port->export(
+        $this->export(
             'Discussion',
             "select t.*, m.Body
                 from :_Threads t
@@ -138,9 +132,8 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $map = [
             'messageID' => 'CommentID',
@@ -156,7 +149,7 @@ class AspPlayground extends Source
         if ($this->getDiscussionBodyMode()) {
             $skipOP = "where parent != 0";
         }
-        $port->export(
+        $this->export(
             'Comment',
             "select m.*, 'BBCode' as Format
                 from :_Messages m
@@ -166,15 +159,14 @@ class AspPlayground extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function bookmarks(Migration $port): void
+    protected function bookmarks(): void
     {
         $map = [
             'Mem' => 'UserID',
             'threadID' => 'DiscussionID',
         ];
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "select *, '1' as Bookmarked
                 from :_Subscription

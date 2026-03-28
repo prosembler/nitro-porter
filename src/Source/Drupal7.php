@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Drupal7 extends Source
 {
@@ -39,9 +38,8 @@ class Drupal7 extends Source
     public int $imageCount;
 
     /**
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
         $this->path = '/uploads/'; //$this->param('attach-target', null) . '/uploads/';
         /*$origin = ''; //$this->param('attach-source', null);
@@ -49,13 +47,13 @@ class Drupal7 extends Source
             mkdir($origin);
         }*/
 
-        $this->users($port);
-        $this->signatures($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->attachments($port);
+        $this->users();
+        $this->signatures();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->attachments();
     }
 
     /**
@@ -86,11 +84,10 @@ class Drupal7 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
-        $port->export(
+        $this->export(
             'User',
             "select
                     uid as UserID,
@@ -108,11 +105,10 @@ class Drupal7 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                     uid as UserID,
@@ -131,28 +127,26 @@ class Drupal7 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
-        $port->export(
+        $this->export(
             'Role',
             "select rid as RoleID, name as Name from :_role"
         );
 
         // User Role.
-        $port->export(
+        $this->export(
             'UserRole',
             "select uid as UserID, rid as RoleID from :_users_roles"
         );
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
-        $port->export(
+        $this->export(
             'Category',
             "select
                     t.tid as CategoryID,
@@ -167,14 +161,13 @@ class Drupal7 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussionMap = array(
             'Body' => array('Column' => 'Body', 'Filter' => array($this, 'convertBase64Attachments')),
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select
                     n.nid as DiscussionID,
@@ -202,14 +195,13 @@ class Drupal7 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $commentMap = array(
             'Body' => array('Column' => 'Body', 'Filter' => array($this, 'convertBase64Attachments')),
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select
                     c.cid as CommentID,
@@ -237,11 +229,10 @@ class Drupal7 extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
-        $port->export(
+        $this->export(
             'Media',
             "select
                     fm.fid as MediaID,

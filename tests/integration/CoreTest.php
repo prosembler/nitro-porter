@@ -31,7 +31,11 @@ class CoreTest extends TestCase
      */
     public function testEncodingDetection(): void
     {
-        $port = migrationFactory(self::ENV_ALIAS, self::ENV_ALIAS);
+        $source = sourceFactory(
+            self::ENV_ALIAS,
+            storageFactory(self::ENV_ALIAS),
+            storageFactory(self::ENV_ALIAS)
+        );
         $tests = [
             'EncodingA' => 'UTF-8', // utf8mb4_unicode_ci
             'EncodingB' => 'ISO-8859-1', // latin1_swedish_ci
@@ -39,7 +43,7 @@ class CoreTest extends TestCase
             'EncodingD' => 'cp1250', // cp1250_general_ci
         ];
         foreach ($tests as $table => $expected) {
-            $encoding = $port->getInputEncoding($table);
+            $encoding = $source->getInputEncoding($table);
             $this->assertEquals($expected, $encoding);
         }
     }

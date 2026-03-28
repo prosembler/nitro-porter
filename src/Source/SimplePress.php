@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class SimplePress extends Source
 {
@@ -46,23 +45,21 @@ class SimplePress extends Source
     /**
      * Forum-specific export format.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->tags($port);
-        $this->comments($port);
-        $this->conversations($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->tags();
+        $this->comments();
+        $this->conversations();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'user_id' => 'UserID',
@@ -72,7 +69,7 @@ class SimplePress extends Source
             'user_registered' => 'DateInserted',
             'lastvisit' => 'DateLastActive'
         );
-        $port->export(
+        $this->export(
             'User',
             "select m.*, u.user_pass, u.user_email, u.user_registered
                 from :_users u
@@ -83,16 +80,15 @@ class SimplePress extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'usergroup_id' => 'RoleID',
             'usergroup_name' => 'Name',
             'usergroup_desc' => 'Description'
         );
-        $port->export(
+        $this->export(
             'Role',
             "select
                 usergroup_id,
@@ -112,7 +108,7 @@ class SimplePress extends Source
             'user_id' => 'UserID',
             'usergroup_id' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "select
                     m.user_id,
@@ -130,9 +126,8 @@ class SimplePress extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'forum_id' => 'CategoryID',
@@ -142,7 +137,7 @@ class SimplePress extends Source
             'form_slug' => 'UrlCode',
             'parent_id' => 'ParentCategoryID'
         );
-        $port->export(
+        $this->export(
             'Category',
             "select
                     f.forum_id,
@@ -166,32 +161,30 @@ class SimplePress extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function tags(Migration $port): void
+    protected function tags(): void
     {
-        if ($port->hasInputSchema('sftags')) {
+        if ($this->hasInputSchema('sftags')) {
             // Tags
             $tag_Map = array(
                 'tag_id' => 'TagID',
                 'tag_name' => 'Name'
             );
-            $port->export('Tag', "select * from :_sftags", $tag_Map);
+            $this->export('Tag', "select * from :_sftags", $tag_Map);
 
-            if ($port->hasInputSchema('sftagmeta')) {
+            if ($this->hasInputSchema('sftagmeta')) {
                 $tagDiscussion_Map = array(
                     'tag_id' => 'TagID',
                     'topic_id' => 'DiscussionID'
                 );
-                $port->export('TagDiscussion', "select * from :_sftagmeta", $tagDiscussion_Map);
+                $this->export('TagDiscussion', "select * from :_sftagmeta", $tagDiscussion_Map);
             }
         }
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'topic_id' => 'DiscussionID',
@@ -203,7 +196,7 @@ class SimplePress extends Source
             'topic_pinned' => 'Announce',
             'topic_slug' => array('Column' => 'Slug', 'Type' => 'varchar(200)')
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select t.*, 'Html' as Format from :_sftopics t",
             $discussion_Map
@@ -211,9 +204,8 @@ class SimplePress extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
@@ -224,7 +216,7 @@ class SimplePress extends Source
             'post_date' => 'DateInserted',
             'poster_ip' => 'InsertIPAddress'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select p.*, 'Html' as Format from :_sfposts p",
             $comment_Map
@@ -232,16 +224,15 @@ class SimplePress extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function conversations(Migration $port): void
+    protected function conversations(): void
     {
         $conv_Map = array(
             'message_id' => 'ConversationID',
             'from_id' => 'InsertUserID',
             'sent_date' => 'DateInserted'
         );
-        $port->export(
+        $this->export(
             'Conversation',
             "select * from :_sfmessages where is_reply = 0",
             $conv_Map
@@ -253,7 +244,7 @@ class SimplePress extends Source
             'from_id' => 'InsertUserID',
             'message' => array('Column' => 'Body')
         );
-        $port->export(
+        $this->export(
             'ConversationMessage',
             'select c.message_id as ConversationID, m.*
                 from :_sfmessages c
@@ -269,7 +260,7 @@ class SimplePress extends Source
             'message_id' => 'ConversationID',
             'from_id' => 'UserID'
         );
-        $port->export(
+        $this->export(
             'UserConversation',
             'select message_id, from_id
                 from :_sfmessages

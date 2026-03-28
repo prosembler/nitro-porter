@@ -70,7 +70,7 @@ function fixNullEmails(mixed $value, string $column, array $row): string
  */
 function createDiscussionSlugs(mixed $value, string $column, array $row): string
 {
-    return $value; // @todo Create a slug
+    return (string) $value; // @todo Create a slug
 }
 
 /**

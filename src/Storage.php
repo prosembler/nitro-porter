@@ -2,7 +2,6 @@
 
 namespace Porter;
 
-use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Porter\Database\ResultSet;
 
@@ -12,66 +11,102 @@ abstract class Storage
      * Software-specific import process.
      *
      * @param string $name Name of the data chunk / table to be written.
-     * @param array $map
-     * @param array $structure
-     * @param ResultSet|Builder $data
-     * @param array $filters
-     * @param Migration $port
+     * @param array $map Origin -> Input names
+     * @param array $structure Name -> type
+     * @param ResultSet|Builder|array $data
+     * @param array $filters Name -> callable
      * @return array Information about the results.
      */
-    abstract public function store(
+    public function store(
         string $name,
         array $map,
         array $structure,
-        $data,
-        array $filters,
-        Migration $port
-    ): array;
+        ResultSet|Builder|array $data,
+        array $filters
+    ): array {
+        $info = [
+            'rows' => 0,
+            'memory' => 0,
+            'name' => $name,
+        ];
+
+        if (is_a($data, '\Porter\Database\ResultSet')) {
+            // Iterate on @deprecated ResultSet.
+            while ($row = $data->nextResultRow()) {
+                $row = $this->normalizeRow($row, $structure, $map, $filters);
+                $info = $this->stream($row, $structure, $info);
+            }
+        } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
+            // Use the Builder to process results one at a time.
+            foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
+                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                $info = $this->stream($row, $structure, $info);
+            }
+        } elseif (is_array($data)) {
+            // Iterate on API data.
+            foreach ($data as $row) {
+                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                $info = $this->stream($row, $structure, $info);
+            }
+        }
+        $this->stream([], [], $info, true); // Insert remaining records.
+
+        return $info;
+    }
 
     /**
-     * @param string $name
+     * Once per $resourceName, prior to store() being used.
+     * @param string $resourceName
      * @param array $structure The final, combined structure to be written.
      */
-    abstract public function prepare(string $name, array $structure): void;
+    abstract public function prepare(string $resourceName, array $structure): void;
 
+    /** Once before Storage is first used. */
     abstract public function begin(): void;
 
+    /** Once after Storage is done being used. */
     abstract public function end(): void;
 
-    abstract public function setPrefix(string $prefix): void;
+    /** Whether $resourceName exists, and optionally contains $structure. */
+    abstract public function exists(string $resourceName = '', array $structure = []): bool;
 
-    abstract public function exists(string $tableName, array $columns = []): bool;
+    /** Send one record for storage at a time. */
+    abstract public function stream(array $row, array $structure, array $info = [], bool $final = false): array;
 
-    abstract public function stream(array $row, array $structure): void;
-
-    abstract public function endStream(): void;
-
-    abstract public function getAlias(): string;
-
-    abstract public function getConnection(): ?Connection;
+    /** Retrieve a reference to the underlying storage method library. */
+    abstract public function getHandle(): mixed;
 
     /**
      * Prepare a row of data for storage.
      *
-     * @param array $map
-     * @param array $structure
-     * @param array $row
-     * @param array $filters
+     * @param array $row Data to operate on.
+     * @param array $fields [fieldName => type]
+     * @param array $map [fieldName => newName]
+     * @param array $filters [fieldName => callable]
      * @return array
      */
-    public function normalizeRow(array $map, array $structure, array $row, array $filters): array
+    public function normalizeRow(array $row, array $fields, array $map, array $filters): array
     {
+        // $fields['keys'] is only for prepare(); ignore here.
+        unset($fields['keys']);
+
         // Apply callback filters.
         $row = $this->filterData($row, $filters);
 
         // Rename data keys for the target.
         $row = $this->mapData($row, $map);
 
+        // Drop columns not in the structure.
+        $row = array_intersect_key($row, $fields);
+
+        // Add missing keys.
+        $row = array_merge(array_fill_keys(array_keys($fields), null), $row);
+
+        // Convert arrays & objects to text (JSON).
+        $row = $this->flattenData($row);
+
         // Fix encoding as needed.
         $row = $this->fixEncoding($row);
-
-        // Drop columns not in the structure.
-        $row = array_intersect_key($row, $structure);
 
         // Convert empty strings to null.
         return array_map(function ($value) {
@@ -88,9 +123,9 @@ abstract class Storage
      */
     public function filterData(array $row, array $filters): array
     {
-        foreach ($filters as $column => $callable) {
-            if (array_key_exists($column, $row)) {
-                $row[$column] = call_user_func($callable, $row[$column], $column, $row);
+        foreach ($filters as $srcColumnName => $callable) {
+            if (array_key_exists($srcColumnName, $row)) {
+                $row[$srcColumnName] = call_user_func($callable, $row[$srcColumnName], $srcColumnName, $row);
             }
         }
 
@@ -100,6 +135,13 @@ abstract class Storage
     /**
      * Apply column map to the data row to rename keys as required.
      *
+     * Uses:
+     * 1) 'src' => 'dest' — maps key `src` in $row to column `dest`. Simplest and original use.
+     * 2) `src' => [] — maps array list in `src` up a level into $row ("flattens" up 1 level)
+     *      Ex: API response {'foo':[],'meta':0} where 'foo' is the list to be stored, not the top-level metadata.
+     * 3) `src.sub` => `dest` — maps JSON array key `sub` in $row key `src` to column `dest.
+     *      Ex: ['src.name' => 'dest'] takes JSON in `src` field and gets property `name`.
+     *
      * @param array $row
      * @param array $map
      * @return array
@@ -108,6 +150,13 @@ abstract class Storage
     {
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
+            // Allow flattening of nested data (1 level).
+            if (is_array($dest)) {
+                $row = $this->mapNestedData($row, $dest, $src);
+                continue; // No need to map again.
+            }
+
+            // Simple-map remaining values.
             foreach ($row as $columnName => $value) {
                 if ($columnName === $src) {
                     $row[$dest] = $value; // Add column with new name.
@@ -164,5 +213,42 @@ abstract class Storage
                 (is_string($value) || is_numeric($value));
             return ($doEncode) ? mb_convert_encoding($value, 'UTF-8', mb_detect_encoding($value)) : $value;
         }, $row);
+    }
+
+    /**
+     * Convert arrays & objects to flat text.
+     *
+     * @param array $row
+     * @return array
+     */
+    protected function flattenData(array $row): array
+    {
+        foreach ($row as &$value) {
+            if (is_iterable($value)) {
+                $value = json_encode($value);
+            }
+        }
+        return $row;
+    }
+
+    /**
+     * Move declared keys up a level AND map to new name.
+     *
+     * When $map contains an array, get nested columns and promote to the top-level of the row.
+     *
+     * @param array $row
+     * @param array $submap Operates like $map, but for the nested values.
+     * @param string $columnName In $row
+     * @return array
+     */
+    protected function mapNestedData(array $row, array $submap, string $columnName): array
+    {
+        foreach ($submap as $src => $dest) {
+            if (isset($row[$columnName][$src])) {
+                $row[$dest] = $row[$columnName][$src];
+            }
+        }
+        unset($row[$columnName]);
+        return $row; // Remove column that was an array value.
     }
 }

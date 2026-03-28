@@ -7,7 +7,8 @@
 use Porter\ConnectionManager;
 use Porter\FileTransfer;
 use Porter\Log;
-use Porter\Migration;
+use Porter\Origin;
+use Porter\Package;
 use Porter\Postscript;
 use Porter\Source;
 use Porter\Target;
@@ -27,96 +28,94 @@ function fileTransferFactory(Source $source, Target $target, string $outputName)
 }
 
 /**
- * Get valid source class.
+ * Get Package if it exists.
+ *
+ * Uses sub-factories to more explicitly define return types.
+ *
+ * @param string $type
+ * @param string $name
+ * @param ?Storage $input
+ * @param ?Storage $output
+ * @return mixed|null
+ */
+function packageFactory(string $type, string $name, ?Storage $input, ?Storage $output): mixed
+{
+    if (!in_array($type, ['Origin', 'Source', 'Target', 'Postscript'])) {
+        Log::comment("Invalid package type.");
+    }
+    $class = "\Porter\\" . $type . "\\" . ucwords($name);
+    if (!class_exists($class)) {
+        Log::comment("No {$type} package found for {$name}");
+    }
+
+    return (class_exists($class)) ? new $class($input, $output, $name) : null;
+}
+
+/**
+ * Get Origin if it exists.
+ *
+ * @param string $origin
+ * @param ?Storage\Https $originStorage
+ * @param ?Storage\Database $inputStorage
+ * @return ?Origin
+ */
+function originFactory(
+    string $origin,
+    ?Storage\Https $originStorage = null,
+    ?Storage\Database $inputStorage = null
+): ?Origin {
+    return packageFactory('Origin', $origin, $originStorage, $inputStorage);
+}
+
+/**
+ * Get Source if it exists.
  *
  * @param string $source
+ * @param ?Storage $inputStorage
+ * @param ?Storage $porterStorage
  * @return ?Source
  */
-function sourceFactory(string $source): ?Source
+function sourceFactory(string $source, ?Storage $inputStorage = null, ?Storage $porterStorage = null): ?Source
 {
-    $class = '\Porter\Source\\' . ucwords($source);
-    if (!class_exists($class)) {
-        Log::comment("No Source found for {$source}");
-    }
-
-    return (class_exists($class)) ? new $class() : null;
+    return packageFactory('Source', $source, $inputStorage, $porterStorage);
 }
 
 /**
- * Get valid target class.
+ * Get Target if it exists.
  *
  * @param string $target
+ * @param ?Storage $porterStorage
+ * @param ?Storage $outputStorage
  * @return ?Target
  */
-function targetFactory(string $target): ?Target
+function targetFactory(string $target, ?Storage $porterStorage = null, ?Storage $outputStorage = null): ?Target
 {
-    if ('file' === $target) {
-        return null;
-    }
-
-    $class = '\Porter\Target\\' . ucwords($target);
-    if (!class_exists($class)) {
-        Log::comment("No Target found for {$target}");
-    }
-
-    return (class_exists($class)) ? new $class() : null;
+    return packageFactory('Target', $target, $porterStorage, $outputStorage);
 }
 
 /**
- * Get postscript class if it exists.
+ * Get Postscript if it exists.
  *
  * @param string $postscript
+ * @param Storage $outputStorage
+ * @param Storage $postscriptStorage
  * @return ?Postscript
  */
-function postscriptFactory(string $postscript): ?Postscript
-{
-    $class = '\Porter\Postscript\\' . ucwords($postscript);
-    if (!class_exists($class)) {
-        Log::comment("No Postscript found for {$postscript}.");
-    }
-
-    return (class_exists($class)) ? new $class() : null;
+function postscriptFactory(
+    string $postscript,
+    ?Storage $outputStorage = null,
+    ?Storage $postscriptStorage = null
+): ?Postscript {
+    return packageFactory('Postscript', $postscript, $outputStorage, $postscriptStorage);
 }
 
 /**
- * Setup a new migration.
- *
- * @param string $inputName
- * @param string $outputName
- * @param string $sourcePrefix
- * @param string $targetPrefix
- * @param string|null $limitTables
- * @return Migration
  * @throws Exception
  */
-function migrationFactory(
-    string $inputName,
-    string $outputName,
-    string $sourcePrefix = '',
-    string $targetPrefix = '',
-    ?string $limitTables = ''
-): Migration {
-    // @todo Delete $inputDB after Sources are all moved to $inputStorage.
-    $inputDB = new \Porter\Database\DbFactory((new ConnectionManager($inputName))->connection()->getPDO());
-    $inputStorage = new Storage\Database(new ConnectionManager($inputName, $sourcePrefix));
-    if ($outputName === 'file') { // @todo storageFactory
-        $porterStorage = new Storage\File(); // Only 1 valid 'file' type currently.
-        $outputStorage = new Storage\File(); // @todo dead variable (halts at porter step)
-        $postscriptStorage = new Storage\File(); // @todo dead variable (halts at porter step)
-    } else {
-        $porterStorage = new Storage\Database(new ConnectionManager($outputName, 'PORT_'));
-        $outputStorage = new Storage\Database(new ConnectionManager($outputName, $targetPrefix));
-        $postscriptStorage = new Storage\Database(new ConnectionManager($outputName, $targetPrefix));
+function storageFactory(string $name, ?string $prefix = ''): Storage
+{
+    if ($name === 'file') { // @todo storageFactory
+        return new Storage\File();
     }
-    $captureOnly = ($outputName === 'sql');
-    return new Migration(
-        $inputDB,
-        $inputStorage,
-        $porterStorage,
-        $outputStorage,
-        $postscriptStorage,
-        loadStructure(),
-        $limitTables,
-        $captureOnly
-    );
+    return new Storage\Database(new ConnectionManager($name, $prefix));
 }

@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class Toast extends Source
 {
@@ -34,22 +33,20 @@ class Toast extends Source
     /**
      * Main export method.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->signatures($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
+        $this->users();
+        $this->roles();
+        $this->signatures();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'ID' => 'UserID',
@@ -58,7 +55,7 @@ class Toast extends Source
             'LastLoginDate' => array('Column' => 'DateLastActive', 'Type' => 'datetime'),
             'IP' => 'LastIPAddress'
         );
-        $port->export(
+        $this->export(
             'User',
             "select *, NOW() as DateInserted from :_Member u",
             $user_Map
@@ -66,13 +63,12 @@ class Toast extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         // Determine safe RoleID to use for non-existant Member role
         $lastRoleID = 1001;
-        $lastRoleResult = $port->query("select max(ID) as LastID from :_Group");
+        $lastRoleResult = $this->query("select max(ID) as LastID from :_Group");
         if ($lastRole = $lastRoleResult->nextResultRow()) {
             $lastRoleID = $lastRole['LastID'] + 1;
         }
@@ -82,7 +78,7 @@ class Toast extends Source
             'ID' => 'RoleID',
             'Name' => 'Name'
         );
-        $port->export(
+        $this->export(
             'Role',
             " select ID, Name from :_Group
                 union all
@@ -96,7 +92,7 @@ class Toast extends Source
             'MemberID' => 'UserID',
             'GroupID' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             " select GroupID, MemberID from :_MemberGroupLink
                  union all
@@ -112,11 +108,10 @@ class Toast extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             " select
                     ID as UserID,
@@ -135,9 +130,8 @@ class Toast extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'ID' => 'CategoryID',
@@ -145,7 +139,7 @@ class Toast extends Source
             'ForumName' => 'Name',
             'Description' => 'Description'
         );
-        $port->export(
+        $this->export(
             'Category',
             "select
                     f.ID,
@@ -165,9 +159,8 @@ class Toast extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'ID' => 'DiscussionID',
@@ -181,7 +174,7 @@ class Toast extends Source
             'Hits' => 'CountViews',
             'ReplyCount' => 'CountComments'
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select p.*,
             'Html' as Format
@@ -193,9 +186,8 @@ class Toast extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'ID' => 'CommentID',
@@ -205,7 +197,7 @@ class Toast extends Source
             'ModifyDate' => 'DateUpdated',
             'Message' => 'Body'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select *,
                     'Html' as Format

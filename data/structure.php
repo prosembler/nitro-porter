@@ -126,7 +126,7 @@ return array(
         'DateInserted' => 'datetime',
         'DateUpdated' => 'datetime',
         'InsertUserID' => 'int',
-        'UpdateUser' => 'int',
+        'UpdateUserID' => 'int',
         'CountRecipients' => 'int',
         'Threshold' => 'int',
         'Class' => 'varchar(20)',

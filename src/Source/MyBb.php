@@ -11,7 +11,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class MyBb extends Source
 {
@@ -50,23 +49,21 @@ class MyBb extends Source
     /**
      * Main export process.
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->attachments($port);
-        $this->bookmarks($port);
+        $this->users();
+        $this->roles();
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->attachments();
+        $this->bookmarks();
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'uid' => 'UserID',
@@ -76,7 +73,7 @@ class MyBb extends Source
             'regdate3' => 'DateFirstVisit',
             'email' => 'Email',
         );
-        $port->export(
+        $this->export(
             'User',
             "select u.*,
                 FROM_UNIXTIME(regdate) as regdate2,
@@ -90,16 +87,15 @@ class MyBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'gid' => 'RoleID',
             'title' => 'Name',
             'description' => 'Description',
         );
-        $port->export(
+        $this->export(
             'Role',
             "select * from :_usergroups",
             $role_Map
@@ -110,7 +106,7 @@ class MyBb extends Source
             'uid' => 'UserID',
             'usergroup' => 'RoleID',
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "select u.uid, u.usergroup from :_users u",
             $userRole_Map
@@ -118,9 +114,8 @@ class MyBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'fid' => 'CategoryID',
@@ -129,7 +124,7 @@ class MyBb extends Source
             'name' => 'Name',
             'description' => 'Description',
         );
-        $port->export(
+        $this->export(
             'Category',
             "select * from :_forums f",
             $category_Map
@@ -137,9 +132,8 @@ class MyBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'tid' => 'DiscussionID',
@@ -149,7 +143,7 @@ class MyBb extends Source
             'views' => 'CountViews',
             'replies' => 'CountComments',
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "select *,
                     FROM_UNIXTIME(dateline) as DateInserted,
@@ -160,9 +154,8 @@ class MyBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'pid' => 'CommentID',
@@ -170,7 +163,7 @@ class MyBb extends Source
             'uid' => 'InsertUserID',
             'message' => array('Column' => 'Body'),
         );
-        $port->export(
+        $this->export(
             'Comment',
             "select p.*,
                     FROM_UNIXTIME(dateline) as DateInserted,
@@ -181,9 +174,8 @@ class MyBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
         $media_Map = array(
             'aid' => 'MediaID',
@@ -196,7 +188,7 @@ class MyBb extends Source
             'filetype' => 'Type',
             'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
         );
-        $port->export(
+        $this->export(
             'Media',
             "select a.*,
                     600 as thumb_width,
@@ -210,15 +202,14 @@ class MyBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function bookmarks(Migration $port): void
+    protected function bookmarks(): void
     {
         $userDiscussion_Map = array(
             'tid' => 'DiscussionID',
             'uid' => 'UserID',
         );
-        $port->export(
+        $this->export(
             'UserDiscussion',
             "select *,
                     1 as Bookmarked

@@ -51,7 +51,7 @@ class Config
     public function get(string $key): ?string
     {
         // Only allow prefixed keys to be accessed directly.
-        if (!in_array(substr($key, 0, 6), ['option', 'source', 'target', 'output', 'input_'])) {
+        if (!in_array(substr($key, 0, 6), ['option', 'source', 'target', 'origin', 'output', 'input_'])) {
             trigger_error('Config access must use allowed prefix.');
         }
         return $this->config[$key] ?? null;
@@ -65,6 +65,22 @@ class Config
     public function debugEnabled(): bool
     {
         return $this->config['debug'] ?? false;
+    }
+
+    /**
+     * @todo Allow 'merge' command to be passed down.
+     */
+    public function mergeEnabled(): bool
+    {
+        return false;
+    }
+
+    /**
+     * @todo Allow start IDs per key to be set in config.
+     */
+    public function getOffsets(): array
+    {
+        return [];
     }
 
     /**
@@ -92,7 +108,7 @@ class Config
     {
         $result = [];
         foreach ($this->config['connections'] as $connection) {
-            if ($alias === $connection['alias']) {
+            if ($alias === $connection['alias'] || strtolower($alias) === $connection['alias']) {
                 $result = $connection;
                 break;
             }

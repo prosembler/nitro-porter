@@ -9,7 +9,6 @@
 namespace Porter\Source;
 
 use Porter\Source;
-use Porter\Migration;
 
 class PunBb extends Source
 {
@@ -57,9 +56,8 @@ class PunBb extends Source
     /**
      * Forum-specific export format
      *
-     * @param Migration $port
      */
-    public function run(Migration $port): void
+    public function run(): void
     {
         $this->cdn = ''; //$this->param('cdn', '');
         /*if ($avatarPath = $this->param('avatars-source', false)) {
@@ -70,15 +68,15 @@ class PunBb extends Source
             $this->avatarPath = $avatarPath;
         }*/
 
-        $this->users($port);
-        $this->roles($port);
-        $this->signatures($port);
+        $this->users();
+        $this->roles();
+        $this->signatures();
 
-        $this->categories($port);
-        $this->discussions($port);
-        $this->comments($port);
-        $this->tags($port);
-        $this->attachments($port);
+        $this->categories();
+        $this->discussions();
+        $this->comments();
+        $this->tags();
+        $this->attachments();
     }
 
     /**
@@ -140,11 +138,10 @@ class PunBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function attachments(Migration $port): void
+    protected function attachments(): void
     {
-        if ($port->hasInputSchema('attach_files')) {
+        if ($this->hasInputSchema('attach_files')) {
             // Media.
             $media_Map = array(
                 'id' => 'MediaID',
@@ -155,7 +152,7 @@ class PunBb extends Source
                 'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
                 'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
             );
-            $port->export(
+            $this->export(
                 'Media',
                 "select f.*,
                         concat({$this->cdn}, 'FileUpload/', f.file_path) as Path,
@@ -171,29 +168,27 @@ class PunBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function tags(Migration $port): void
+    protected function tags(): void
     {
-        if ($port->hasInputSchema('tags')) {
+        if ($this->hasInputSchema('tags')) {
             $tag_Map = array(
                 'id' => 'TagID',
                 'tag' => 'Name'
             );
-            $port->export('Tag', "SELECT * FROM :_tags", $tag_Map);
+            $this->export('Tag', "SELECT * FROM :_tags", $tag_Map);
 
             $tagDiscussionMap = array(
                 'topic_id' => 'DiscussionID',
                 'tag_id' => 'TagID'
             );
-            $port->export('TagDiscussion', "SELECT * FROM :_topic_tags", $tagDiscussionMap);
+            $this->export('TagDiscussion', "SELECT * FROM :_topic_tags", $tagDiscussionMap);
         }
     }
 
     /**
-     * @param Migration $port
      */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $comment_Map = array(
             'id' => 'CommentID',
@@ -202,7 +197,7 @@ class PunBb extends Source
             'poster_ip' => 'InsertIPAddress',
             'message' => 'Body'
         );
-        $port->export(
+        $this->export(
             'Comment',
             "SELECT p.*,
                     'BBCode' AS Format,
@@ -220,9 +215,8 @@ class PunBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $discussion_Map = array(
             'id' => 'DiscussionID',
@@ -235,7 +229,7 @@ class PunBb extends Source
             'message' => 'Body'
 
         );
-        $port->export(
+        $this->export(
             'Discussion',
             "SELECT t.*,
                     from_unixtime(p.posted) AS DateInserted,
@@ -255,9 +249,8 @@ class PunBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $category_Map = array(
             'id' => 'CategoryID',
@@ -266,7 +259,7 @@ class PunBb extends Source
             'disp_position' => 'Sort',
             'parent_id' => 'ParentCategoryID'
         );
-        $port->export(
+        $this->export(
             'Category',
             "SELECT
                 id,
@@ -288,11 +281,10 @@ class PunBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function signatures(Migration $port): void
+    protected function signatures(): void
     {
-        $port->export(
+        $this->export(
             'UserMeta',
             "select
                    u.id as UserID,
@@ -313,22 +305,21 @@ class PunBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $role_Map = array(
             'g_id' => 'RoleID',
             'g_title' => 'Name'
         );
-        $port->export('Role', "SELECT * FROM :_groups", $role_Map);
+        $this->export('Role', "SELECT * FROM :_groups", $role_Map);
 
         // UserRole.
         $userRole_Map = array(
             'id' => 'UserID',
             'group_id' => 'RoleID'
         );
-        $port->export(
+        $this->export(
             'UserRole',
             "SELECT
                     CASE u.group_id WHEN 2 THEN 0 ELSE id END AS id,
@@ -339,9 +330,8 @@ class PunBb extends Source
     }
 
     /**
-     * @param Migration $port
      */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $user_Map = array(
             'AvatarID' => array('Column' => 'Photo', 'Filter' => array($this, 'getAvatarByID')),
@@ -352,7 +342,7 @@ class PunBb extends Source
             'registration_ip' => 'InsertIPAddress',
             'PasswordHash' => 'Password'
         );
-        $port->export(
+        $this->export(
             'User',
             "SELECT
                      u.*, u.id AS AvatarID,

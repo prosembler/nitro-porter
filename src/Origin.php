@@ -58,26 +58,26 @@ abstract class Origin extends Package
 
         // Retrieve data from the origin.
         $split_send = microtime(true);
-        list($response, $headers) = $this->inputStorage->get($endpoint, $query);
+        list($content, $headers) = $this->inputStorage->get($endpoint, $query);
         $split_reply = microtime(true);
 
-        // Discard the rest of the response if we only want a key's contents.
+        // Discard the rest of the content if we only want a key's contents.
         if (!empty($key)) {
-            $response = $response[$key];
+            $content = $content[$key];
         }
 
         // Store the data.
-        $info = $this->outputStorage->store($tableName, $map, $fields, $response, []);
+        $info = $this->outputStorage->store($tableName, $map, $fields, $content, []);
 
         // Get first/last records for downstream logic.
-        $info['last'] = end($response);
-        $info['first'] = reset($response);
+        $info['last'] = end($content);
+        $info['first'] = reset($content);
         $info['headers'] = $headers;
         $info['api_time'] = $split_reply - $split_send;
         $info['pull_time'] = microtime(true) - $start;
 
         // Report.
-        Log::storage('pull', $tableName, $info['pull_time'], count($response), $info['memory']);
+        Log::storage('pull', $tableName, $info['pull_time'], count($content), $info['memory']);
 
         return $info;
     }

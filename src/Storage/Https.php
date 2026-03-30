@@ -12,6 +12,7 @@ use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Https extends Storage
 {
@@ -125,54 +126,37 @@ class Https extends Storage
      */
     public function get(string $endpoint, array $query, int $retries = 0): array
     {
-        // Detect excessive retries.
-        if ($retries > self::MAX_RETRIES) {
-            $this->abort("MAX_RETRIES (" . self::MAX_RETRIES . ") reached");
-        }
-        $retries++;
-
-        // Send request.
+        // Build request.
         $options = ['headers' => $this->getHeaders()];
         if (!empty($query)) {
             $options['query'] = $query;
         }
+
+        // Show full request in logs.
         if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
             Log::comment("\nSENT: GET ($endpoint)\n> " . json_encode($this->redactHeaders($options)));
         }
-        try {
-            $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
-        } catch (TransportExceptionInterface $e) { // Bad option passed.
-            $this->abort("GET ($endpoint) " . $e->getMessage());
-            exit(); // Stan is throwing a tantrum.
-        }
 
-        // Parse response.
-        $code = 0;
-        $headers = [];
-        $message = '';
-        try {
-            $headers = $response->getHeaders(false); // Forcibly retrieve headers.
-            $message = $response->getContent(false); //gdt Forcibly retrieve body.
-            $code = $response->getStatusCode();
-            $content = $response->toArray();
-        } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
-            // Handle 429 (rate limit) errors & retries.
-            if ($this->retry($code, $headers)) {
-                return $this->get($endpoint, $query, $retries); // TRY AGAIN.
+        while (empty($parsed)) {
+            // Detect excessive retries.
+            if ($retries > self::MAX_RETRIES) {
+                $this->abort("MAX_RETRIES (" . self::MAX_RETRIES . ") reached");
             }
-            // Collect & log (non-429) error before trying again.
-            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
-            return $this->get($endpoint, $query, $retries); // TRY AGAIN.
-        } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
-            // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
-            Log::comment("HTTP $code ($endpoint) " . $e->getMessage());
-            return $this->get($endpoint, $query, $retries); // TRY AGAIN.
-        }
-        if (Config::getInstance()->debugEnabled()) { // Show (good) full response in logs.
-            Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
+            $retries++;
+
+            // Send request.
+            try {
+                $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
+            } catch (TransportExceptionInterface $e) { // Bad option passed.
+                $this->abort("GET ($endpoint) " . $e->getMessage());
+                exit(); // Stan is throwing a tantrum.
+            }
+
+            // Parse request.
+            $parsed = $this->parseResponse($response);
         }
 
-        return [$content, $headers];
+        return $parsed;
     }
 
     /**
@@ -237,5 +221,39 @@ class Https extends Storage
     public function stream(array $row, array $structure, array $info = [], bool $final = false): array
     {
         return [];
+    }
+
+    /**
+     * Parse `ResponseInterface` from get() for content & headers.
+     * @return array Empty means retry.
+     */
+    protected function parseResponse(ResponseInterface $response): array
+    {
+        $code = 0;
+        $headers = [];
+        $message = '';
+        try {
+            $headers = $response->getHeaders(false); // Forcibly retrieve headers.
+            $message = $response->getContent(false); // Forcibly retrieve body.
+            $code = $response->getStatusCode();
+            $content = $response->toArray();
+        } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
+            // Handle 429 (rate limit) errors & retries.
+            if ($this->retry($code, $headers)) {
+                return []; // RETRY.
+            }
+            // Collect & log (non-429) error before trying again.
+            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
+            return []; // RETRY.
+        } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
+            // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
+            Log::comment("HTTP $code " . $e->getMessage());
+            return []; // RETRY.
+        }
+        if (Config::getInstance()->debugEnabled()) { // Show (good) full response in logs.
+            Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
+        }
+
+        return [$content, $headers];
     }
 }

@@ -119,14 +119,15 @@ class Https extends Storage
 
     /**
      * Send the request & retrieve the response content.
-     * @param string $endpoint URI, no `/` at start or path of base_uri will be overwritten.
-     * @param array $query paramName => value
+     * @param string $endpoint URI to fetch.
+     * @param array $query paramName => value.
      * @param int $retries How many times we've tried (recursively).
      * @return array Response content.
      */
     public function get(string $endpoint, array $query, int $retries = 0): array
     {
         // Build request.
+        $endpoint = ltrim($endpoint, '/'); // No `/` at start or path of base_uri will be overwritten.
         $options = ['headers' => $this->getHeaders()];
         if (!empty($query)) {
             $options['query'] = $query;
@@ -255,5 +256,16 @@ class Https extends Storage
         }
 
         return [$content, $headers];
+    }
+
+    protected function download(string $url, string $name, string $signature = ''): string
+    {
+        // Destination.
+
+        // Resource.
+
+        // Verify signature.
+
+        return $path;
     }
 }

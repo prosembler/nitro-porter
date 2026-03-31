@@ -8,6 +8,7 @@ use Porter\Log;
 use Porter\Storage;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -258,14 +259,34 @@ class Https extends Storage
         return [$content, $headers];
     }
 
-    protected function download(string $url, string $name, string $signature = ''): string
+    public function download(string $url, string $path, string $signature = ''): bool
     {
-        // Destination.
+        // Get & validate response.
+        try {
+            $response = $this->connectionManager->connection()->request('GET', $url);
+            $response->getStatusCode();
+        } catch (ExceptionInterface $e) {
+            $type = str_replace('ExceptionInterface', '', get_class($e));
+            Log::comment("$type error downloading [$url] " . $e->getMessage());
+            return false;
+        }
 
-        // Resource.
+        // Write file.
+        $fileHandler = fopen($path, 'w');
+        try {
+            foreach ($this->connectionManager->connection()->stream($response) as $chunk) {
+                fwrite($fileHandler, $chunk->getContent());
+            }
+        } catch (ExceptionInterface $e) {
+            Log::comment("Failed to write $url to $path");
+            return false;
+        }
 
-        // Verify signature.
+        // Verify signature
+        if (!empty($signature)) {
+            // @todo
+        }
 
-        return $path;
+        return true;
     }
 }

@@ -351,9 +351,12 @@ class Discord extends Origin
     /** @see https://discord.com/developers/docs/reference#image-formatting-cdn-endpoints */
     protected function avatars(): void
     {
-        $ids = $this->getUserIDs();
-        foreach ($ids as $id) {
-            // @todo self:: CDN_BASE_URI . avatars/user_id/user_avatar.png
+        if ($folder = $this->getDownloadFolder('avatars')) {
+            $ids = $this->getUserIDs();
+            foreach ($ids as $id) {
+                $url = self::CDN_BASE_URI . 'avatars/' . $id . '/user_avatar.png';
+                $this->inputStorage->download($url, $folder . 'avatar_' . $id . '.png');
+            }
         }
     }
 

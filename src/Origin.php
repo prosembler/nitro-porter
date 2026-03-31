@@ -81,4 +81,28 @@ abstract class Origin extends Package
 
         return $info;
     }
+
+    /**
+     * Folder to download files into.
+     *
+     * @return string source_root/$name/
+     */
+    protected function getDownloadFolder(string $name): string
+    {
+        // Get the source_root.
+        $srcRoot = Config::getInstance()->get('source_root');
+        if (empty($srcRoot)) {
+            Log::comment("No download folder defined in config (`source_root`)");
+            return '';
+        }
+        if (!is_dir($srcRoot)) {
+            Log::comment("Download folder defined in config (`source_root`) does not exist: $srcRoot");
+            return '';
+        }
+
+        // Build the path & return it.
+        $folder = rtrim($srcRoot, '/') . '/' . trim($name, '/');
+        touchFolder($folder);
+        return $folder . '/';
+    }
 }

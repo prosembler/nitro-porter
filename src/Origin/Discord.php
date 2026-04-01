@@ -436,11 +436,12 @@ class Discord extends Origin
      */
     protected function messageLoop(array $channels): array
     {
+        $hasMessagesTable = $this->outputStorage->exists('discord_messages');
         foreach ($channels as $channelId => $status) {
             // Check status.
             if (true === $status) {
                 continue; // Channel is done, bail.
-            } elseif (false === $status) { // Resume?
+            } elseif (false === $status && $hasMessagesTable) { // Resume?
                 $channels[$channelId] = $this->getLastMessageId($channelId);
                 Log::comment("\nResumed channel $channelId at message {$channels[$channelId]}");
             }

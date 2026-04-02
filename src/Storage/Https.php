@@ -68,10 +68,21 @@ class Https extends Storage
      */
     public function addError(array $errorInfo): void
     {
+        // Store the error.
         $this->errors[] = $errorInfo;
-        Log::comment("HTTP {$errorInfo['code']} ({$errorInfo['endpoint']}) " .
-            $errorInfo['message'] . " | " . $errorInfo['exception']->getMessage());
-        Log::comment('HEADERS: ' . json_encode($errorInfo['headers']));
+
+        // HTTP code & message log.
+        $endpoint = (!empty($errorInfo['endpoint'])) ? $errorInfo['endpoint'] . ' ' : '';
+        $msg = (!empty($errorInfo['message'])) ? $errorInfo['message'] . ' ' : '';
+        $exception = (!empty($errorInfo['exception'])) ? $errorInfo['exception']->getMessage() : '';
+        Log::comment("HTTP {$errorInfo['code']} " . $endpoint . $msg . "| " . $exception);
+
+        // Header log.
+        if (!empty($errorInfo['headers'])) {
+            Log::comment('HEADERS: ' . json_encode($errorInfo['headers']));
+        }
+
+        // Cooldown.
         if (count($this->getErrors()) >= self::MAX_ERRORS) {
             $this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
         } else {

@@ -198,6 +198,9 @@ class Discord extends Origin
         $channelIds = $this->getTextChannels(); // Now including threads.
         $this->messages($channelIds);
 
+        // Missing users
+        $this->remedialUsers();
+
         // Files
         //$this->emojis();
         //$this->avatars();
@@ -476,5 +479,28 @@ class Discord extends Origin
         }
 
         return $channels;
+    }
+
+    /**
+     * Get data for departed users to fill in gaps.
+     * @see https://docs.discord.com/developers/resources/user#get-user
+     */
+    protected function remedialUsers(): void
+    {
+        // Validate tables exist.
+        if (!$this->outputStorage->exists('discord_users') || !$this->outputStorage->exists('discord_messages')) {
+            Log::comment("Warning: Failed to find remedial users due to incomplete origin tables.");
+            return;
+        }
+
+        // Derive missing users.
+        $users = $this->outputQB()->from('discord_users')->get(['id'])->toArray();
+        $posted = $this->outputQB()->from('discord_messages')->get(['authorid'])->unique()->toArray();
+        $missingUsers = array_diff(array_column($posted, 'authorid'), array_column($users, 'id'));
+
+        // Individually retrieve users.
+        foreach ($missingUsers as $userid) {
+            $this->pull("users/$userid", self::DB_USERS, 'discord_users', null, [], self::MAP_USERS);
+        }
     }
 }

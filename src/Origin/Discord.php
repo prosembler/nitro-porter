@@ -124,7 +124,7 @@ class Discord extends Origin
      * @var array Name => column type
      * @see \Porter\Source::renumber() for why an index is important.
      */
-    protected const array DB_STRUCTURE_MESSAGES = [
+    protected const array DB_MESSAGES = [
         'id' => 'varchar(100)',
         'channel_id' => 'varchar(100)', //@todo key?
         'content' => 'text',
@@ -137,7 +137,7 @@ class Discord extends Origin
         'message_reference' => 'text',
         'thread' => 'text',
         'author' => 'text',
-        'authorid' => 'int', // Derived from author.id — flattened to allow Source to filter.
+        'authorid' => 'text', // Derived from author.id — flattened to allow Source to filter.
         // OBJECTS[]
         'poll' => 'text', // @see https://discord.com/developers/docs/resources/poll#poll-object
         'attachments' => 'text', // @see https://discord.com/developers/docs/resources/message#attachment-object
@@ -456,7 +456,7 @@ class Discord extends Origin
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::DB_STRUCTURE_MESSAGES, 'discord_messages', null, $query, $map);
+            $info = $this->pull($endpoint, self::DB_MESSAGES, 'discord_messages', null, $query, $map);
 
             // Update status.
             if (0 === (int)$info['rows']) {

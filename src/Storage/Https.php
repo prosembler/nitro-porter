@@ -271,12 +271,15 @@ class Https extends Storage
         return [$content, $headers];
     }
 
-    public function download(string $url, string $path, string $signature = ''): bool
+    public function download(string $url, string $path): bool
     {
         // Get & validate response.
         try {
             $response = $this->connectionManager->connection()->request('GET', $url);
             $response->getStatusCode();
+        } catch (ClientExceptionInterface $e) {
+            Log::comment("4xx error downloading [$url]", false);
+            return false;
         } catch (ExceptionInterface $e) {
             $type = str_replace('ExceptionInterface', '', get_class($e));
             Log::comment("$type error downloading [$url] " . $e->getMessage());
@@ -293,6 +296,13 @@ class Https extends Storage
             Log::comment("Failed to write $url to $path");
             return false;
         }
+
+        return true;
+    }
+
+    public function signedDownload(string $url, string $path, string $signature = ''): bool
+    {
+        $this->download($url, $path);
 
         // Verify signature
         if (!empty($signature)) {

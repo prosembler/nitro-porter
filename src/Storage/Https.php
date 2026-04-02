@@ -145,9 +145,10 @@ class Https extends Storage
             $options['query'] = $query;
         }
 
-        // Show full request in logs.
+        // Show request in logs.
         if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
-            Log::comment("\nSENT: GET ($endpoint)\n> " . json_encode($this->redactHeaders($options)));
+            Log::comment("\nSENT: GET ($endpoint) " . json_encode($options['query']));
+            //Log::comment('> ' . $this->redactHeaders(['headers']));
         }
 
         while (empty($parsed)) {

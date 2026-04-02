@@ -469,7 +469,6 @@ class Discord extends Origin
             } elseif (isset($info['last']['id'])) {
                 // Update offset & report where we are.
                 $id = $channels[$channelId] = $info['last']['id']; // Should be oldest message.
-                $elapsed = formatElapsed($info['api_time']);
                 $time = $info['last']['timestamp'] ?? '';
                 Log::comment("> last_msg=$id @ " . $time);
             }

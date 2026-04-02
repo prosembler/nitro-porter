@@ -282,15 +282,15 @@ class Discord extends Origin
     protected function users(): void
     {
         $query = ['limit' => '1000'];
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/members", self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $endpoint = "guilds/" . $this->getGuildId() . "/members";
+        $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
     protected function roles(): void
     {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId", self::DB_ROLES, 'discord_roles', 'roles');
+        $endpoint = "guilds/" . $this->getGuildId();
+        $this->pull($endpoint, self::DB_ROLES, 'discord_roles', 'roles');
     }
 
     /**
@@ -371,8 +371,8 @@ class Discord extends Origin
      */
     protected function channels(): void
     {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/channels", self::DB_CHANNELS, 'discord_channels');
+        $endpoint = "guilds/" . $this->getGuildId() . "/channels";
+        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels');
     }
 
     /**
@@ -381,8 +381,8 @@ class Discord extends Origin
      */
     protected function activeThreads(): void
     {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/threads/active", self::DB_CHANNELS, 'discord_channels', 'threads');
+        $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
+        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
     }
 
     /**
@@ -500,7 +500,8 @@ class Discord extends Origin
 
         // Individually retrieve users.
         foreach ($missingUsers as $userid) {
-            $this->pull("users/$userid", self::DB_USERS, 'discord_users', null, [], self::MAP_USERS);
+            $endpoint = "users/$userid";
+            $this->pull($endpoint, self::DB_USERS, 'discord_users', null, [], self::MAP_USERS);
         }
     }
 }

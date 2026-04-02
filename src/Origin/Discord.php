@@ -278,6 +278,11 @@ class Discord extends Origin
         return $this->outputQB()->from('discord_users')->get('id')->toArray();
     }
 
+    private function getEmojis(): array
+    {
+        return $this->outputQB()->from('discord_emojis')->get(['id', 'name'])->toArray();
+    }
+
     /** @see https://discord.com/developers/docs/resources/guild#list-guild-members */
     protected function users(): void
     {
@@ -337,10 +342,26 @@ class Discord extends Origin
      */
     protected function emojis(): void
     {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId", self::DB_EMOJIS, 'discord_emojis', 'emojis');
+        // Data
+        $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
+        $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis', 'emojis');
+
         // Files
-        // @todo self::CDN_BASE_URI . emojis/emoji_id.png
+        if ($folder = $this->getDownloadFolder('emojis')) {
+            $emojis = $this->getEmojis();
+            foreach ($emojis as $emoji) {
+                $url = self::CDN_BASE_URI . 'emojis/' . $emoji->id . '.';
+                $types = ['webp', 'png', 'jpg', 'gif', 'jpeg']; // By probability-ish.
+                // Originals may be PNG, JPEG, WebP, or GIF. Only WebP is guaranteed to exist.
+                $found = 0;
+                foreach ($types as $type) {
+                    $this->inputStorage->download($url . $type, $folder . $emoji->name . '.' . $type);
+                    if (2 === $found++) {
+                        break; // There aren't more than two variants (non-webp original + webp).
+                    }
+                }
+            }
+        }
     }
 
     /** @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls */

@@ -468,7 +468,7 @@ class Discord extends Origin
                 $id = $channels[$channelId] = $info['last']['id']; // Should be oldest message.
                 $elapsed = formatElapsed($info['api_time']);
                 $time = $info['last']['timestamp'] ?? '';
-                Log::comment("> $elapsed; last message id=$id; timestamp=" . $time);
+                Log::comment("> last_msg=$id @ " . $time);
             }
 
             // Rate limit.

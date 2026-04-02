@@ -60,7 +60,7 @@ class Discord extends Origin
         15 => 'GUILD_FORUM',
     ];
 
-    protected const array DB_STRUCTURE_USERS = [
+    protected const array DB_USERS = [
         'nick' => 'varchar(100)',
         'avatar' => 'varchar(100)',
         'roles' => 'text',
@@ -83,7 +83,7 @@ class Discord extends Origin
         ],
     ];
 
-    protected const array DB_STRUCTURE_ROLES = [
+    protected const array DB_ROLES = [
         'id' => 'varchar(100)',
         'name' => 'varchar(100)',
         'position' => 'int',
@@ -91,14 +91,14 @@ class Discord extends Origin
         'mentionable' => 'tinyint',
     ];
 
-    protected const array DB_STRUCTURE_EMOJIS = [
+    protected const array DB_EMOJIS = [
         'id' => 'varchar(100)',
         'name' => 'varchar(100)',
         'user' => 'text', // author
         'animated' => 'tinyint',
     ];
 
-    protected const array DB_STRUCTURE_CHANNELS = [
+    protected const array DB_CHANNELS = [
         'id' => 'varchar(100)',
         'type' => 'int', //@todo key?
         'guild_id' => 'varchar(100)',
@@ -155,9 +155,22 @@ class Discord extends Origin
         ],
     ];
 
-    protected const array DB_STRUCTURE_USERROLES = [
+    protected const array DB_USERROLES = [
         'user_id' => 'bigint',
         'role_id' => 'bigint',
+    ];
+
+    protected const array MAP_USERS = [
+        'user' => [ // obj.param => flatName
+            'id' => 'id',
+            'username' => 'username',
+            'discriminator' => 'discriminator',
+            'global_name' => 'global_name',
+            'avatar' => 'global_avatar',
+            'email' => 'email',
+            'bot' => 'bot',
+            'verified' => 'verified',
+        ],
     ];
 
     /**
@@ -267,26 +280,14 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000'];
         $guildId = $this->getGuildId();
-        $map = [
-            'user' => [ // obj.param => flatName
-                'id' => 'id',
-                'username' => 'username',
-                'discriminator' => 'discriminator',
-                'global_name' => 'global_name',
-                'avatar' => 'global_avatar',
-                'email' => 'email',
-                'bot' => 'bot',
-                'verified' => 'verified',
-            ],
-        ];
-        $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', null, $query, $map);
+        $this->pull("guilds/$guildId/members", self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
     protected function roles(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId", self::DB_STRUCTURE_ROLES, 'discord_roles', 'roles');
+        $this->pull("guilds/$guildId", self::DB_ROLES, 'discord_roles', 'roles');
     }
 
     /**
@@ -296,14 +297,14 @@ class Discord extends Origin
     {
         $start = microtime(true);
         $info = [];
-        $this->outputStorage->prepare('discord_user_roles', self::DB_STRUCTURE_USERROLES);
+        $this->outputStorage->prepare('discord_user_roles', self::DB_USERROLES);
 
         $users = $this->outputQB()->from('discord_users')->get(['id', 'roles'])->toArray();
         foreach ($users as $user) {
             $roles = json_decode($user->roles); // Discord's array got auto-collapsed to JSON.
             foreach ($roles as $roleID) {
                 $row = ['user_id' => $user->id, 'role_id' => $roleID];
-                $info = $this->outputStorage->stream($row, self::DB_STRUCTURE_USERROLES, $info);
+                $info = $this->outputStorage->stream($row, self::DB_USERROLES, $info);
             }
         }
         $this->outputStorage->stream([], [], $info, true);
@@ -334,7 +335,7 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId", self::DB_STRUCTURE_EMOJIS, 'discord_emojis', 'emojis');
+        $this->pull("guilds/$guildId", self::DB_EMOJIS, 'discord_emojis', 'emojis');
         // Files
         // @todo self::CDN_BASE_URI . emojis/emoji_id.png
     }
@@ -368,7 +369,7 @@ class Discord extends Origin
     protected function channels(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/channels", self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+        $this->pull("guilds/$guildId/channels", self::DB_CHANNELS, 'discord_channels');
     }
 
     /**
@@ -378,7 +379,7 @@ class Discord extends Origin
     protected function activeThreads(): void
     {
         $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/threads/active", self::DB_STRUCTURE_CHANNELS, 'discord_channels', 'threads');
+        $this->pull("guilds/$guildId/threads/active", self::DB_CHANNELS, 'discord_channels', 'threads');
     }
 
     /**
@@ -389,7 +390,7 @@ class Discord extends Origin
     {
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::DB_STRUCTURE_CHANNELS, 'discord_channels', 'threads');
+            $info = $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
             $this->rateLimit($info['headers']);
         }
     }

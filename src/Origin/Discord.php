@@ -25,6 +25,7 @@
 
 namespace Porter\Origin;
 
+use Illuminate\Database\Query\Builder;
 use Porter\Log;
 use Porter\Origin;
 
@@ -160,6 +161,17 @@ class Discord extends Origin
         'role_id' => 'bigint',
     ];
 
+    protected const array DB_ATTACHMENTS = [
+        'id' => 'text',
+        'message_id' => 'bigint', // renumber?
+        'filename' => 'text',
+        'url' => 'text',
+        'size' => 'bigint',
+        'width' => 'int',
+        'height' => 'int',
+        'content_type' => 'varchar(100)',
+    ];
+
     protected const array MAP_USERS = [
         'user' => [ // obj.param => flatName
             'id' => 'id',
@@ -277,6 +289,15 @@ class Discord extends Origin
         return $this->outputQB()->from('discord_emojis')->get(['id', 'name'])->toArray();
     }
 
+    private function getMessageAttachments(): Builder|false
+    {
+        if (!$this->outputStorage->exists('discord_messages')) {
+            return false;
+        }
+        return $this->outputQB()->from('discord_messages')->select('attachments')
+            ->where('attachments', '<>', '[]');
+    }
+
     /** @see https://discord.com/developers/docs/resources/guild#list-guild-members */
     protected function users(): void
     {
@@ -313,6 +334,25 @@ class Discord extends Origin
         $this->outputStorage->stream([], [], $info, true);
         Log::storage('extract', 'discord_user_roles', (microtime(true) - $start), $info['rows'], $info['memory'] ?? 0);
     }
+
+    /**
+     * Generate intermediary table to unpack attachments from their messages.
+     */
+    protected function extractAttachments(): void
+    {
+        $start = microtime(true);
+        $info = [];
+        $this->outputStorage->prepare('discord_attachments', self::DB_ATTACHMENTS);
+        if ($data = $this->getMessageAttachments()) {
+            foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
+                // @todo Need DB write storage, which makes Origin::__construct() wrong / non-parallel
+                //$row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                //$info = $this->{storage}->stream($row, $structure, $info);
+            }
+            //Log::storage('extract', 'discord_attachments', microtime(true) - $start, $info['rows'], $memory);
+        }
+    }
+
 
     /**
      * @see https://discord.com/developers/docs/reference#image-formatting
@@ -359,13 +399,21 @@ class Discord extends Origin
         }
     }
 
-    /** @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls */
+    /**
+     * Assume a 24-hour expiry on attachments and just grab them after messages() completes.
+     * @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls
+     * @see https://docs.discord.com/developers/resources/message#attachment-object
+     * @example https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png
+     *      ?ex=65d903de - Hex timestamp indicating when an attachment CDN URL will expire
+     *      &is=65c68ede - Hex timestamp indicating when the URL was issued
+     *      &hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f& - Signature
+     */
     protected function attachments(): void
     {
-        // @todo https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png
-        // ?ex=65d903de - Hex timestamp indicating when an attachment CDN URL will expire
-        // &is=65c68ede - Hex timestamp indicating when the URL was issued
-        // &hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f& - Signature
+        $this->extractAttachments();
+        if ($folder = $this->getDownloadFolder('attachments')) {
+            // @todo check if file exists already before pulling it down
+        }
     }
 
     /** @see https://discord.com/developers/docs/reference#image-formatting-cdn-endpoints */

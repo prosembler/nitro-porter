@@ -186,17 +186,11 @@ class Discord extends Origin
         // Users
         $this->users();
         $this->roles();
-        $this->extractUserRoles();
 
-        // Channels
+        // Content
         $this->channels();
-        $channelIds = $this->getTextChannels(); // Before polluting with threads.
-        $this->activeThreads();
-        $this->archivedThreads($channelIds);
-
-        // Messages
-        $channelIds = $this->getTextChannels(); // Now including threads.
-        $this->messages($channelIds);
+        $this->threads();
+        $this->messages();
 
         // Missing users
         $this->remedialUsers();
@@ -246,7 +240,7 @@ class Discord extends Origin
     /**
      * Get channel id list.
      */
-    private function getTextChannels(): array
+    private function getTextChannels(array $types): array
     {
         // Allow config list to override.
         if (!empty($this->config['extra']['channels']) && count($this->config['extra']['channels'])) {
@@ -256,7 +250,7 @@ class Discord extends Origin
         // Get channels from database.
         $channels = $this->outputQB()->from('discord_channels')
             ->distinct()->limit(10000) // Safety from repeat pulls & invalid data.
-            ->whereIn('type', array_keys(self::TEXT_CHANNEL_TYPES))
+            ->whereIn('type', array_keys($types))
             ->get('id')->toArray();
         return array_column($channels, 'id');
     }
@@ -294,6 +288,7 @@ class Discord extends Origin
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
     protected function roles(): void
     {
+        $this->extractUserRoles();
         $endpoint = "guilds/" . $this->getGuildId();
         $this->pull($endpoint, self::DB_ROLES, 'discord_roles', 'roles');
     }
@@ -397,21 +392,18 @@ class Discord extends Origin
     }
 
     /**
-     * Active threads PER GUILD (1).
+     * Active threads per GUILD (1) & public archived threads per CHANNEL.
      * @see https://discord.com/developers/docs/resources/guild#list-active-guild-threads
-     */
-    protected function activeThreads(): void
-    {
-        $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
-        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
-    }
-
-    /**
-     * Public archived threads PER CHANNEL.
      * @see https://discord.com/developers/docs/resources/channel#list-public-archived-threads
      */
-    protected function archivedThreads(array $channelIds): void
+    protected function threads(): void
     {
+        // Active threads.
+        $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
+        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
+
+        // Archived threads.
+        $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
             $info = $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
@@ -426,8 +418,9 @@ class Discord extends Origin
      * It gives a 5-sec timeout every ~10 "identical" requests, which slows things down badly.
      * This means you're effectively limited to ~5K messages per minute if you don't cycle channels.
      */
-    protected function messages(array $channelIds): void
+    protected function messages(): void
     {
+        $channelIds = $this->getTextChannels(self::TEXT_CHANNEL_TYPES);
         if (count($channelIds) > self::MAX_CHANNEL_QUERIES) {
             Log::comment("INFO: Found more than MAX_CHANNEL_QUERIES.");
             return;

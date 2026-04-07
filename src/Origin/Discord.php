@@ -337,6 +337,7 @@ class Discord extends Origin
 
     /**
      * Generate intermediary table to unpack attachments from their messages.
+     * @see \Porter\Storage::store()
      */
     protected function extractAttachments(): void
     {
@@ -344,12 +345,11 @@ class Discord extends Origin
         $info = [];
         $this->outputStorage->prepare('discord_attachments', self::DB_ATTACHMENTS);
         if ($data = $this->getMessageAttachments()) {
-            foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
-                // @todo Need DB write storage, which makes Origin::__construct() wrong / non-parallel
-                //$row = $this->normalizeRow((array)$row, $structure, $map, $filters);
-                //$info = $this->{storage}->stream($row, $structure, $info);
+            foreach ($data->cursor() as $row) { // Streaming data requires a separate Storage object.
+                $row = $this->extractStorage->normalizeRow((array)$row, self::DB_ATTACHMENTS, [], []);
+                $info = $this->extractStorage->stream($row, self::DB_ATTACHMENTS, $info);
             }
-            //Log::storage('extract', 'discord_attachments', microtime(true) - $start, $info['rows'], $memory);
+            Log::storage('extract', 'discord_attachments', microtime(true) - $start, $info['rows'], $info['memory']);
         }
     }
 

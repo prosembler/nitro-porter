@@ -78,6 +78,7 @@ class Controller
             $source->skipDiscussionBody();
             $target->skipDiscussionBody();
         }
+        Log::comment("? 'Use Discussion Body' = " . ($target->getDiscussionBodyMode() ? 'On' : 'Off'));
 
         // Evaluate if both packages have file transfer support and sync them.
         if (
@@ -97,6 +98,10 @@ class Controller
      */
     public function run(Request $request): void
     {
+        $start = microtime(true); // Start the timer.
+        set_time_limit(0); // Disable PHP time limit.
+        ini_set('memory_limit', '256M'); // Override memory limit to be high enough.
+
         // Break down the Request.
         $sourceName = $request->getSource();
         $targetName = $request->getTarget();
@@ -106,12 +111,19 @@ class Controller
         $targetPrefix = $request->getOutputTablePrefix();
         $dataTypes = $request->getDatatypes();
 
-        // Create new migration artifacts.
+        // Log the Request.
+        Log::comment("NITRO PORTER RUNNING...");
+        Log::comment("Porting " . $sourceName . " to " . $targetName);
+        Log::comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
+        Log::comment("Porter: " . $outputName . ' (PORT_)');
+        Log::comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
+        Log::comment("\n" . sprintf('[ STARTED at %s ]', date('H:i:s e')) . "\n");
+
+        // Factory for migration artifacts.
         $inputStorage = storageFactory($inputName, $sourcePrefix);
         $porterStorage = storageFactory($outputName, 'PORT_');
         $outputStorage = storageFactory($outputName, $targetPrefix);
-        $postscriptStorage = storageFactory($outputName, $targetPrefix);
-
+        $postscriptStorage = storageFactory($outputName, $targetPrefix); // Postscript names must match target names.
         $source = sourceFactory($sourceName, $inputStorage, $porterStorage);
         $target = targetFactory($targetName, $porterStorage, $outputStorage);
         $postscript = postscriptFactory($targetName, $outputStorage, $postscriptStorage);
@@ -125,28 +137,10 @@ class Controller
         $inputDB = new \Porter\Database\DbFactory(new ConnectionManager($inputName)->connection()->getPDO());
         $source->addLegacySupport($inputDB);
 
-        // Report on request.
-        Log::comment("NITRO PORTER RUNNING...");
-        Log::comment("Porting " . $sourceName . " to " . $targetName);
-        Log::comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
-        Log::comment("Porter: " . $outputName . ' (PORT_)');
-        Log::comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
-
-        // Setup & log flags.
+        // Evaluate the Source & Target flags.
         if ($target) {
             $this->setFlags($source, $target);
-            Log::comment("? 'Use Discussion Body' = " .
-                ($target->getDiscussionBodyMode() ? 'Enabled' : 'Disabled'));
         }
-        set_time_limit(0);
-        ini_set('memory_limit', '256M');
-
-        // Report start.
-        $start = microtime(true);
-        Log::comment("\n" . sprintf(
-            '[ STARTED at %s ]',
-            date('H:i:s e')
-        ) . "\n");
 
         // Export (Source -> `PORT_`).
         $this->doExport($source);
@@ -154,7 +148,6 @@ class Controller
         // Import (`PORT_` -> Target).
         if ($target) {
             $this->doImport($target);
-            // Postscript names must match target names currently.
             if ($postscript) {
                 $this->doPostscript($postscript);
             }

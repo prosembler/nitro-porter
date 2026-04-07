@@ -9,15 +9,23 @@ abstract class Origin extends Package
     /** @var array */
     protected array $config = [];
 
+    /** @var Storage\Https Where the origin data is from (read-only HTTPS). */
+    protected Storage\Https $originStorage;
+
     /**
      * @throws \Exception
      */
     public function __construct(
-        protected Storage\Https $inputStorage, // Where the source data is from (read-only).
-        protected Storage\Database $outputStorage, // Where the data is being written.
+        protected Storage\Database $outputStorage, // Where data is being written.
+        protected Storage\Database $extractStorage, // Second connection for simultaneous read/write.
         string $connectionAlias,
     ) {
         $this->config = Config::getInstance()->getConnectionAlias($connectionAlias);
+    }
+
+    public function addHttps(Storage\Https $originStorage): void
+    {
+        $this->originStorage = $originStorage;
     }
 
     /**
@@ -58,7 +66,7 @@ abstract class Origin extends Package
 
         // Retrieve data from the origin.
         $split_send = microtime(true);
-        list($content, $headers) = $this->inputStorage->get($endpoint, $query);
+        list($content, $headers) = $this->originStorage->get($endpoint, $query);
         $split_reply = microtime(true);
 
         // Discard the rest of the content if we only want a key's contents.

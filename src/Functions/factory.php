@@ -15,11 +15,7 @@ use Porter\Target;
 use Porter\Storage;
 
 /**
- * @param Source $source
- * @param Target $target
- * @param string $outputName
- * @return FileTransfer
- * @throws Exception
+ * Setup a new FileTransfer service.
  */
 function fileTransferFactory(Source $source, Target $target, string $outputName): FileTransfer
 {
@@ -31,12 +27,6 @@ function fileTransferFactory(Source $source, Target $target, string $outputName)
  * Get Package if it exists.
  *
  * Uses sub-factories to more explicitly define return types.
- *
- * @param string $type
- * @param string $name
- * @param ?Storage $input
- * @param ?Storage $output
- * @return mixed|null
  */
 function packageFactory(string $type, string $name, ?Storage $input, ?Storage $output): mixed
 {
@@ -53,27 +43,14 @@ function packageFactory(string $type, string $name, ?Storage $input, ?Storage $o
 
 /**
  * Get Origin if it exists.
- *
- * @param string $origin
- * @param ?Storage\Https $originStorage
- * @param ?Storage\Database $inputStorage
- * @return ?Origin
  */
-function originFactory(
-    string $origin,
-    ?Storage\Https $originStorage = null,
-    ?Storage\Database $inputStorage = null
-): ?Origin {
-    return packageFactory('Origin', $origin, $originStorage, $inputStorage);
+function originFactory(string $origin, ?Storage $inputStorage = null, ?Storage $extractStorage = null): ?Origin
+{
+    return packageFactory('Origin', $origin, $inputStorage, $extractStorage);
 }
 
 /**
  * Get Source if it exists.
- *
- * @param string $source
- * @param ?Storage $inputStorage
- * @param ?Storage $porterStorage
- * @return ?Source
  */
 function sourceFactory(string $source, ?Storage $inputStorage = null, ?Storage $porterStorage = null): ?Source
 {
@@ -82,11 +59,6 @@ function sourceFactory(string $source, ?Storage $inputStorage = null, ?Storage $
 
 /**
  * Get Target if it exists.
- *
- * @param string $target
- * @param ?Storage $porterStorage
- * @param ?Storage $outputStorage
- * @return ?Target
  */
 function targetFactory(string $target, ?Storage $porterStorage = null, ?Storage $outputStorage = null): ?Target
 {
@@ -95,11 +67,6 @@ function targetFactory(string $target, ?Storage $porterStorage = null, ?Storage 
 
 /**
  * Get Postscript if it exists.
- *
- * @param string $postscript
- * @param Storage $outputStorage
- * @param Storage $postscriptStorage
- * @return ?Postscript
  */
 function postscriptFactory(
     string $postscript,

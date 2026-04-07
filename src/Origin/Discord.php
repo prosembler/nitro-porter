@@ -193,7 +193,7 @@ class Discord extends Origin
     public function run(): void
     {
         // Discord-specific setup.
-        $this->inputStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
+        $this->originStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
 
         // Users
         $this->users();
@@ -390,7 +390,7 @@ class Discord extends Origin
                 // Originals may be PNG, JPEG, WebP, or GIF. Only WebP is guaranteed to exist.
                 $found = 0;
                 foreach ($types as $type) {
-                    $this->inputStorage->download($url . $type, $folder . $emoji->name . '.' . $type);
+                    $this->originStorage->download($url . $type, $folder . $emoji->name . '.' . $type);
                     if (2 === $found++) {
                         break; // There aren't more than two variants (non-webp original + webp).
                     }
@@ -423,7 +423,7 @@ class Discord extends Origin
             $ids = $this->getUserIDs();
             foreach ($ids as $id) {
                 $url = self::CDN_BASE_URI . 'avatars/' . $id . '/user_avatar.png';
-                $this->inputStorage->download($url, $folder . 'avatar_' . $id . '.png');
+                $this->originStorage->download($url, $folder . 'avatar_' . $id . '.png');
             }
         }
     }

@@ -212,8 +212,8 @@ class Discord extends Origin
         $this->remedialUsers();
 
         // Files
-        //$this->emojis();
-        //$this->avatars();
+        $this->emojis();
+        $this->avatars();
     }
 
     private function getGuildId(): string

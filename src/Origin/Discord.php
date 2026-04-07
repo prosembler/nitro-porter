@@ -380,7 +380,10 @@ class Discord extends Origin
                 // Originals may be PNG, JPEG, WebP, or GIF. Only WebP is guaranteed to exist.
                 $found = 0;
                 foreach ($types as $type) {
-                    $this->originStorage->download($url . $type, $folder . $emoji->name . '.' . $type);
+                    $path = $folder . $emoji->name . '.' . $type;
+                    if (!file_exists($path)) {
+                        $this->originStorage->download($url . $type, $path);
+                    }
                     if (2 === $found++) {
                         break; // There aren't more than two variants (non-webp original + webp).
                     }
@@ -396,7 +399,10 @@ class Discord extends Origin
             $ids = $this->getUserIDs();
             foreach ($ids as $id) {
                 $url = self::CDN_BASE_URI . 'avatars/' . $id . '/user_avatar.png';
-                $this->originStorage->download($url, $folder . 'avatar_' . $id . '.png');
+                $path = $folder . 'avatar_' . $id . '.png';
+                if (!file_exists($path)) {
+                    $this->originStorage->download($url, $path);
+                }
             }
         }
     }

@@ -299,16 +299,4 @@ class Https extends Storage
 
         return true;
     }
-
-    public function signedDownload(string $url, string $path, string $signature = ''): bool
-    {
-        $this->download($url, $path);
-
-        // Verify signature
-        if (!empty($signature)) {
-            // @todo
-        }
-
-        return true;
-    }
 }

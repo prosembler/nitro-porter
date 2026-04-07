@@ -346,7 +346,12 @@ class Discord extends Origin
                 $attachInfo = $this->extractStorage->stream($attachment, self::DB_USERROLES, $attachInfo);
                 // Retrieve the file.
                 if ($this->attachmentFolder) {
-                    // @todo check if file exists already before pulling it down
+                    $path = $this->attachmentFolder . $attachment['filename'];
+                    if (!file_exists($path)) {
+                        $this->originStorage->download($attachment['url'], $path);
+                    } else {
+                        Log::comment("WARNING: Attachment '{$attachment['filename']}' already exists.");
+                    }
                 }
             }
         }

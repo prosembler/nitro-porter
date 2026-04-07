@@ -294,7 +294,7 @@ class Discord extends Origin
         if (!$this->outputStorage->exists('discord_messages')) {
             return false;
         }
-        return $this->outputQB()->from('discord_messages')->select('attachments')
+        return $this->outputQB()->from('discord_messages')->select(['id','attachments'])
             ->where('attachments', '<>', '[]');
     }
 
@@ -344,10 +344,13 @@ class Discord extends Origin
         $start = microtime(true);
         $info = [];
         $this->outputStorage->prepare('discord_attachments', self::DB_ATTACHMENTS);
-        if ($data = $this->getMessageAttachments()) {
-            foreach ($data->cursor() as $row) { // Streaming data requires a separate Storage object.
-                $row = $this->extractStorage->normalizeRow((array)$row, self::DB_ATTACHMENTS, [], []);
-                $info = $this->extractStorage->stream($row, self::DB_ATTACHMENTS, $info);
+        if ($messages = $this->getMessageAttachments()) {
+            foreach ($messages->cursor() as $message) { // Streaming data requires a separate Storage object.
+                $attachments = json_decode($message->attachments);
+                foreach ($attachments as $attachment) { // Multiple can be stored per message.
+                    $attachment['message_id'] = $message->id;
+                    $info = $this->extractStorage->stream($attachment, self::DB_USERROLES, $info);
+                }
             }
             Log::storage('extract', 'discord_attachments', microtime(true) - $start, $info['rows'], $info['memory']);
         }

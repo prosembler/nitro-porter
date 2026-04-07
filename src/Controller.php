@@ -164,7 +164,7 @@ class Controller
         Log::comment("\n" . sprintf(
             '[ FINISHED at %s after running for %s ]',
             date('H:i:s e'),
-            formatElapsed(microtime(true) - $start)
+            Log::formatElapsed(microtime(true) - $start)
         ));
         Log::comment("[ After testing, you may delete any `PORT_` database tables. ]");
         Log::comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
@@ -211,7 +211,7 @@ class Controller
         Log::comment("\n" . sprintf(
             '[ FINISHED at %s after running for %s ]',
             date('H:i:s e'),
-            formatElapsed(microtime(true) - $start)
+            Log::formatElapsed(microtime(true) - $start)
         ));
     }
 }

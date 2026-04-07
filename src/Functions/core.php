@@ -60,34 +60,6 @@ function combinePaths(array|string $paths, string $delimiter = '/'): string
 }
 
 /**
- * For outputting how long the export took.
- *
- * @param float $elapsed
- * @return string
- */
-function formatElapsed(float $elapsed): string
-{
-    $m = floor($elapsed / 60);
-    $s = $elapsed - $m * 60;
-    return ($m) ? sprintf('%d:%05.2f', $m, $s) : sprintf('%05.2fs', $s);
-}
-
-/**
- * Human-readable filesize output.
- *
- * @param int $size
- * @return string
- */
-function formatBytes(int $size): string
-{
-    if (!$size) {
-        return '0b';
-    }
-    $unit = ['b','kb','mb','gb','tb','pb'];
-    return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . $unit[$i];
-}
-
-/**
  * Create folder if it doesn't exit.
  *
  * @param string $path Full path of the folder to be created.

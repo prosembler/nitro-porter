@@ -6,9 +6,9 @@
 
 namespace Porter;
 
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
 use Monolog\Handler\FirePHPHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 /**
  * Monolog wrapper
@@ -70,9 +70,31 @@ class Log
             $action,
             $table,
             $rowCount,
-            formatElapsed($timeElapsed),
-            formatBytes($memPeak)
+            Log::formatElapsed($timeElapsed),
+            Log::formatBytes($memPeak)
         );
         Log::comment($report);
+    }
+
+    /**
+     * For outputting how long the export took.
+     */
+    public static function formatElapsed(float $elapsed): string
+    {
+        $m = floor($elapsed / 60);
+        $s = $elapsed - $m * 60;
+        return ($m) ? sprintf('%d:%05.2f', $m, $s) : sprintf('%05.2fs', $s);
+    }
+
+    /**
+     * Human-readable filesize output.
+     */
+    public static function formatBytes(int $size): string
+    {
+        if (!$size) {
+            return '0b';
+        }
+        $unit = ['b', 'kb', 'mb', 'gb', 'tb', 'pb'];
+        return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . $unit[$i];
     }
 }

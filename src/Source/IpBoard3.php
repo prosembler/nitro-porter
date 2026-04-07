@@ -55,7 +55,7 @@ class IpBoard3 extends Source
         }
 
         // Set up a target folder
-        $targetFolder = combinePaths(array($sourceFolder, 'ipb'));
+        $targetFolder = self::combinePaths(array($sourceFolder, 'ipb'));
         if (!is_dir($sourceFolder)) {
             @$made = mkdir($targetFolder, 0777, true);
             if (!$made) {
@@ -111,10 +111,10 @@ class IpBoard3 extends Source
 
             $photoFileName = basename($photo);
             $photoPath = dirname($photo);
-            $photoFolder = combinePaths(array($targetFolder, $photoPath));
+            $photoFolder = self::combinePaths(array($targetFolder, $photoPath));
             @mkdir($photoFolder, 0777, true);
 
-            $photoSrc = combinePaths(array($sourceFolder, $photo));
+            $photoSrc = self::combinePaths(array($sourceFolder, $photo));
             if (!file_exists($photoSrc)) {
                 $errors[] = "Missing file: {$photoSrc}";
                 continue;
@@ -127,16 +127,16 @@ class IpBoard3 extends Source
             if (!$mainPhoto) {
                 $mainPhoto = $photo;
             }
-            $mainSrc = combinePaths(array($sourceFolder, $mainPhoto));
-            $mainDest = combinePaths(array($photoFolder, "p" . $photoFileName));
+            $mainSrc = self::combinePaths(array($sourceFolder, $mainPhoto));
+            $mainDest = self::combinePaths(array($photoFolder, "p" . $photoFileName));
             $copied = @copy($mainSrc, $mainDest);
             if (!$copied) {
                 $error |= true;
                 $errors[] = "! failed to copy main photo '{$mainSrc}' for user {$userID} (-> {$mainDest}).";
             }
 
-            $thumbSrc = combinePaths(array($sourceFolder, $mainPhoto));
-            $thumbDest = combinePaths(array($photoFolder, "n" . $photoFileName));
+            $thumbSrc = self::combinePaths(array($sourceFolder, $mainPhoto));
+            $thumbDest = self::combinePaths(array($photoFolder, "n" . $photoFileName));
             $copied = @copy($thumbSrc, $thumbDest);
             if (!$copied) {
                 $error |= true;
@@ -819,5 +819,28 @@ EOT;
                on a.attach_ext = ty.atype_extension";
         $this->clearFilters('Media', $media_Map, $sql);
         $this->export('Media', $sql, $media_Map);
+    }
+
+    /**
+     * Build a valid path from multiple pieces.
+     *
+     * @param array|string $paths
+     * @param  string $delimiter
+     * @return string
+     */
+    public static function combinePaths(array|string $paths, string $delimiter = '/'): string
+    {
+        if (is_array($paths)) {
+            $mungedPath = implode($delimiter, $paths);
+            $mungedPath = str_replace(
+                array($delimiter . $delimiter . $delimiter, $delimiter . $delimiter),
+                array($delimiter, $delimiter),
+                $mungedPath
+            );
+
+            return str_replace(array('http:/', 'https:/'), array('http://', 'https://'), $mungedPath);
+        } else {
+            return $paths;
+        }
     }
 }

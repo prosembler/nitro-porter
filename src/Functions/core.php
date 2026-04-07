@@ -37,29 +37,6 @@ function loadData(string $name): array
 }
 
 /**
- * Build a valid path from multiple pieces.
- *
- * @param array|string $paths
- * @param  string $delimiter
- * @return string
- */
-function combinePaths(array|string $paths, string $delimiter = '/'): string
-{
-    if (is_array($paths)) {
-        $mungedPath = implode($delimiter, $paths);
-        $mungedPath = str_replace(
-            array($delimiter . $delimiter . $delimiter, $delimiter . $delimiter),
-            array($delimiter, $delimiter),
-            $mungedPath
-        );
-
-        return str_replace(array('http:/', 'https:/'), array('http://', 'https://'), $mungedPath);
-    } else {
-        return $paths;
-    }
-}
-
-/**
  * Create folder if it doesn't exit.
  *
  * @param string $path Full path of the folder to be created.

@@ -77,7 +77,8 @@ abstract class Origin extends Package
         // Store the data.
         $info = $this->outputStorage->store($tableName, $map, $fields, $content, []);
 
-        // Get first/last records for downstream logic.
+        // Add metadata for downstream logic.
+        $info['content'] = $content;
         $info['last'] = end($content);
         $info['first'] = reset($content);
         $info['headers'] = $headers;

@@ -185,6 +185,9 @@ class Discord extends Origin
         ],
     ];
 
+    /** @var string Folder path to download attachment files into. */
+    protected string $attachmentFolder;
+
     /**
      * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
      * Current behavior is to REBUILD users & channels on every run, but RESUME messages from last ID.
@@ -194,6 +197,7 @@ class Discord extends Origin
     {
         // Discord-specific setup.
         $this->originStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
+        $this->attachmentFolder = $this->getDownloadFolder('attachments');
 
         // Users
         $this->users();
@@ -210,7 +214,6 @@ class Discord extends Origin
         // Files
         //$this->emojis();
         //$this->avatars();
-        //$this->attachments();
     }
 
     private function getGuildId(): string
@@ -289,15 +292,6 @@ class Discord extends Origin
         return $this->outputQB()->from('discord_emojis')->get(['id', 'name'])->toArray();
     }
 
-    private function getMessageAttachments(): Builder|false
-    {
-        if (!$this->outputStorage->exists('discord_messages')) {
-            return false;
-        }
-        return $this->outputQB()->from('discord_messages')->select(['id','attachments'])
-            ->where('attachments', '<>', '[]');
-    }
-
     /** @see https://discord.com/developers/docs/resources/guild#list-guild-members */
     protected function users(): void
     {
@@ -336,26 +330,27 @@ class Discord extends Origin
     }
 
     /**
-     * Generate intermediary table to unpack attachments from their messages.
-     * @see \Porter\Storage::store()
+     * Generate intermediary table to unpack attachments from their messages & download them.
      */
-    protected function extractAttachments(): void
+    protected function extractAttachments(array $messages): void
     {
-        $start = microtime(true);
-        $info = [];
-        $this->outputStorage->prepare('discord_attachments', self::DB_ATTACHMENTS);
-        if ($messages = $this->getMessageAttachments()) {
-            foreach ($messages->cursor() as $message) { // Streaming data requires a separate Storage object.
-                $attachments = json_decode($message->attachments);
-                foreach ($attachments as $attachment) { // Multiple can be stored per message.
-                    $attachment['message_id'] = $message->id;
-                    $info = $this->extractStorage->stream($attachment, self::DB_USERROLES, $info);
+        $attachInfo = [];
+        $messages = array_column($messages, 'attachments', 'id');
+        $msgsWithAttachments = array_filter($messages, fn ($attachments) => ($attachments !== '[]'));
+        foreach ($msgsWithAttachments as $message_id => $attachments) {
+            // Unpack this message's attachments.
+            $attachments = json_decode($attachments);
+            foreach ($attachments as $attachment) { // Multiple can be stored per message.
+                // Store the attachment record.
+                $attachment['message_id'] = $message_id;
+                $attachInfo = $this->extractStorage->stream($attachment, self::DB_USERROLES, $attachInfo);
+                // Retrieve the file.
+                if ($this->attachmentFolder) {
+                    // @todo check if file exists already before pulling it down
                 }
             }
-            Log::storage('extract', 'discord_attachments', microtime(true) - $start, $info['rows'], $info['memory']);
         }
     }
-
 
     /**
      * @see https://discord.com/developers/docs/reference#image-formatting
@@ -399,23 +394,6 @@ class Discord extends Origin
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * Assume a 24-hour expiry on attachments and just grab them after messages() completes.
-     * @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls
-     * @see https://docs.discord.com/developers/resources/message#attachment-object
-     * @example https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png
-     *      ?ex=65d903de - Hex timestamp indicating when an attachment CDN URL will expire
-     *      &is=65c68ede - Hex timestamp indicating when the URL was issued
-     *      &hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f& - Signature
-     */
-    protected function attachments(): void
-    {
-        $this->extractAttachments();
-        if ($folder = $this->getDownloadFolder('attachments')) {
-            // @todo check if file exists already before pulling it down
         }
     }
 
@@ -500,12 +478,20 @@ class Discord extends Origin
      *  > Returns an array of message objects from newest to oldest on success.
      * @see https://discord.com/developers/docs/resources/message
      * @see https://discord.com/developers/docs/resources/message#message-object-message-types (types)
-     * @param array $channels
-     * @return array
+     *
+     * Attachments should be collected now, while we're sure the timeouts are still fresh
+     *   and we are tracking iterative backups so we can grab only new ones.
+     * @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls
+     * @see https://docs.discord.com/developers/resources/message#attachment-object
+     * @example https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png
+     *       ?ex=65d903de - Hex timestamp indicating when an attachment CDN URL will expire
+     *       &is=65c68ede - Hex timestamp indicating when the URL was issued
+     *       &hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f& - Signature
      */
     protected function messageLoop(array $channels): array
     {
         $hasMessagesTable = $this->outputStorage->exists('discord_messages');
+        $this->outputStorage->prepare('discord_attachments', self::DB_ATTACHMENTS);
         foreach ($channels as $channelId => $status) {
             // Check status.
             if (true === $status) {
@@ -525,6 +511,9 @@ class Discord extends Origin
                 $query['before'] = $channels[$channelId];
             }
             $info = $this->pull($endpoint, self::DB_MESSAGES, 'discord_messages', null, $query, $map);
+
+            // Attachments.
+            $this->extractAttachments($info['content']);
 
             // Update status.
             if (0 === (int)$info['rows']) {

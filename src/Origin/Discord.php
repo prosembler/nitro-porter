@@ -358,25 +358,12 @@ class Discord extends Origin
     }
 
     /**
-     * @see https://discord.com/developers/docs/reference#image-formatting
-     * > The returned format can be changed by changing the extension name at the end of the URL.
-     * >> The returned size can be changed by appending a querystring of ?size=desired_size to the URL.
-     * >> Image size can be any power of two between 16 and 4096.
-     * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
-     * >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
-     * >> WebP and AVIF formats must be requested as WebP since they don't convert well to other formats.
-     * > Ex data URI format: `data:image/jpeg;base64,BASE64_ENCODED_JPEG_IMAGE_DATA`
-     * >> Ensure content type (image/jpeg, image/png, image/gif) matches the image data being provided.
-     * @param int $id
-     */
-    protected function getImage(int $id): void
-    {
-        // @todo
-    }
-
-    /**
      * Porter currently lacks a way to migrate an emoji set but we still pull them for backup purposes.
      * @see https://discord.com/developers/docs/resources/emoji#emoji-object
+     * @see https://discord.com/developers/docs/reference#image-formatting
+     * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
+     *  >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
+     *  >> WebP and AVIF formats must be requested as WebP since they don't convert well to other formats.
      */
     protected function emojis(): void
     {

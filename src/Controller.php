@@ -120,14 +120,14 @@ class Controller
         Log::comment("\n" . sprintf('[ STARTED at %s ]', date('H:i:s e')) . "\n");
 
         // Factory for migration artifacts.
-        $inputStorage = storageFactory($inputName, $sourcePrefix);
-        $porterStorage = storageFactory($outputName, 'PORT_');
-        $outputStorage = storageFactory($outputName, $targetPrefix);
-        $postscriptStorage = storageFactory($outputName, $targetPrefix); // Postscript names must match target names.
-        $source = sourceFactory($sourceName, $inputStorage, $porterStorage);
-        $target = targetFactory($targetName, $porterStorage, $outputStorage);
-        $postscript = postscriptFactory($targetName, $outputStorage, $postscriptStorage);
-        $fileTransfer = fileTransferFactory($source, $target, $outputName);
+        $inputStorage = Factory::storage($inputName, $sourcePrefix);
+        $porterStorage = Factory::storage($outputName, 'PORT_');
+        $outputStorage = Factory::storage($outputName, $targetPrefix);
+        $postscriptStorage = Factory::storage($outputName, $targetPrefix); // Postscript names must match target names.
+        $source = Factory::source($sourceName, $inputStorage, $porterStorage);
+        $target = Factory::target($targetName, $porterStorage, $outputStorage);
+        $postscript = Factory::postscript($targetName, $outputStorage, $postscriptStorage);
+        $fileTransfer = Factory::fileTransfer($source, $target, $outputName);
 
         // Set constraints.
         $source->limitTables($dataTypes);
@@ -185,7 +185,7 @@ class Controller
         // Create new migration artifacts.
         $inputStorage = new Storage\Database(new ConnectionManager($inputName));
         $extractStorage = new Storage\Database(new ConnectionManager($inputName));
-        $origin = originFactory($originName, $inputStorage, $extractStorage);
+        $origin = Factory::origin($originName, $inputStorage, $extractStorage);
 
         $originStorage = new Storage\Https(new ConnectionManager($originName)); // @todo non-API origins
         $origin->addHttps($originStorage);

@@ -8,8 +8,6 @@ use Porter\Log;
 
 /**
  * Retrieve the config.
- *
- * @return array
  */
 function loadConfig(): array
 {
@@ -22,9 +20,6 @@ function loadConfig(): array
 
 /**
  * Retrieve an array from named file in `/data`.
- *
- * @param string $name
- * @return array
  */
 function loadData(string $name): array
 {

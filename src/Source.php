@@ -426,4 +426,91 @@ abstract class Source extends Package
             $this->limitedTables = $tables;
         }
     }
+
+    /**
+     * Create a thumbnail from an image file.
+     *
+     * @param string $path
+     * @param string $thumbPath
+     * @param  int $height
+     * @param  int $width
+     */
+    public static function generateThumbnail($path, $thumbPath, $height = 50, $width = 50): void
+    {
+        list($widthSource, $heightSource, $type) = getimagesize($path);
+
+        $xCoordinate = 0;
+        $yCoordinate = 0;
+        $heightDiff = $heightSource - $height;
+        $widthDiff = $widthSource - $width;
+        if ($widthDiff > $heightDiff) {
+            // Crop the original width down
+            $newWidthSource = round(($width * $heightSource) / $height);
+
+            // And set the original x position to the cropped start point.
+            $xCoordinate = round(($widthSource - $newWidthSource) / 2);
+            $widthSource = $newWidthSource;
+        } else {
+            // Crop the original height down
+            $newHeightSource = round(($height * $widthSource) / $width);
+
+            // And set the original y position to the cropped start point.
+            $yCoordinate = round(($heightSource - $newHeightSource) / 2);
+            $heightSource = $newHeightSource;
+        }
+
+        $targetImage = false;
+        $sourceImage = false;
+        try {
+            switch ($type) {
+                case 1:
+                    $sourceImage = imagecreatefromgif($path);
+                    break;
+                case 2:
+                    $sourceImage = @imagecreatefromjpeg($path);
+                    if (!$sourceImage) {
+                        $sourceImage = imagecreatefromstring(file_get_contents($path));
+                    }
+                    break;
+                case 3:
+                    $sourceImage = imagecreatefrompng($path);
+                    imagealphablending($sourceImage, true);
+                    break;
+            }
+
+            $targetImage = imagecreatetruecolor($width, $height);
+            imagecopyresampled(
+                $targetImage,
+                $sourceImage,
+                0,
+                0,
+                $xCoordinate,
+                $yCoordinate,
+                $width,
+                $height,
+                $widthSource,
+                $heightSource
+            );
+            if ($sourceImage) {
+                imagedestroy($sourceImage);
+            }
+
+            switch ($type) {
+                case 1:
+                    imagegif($targetImage, $thumbPath);
+                    break;
+                case 2:
+                    imagejpeg($targetImage, $thumbPath);
+                    break;
+                case 3:
+                    imagepng($targetImage, $thumbPath);
+                    break;
+            }
+            if ($targetImage) {
+                imagedestroy($targetImage);
+            }
+        } catch (\Exception $e) {
+            echo "Could not generate a thumbnail for " . $targetImage;
+        }
+    }
 }

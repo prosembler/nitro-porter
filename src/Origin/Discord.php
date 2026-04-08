@@ -533,45 +533,29 @@ class Discord extends Origin
     }
 
     /**
-     * Get data for non-guild users to fill in gaps.
+     * Get & store data for non-guild users to fill in gaps.
      *
      * Authors are stored as a SINGLE user object on messages.
      */
     protected function remediateUsers(array $content): void
     {
-        // Store missing users.
-        $info = [];
         $users = array_column($content, 'author', 'id');
-        foreach ($users as $user) {
-            if (!in_array($user['id'], $this->guildUsers, true)) {
-                $info = $this->outputStorage->stream($user, self::DB_USERS, $info);
-            }
-        }
-        if (!empty($info['rows'])) { // Finish the batch if we started one.
-            $this->outputStorage->stream([], [], $info, true);
-        }
+        $missingUsers = array_diff_key($users, array_combine($this->guildUsers, $this->guildUsers));
+        $this->outputStorage->store('discord_users', [], self::DB_USERS, $missingUsers, []);
     }
 
     /**
-     * Get data for non-guild emojis to fill in gaps.
+     * Get & store data for non-guild emojis to fill in gaps.
      *
      * Reactions are stored as a LIST of emoji objects on messages.
      */
     protected function remediateEmoji(array $content): void
     {
-        // Store missing emojis.
-        $info = [];
         $messages = array_column($content, 'reactions');
         $msgsWithEmojis = array_filter($messages, fn ($reactions) => (!empty($reactions)));
         foreach ($msgsWithEmojis as $emojis) {
-            foreach ($emojis as $emoji) {
-                if (!in_array($emoji['id'], $this->guildEmojis, true)) {
-                    $info = $this->outputStorage->stream($emoji, self::DB_USERS, $info);
-                }
-            }
-        }
-        if (!empty($info['rows'])) { // Finish the batch if we started one.
-            $this->outputStorage->stream([], [], $info, true);
+            $missingEmojis = array_diff($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
+            $this->outputStorage->store('discord_emojis', [], self::DB_EMOJIS, $missingEmojis, []);
         }
     }
 

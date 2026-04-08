@@ -104,14 +104,10 @@ abstract class Origin extends Package
             Log::comment("No download folder defined in config (`source_root`)");
             return '';
         }
-        if (!is_dir($srcRoot)) {
-            Log::comment("Download folder defined in config (`source_root`) does not exist: $srcRoot");
-            return '';
-        }
 
         // Build the path & return it.
         $folder = rtrim($srcRoot, '/') . '/' . trim($name, '/');
-        touchFolder($folder);
-        return $folder . '/';
+        $exists = touchFolder($folder);
+        return ($exists) ? $folder . '/' : '';
     }
 }

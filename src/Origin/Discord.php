@@ -188,6 +188,12 @@ class Discord extends Origin
     /** @var string Folder path to download attachment files into. */
     protected string $attachmentFolder;
 
+    /** @var array IDs of guild users used to find non-guild users. */
+    protected array $guildUsers;
+
+    /** @var array IDs of guild emojis used to find non-guild emojis. */
+    protected array $guildEmojis;
+
     /**
      * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
      * Current behavior is to REBUILD users & channels on every run, but RESUME messages from last ID.
@@ -199,21 +205,21 @@ class Discord extends Origin
         $this->originStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
         $this->attachmentFolder = $this->getDownloadFolder('attachments');
 
-        // Users
+        // Guild users & roles
         $this->users();
         $this->roles();
 
-        // Content
+        // Guild taxonomy & emoji
+        $this->emojis();
         $this->channels();
         $this->threads();
+
+        // Guild content + non-guild users/emoji.
         $this->messages();
 
-        // Missing users
-        $this->remedialUsers();
-
-        // Files
-        $this->emojis();
-        $this->avatars();
+        // Download last to catch late additions.
+        $this->downloadAvatars();
+        $this->downloadEmojis();
     }
 
     private function getGuildId(): string
@@ -282,20 +288,10 @@ class Discord extends Origin
         return $message->id ?? 0;
     }
 
-    private function getUserIDs(): array
-    {
-        return $this->outputQB()->from('discord_users')->get('id')->toArray();
-    }
-
-    private function getEmojis(): array
-    {
-        return $this->outputQB()->from('discord_emojis')->get(['id', 'name'])->toArray();
-    }
-
     /** @see https://discord.com/developers/docs/resources/guild#list-guild-members */
     protected function users(): void
     {
-        $query = ['limit' => '1000'];
+        $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
         $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
     }
@@ -353,20 +349,23 @@ class Discord extends Origin
     /**
      * Porter currently lacks a way to migrate an emoji set but we still pull them for backup purposes.
      * @see https://discord.com/developers/docs/resources/emoji#emoji-object
-     * @see https://discord.com/developers/docs/reference#image-formatting
-     * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
-     *  >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
-     *  >> WebP and AVIF formats must be requested as WebP since they don't convert well to other formats.
      */
     protected function emojis(): void
     {
-        // Data
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
         $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis', 'emojis');
+    }
 
-        // Files
+    /**
+     * @see https://discord.com/developers/docs/reference#image-formatting
+     * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
+     *   >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
+     *   >> WebP and AVIF formats must be requested as WebP since they don't convert well to other formats.
+     */
+    protected function downloadEmojis(): void
+    {
         if ($folder = $this->getDownloadFolder('emojis')) {
-            $emojis = $this->getEmojis();
+            $emojis = $this->outputQB()->from('discord_emojis')->get(['id', 'name'])->toArray();
             foreach ($emojis as $emoji) {
                 $url = self::CDN_BASE_URI . 'emojis/' . $emoji->id . '.';
                 $types = ['webp', 'png', 'jpg', 'gif', 'jpeg']; // By probability-ish.
@@ -386,10 +385,10 @@ class Discord extends Origin
     }
 
     /** @see https://discord.com/developers/docs/reference#image-formatting-cdn-endpoints */
-    protected function avatars(): void
+    protected function downloadAvatars(): void
     {
         if ($folder = $this->getDownloadFolder('avatars')) {
-            $ids = $this->getUserIDs();
+            $ids = $this->outputQB()->from('discord_users')->get('id')->toArray();
             foreach ($ids as $id) {
                 $url = self::CDN_BASE_URI . 'avatars/' . $id . '/user_avatar.png';
                 $path = $folder . 'avatar_' . $id . '.png';
@@ -506,6 +505,12 @@ class Discord extends Origin
             // Attachments.
             $this->extractAttachments($info['content']);
 
+            // Non-guild emoji.
+            $this->remediateEmoji($info['content']);
+
+            // Non-guild authors.
+            $this->remediateUsers($info['content']);
+
             // Update status.
             if (0 === (int)$info['rows']) {
                 // Change status to 'done' if no more rows found.
@@ -526,26 +531,45 @@ class Discord extends Origin
     }
 
     /**
-     * Get data for departed users to fill in gaps.
-     * @see https://docs.discord.com/developers/resources/user#get-user
+     * Get data for non-guild users to fill in gaps.
+     *
+     * Authors are stored as a SINGLE user object on messages.
      */
-    protected function remedialUsers(): void
+    protected function remediateUsers(array $content): void
     {
-        // Validate tables exist.
-        if (!$this->outputStorage->exists('discord_users') || !$this->outputStorage->exists('discord_messages')) {
-            Log::comment("Warning: Failed to find remedial users due to incomplete origin tables.");
-            return;
+        // Store missing users.
+        $info = [];
+        $users = array_column($content, 'author', 'id');
+        foreach ($users as $user) {
+            if (!in_array($user['id'], $this->guildUsers, true)) {
+                $info = $this->outputStorage->stream($user, self::DB_USERS, $info);
+            }
         }
+        if (!empty($info['rows'])) { // Finish the batch if we started one.
+            $this->outputStorage->stream([], [], $info, true);
+        }
+    }
 
-        // Derive missing users.
-        $users = $this->outputQB()->from('discord_users')->get(['id'])->toArray();
-        $posted = $this->outputQB()->from('discord_messages')->get(['authorid'])->unique()->toArray();
-        $missingUsers = array_diff(array_column($posted, 'authorid'), array_column($users, 'id'));
-
-        // Individually retrieve users.
-        foreach ($missingUsers as $userid) {
-            $endpoint = "users/$userid";
-            $this->pull($endpoint, self::DB_USERS, 'discord_users', null, [], self::MAP_USERS);
+    /**
+     * Get data for non-guild emojis to fill in gaps.
+     *
+     * Reactions are stored as a LIST of emoji objects on messages.
+     */
+    protected function remediateEmoji(array $content): void
+    {
+        // Store missing emojis.
+        $info = [];
+        $messages = array_column($content, 'reactions');
+        $msgsWithEmojis = array_filter($messages, fn ($reactions) => (!empty($reactions)));
+        foreach ($msgsWithEmojis as $emojis) {
+            foreach ($emojis as $emoji) {
+                if (!in_array($emoji['id'], $this->guildEmojis, true)) {
+                    $info = $this->outputStorage->stream($emoji, self::DB_USERS, $info);
+                }
+            }
+        }
+        if (!empty($info['rows'])) { // Finish the batch if we started one.
+            $this->outputStorage->stream([], [], $info, true);
         }
     }
 

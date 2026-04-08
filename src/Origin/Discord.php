@@ -354,7 +354,7 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
-        $info = $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis', 'emojis');
+        $info = $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis');
         $this->guildEmojis = array_column($info['content'], 'id');
     }
 

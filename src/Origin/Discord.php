@@ -336,23 +336,16 @@ class Discord extends Origin
     {
         $attachInfo = [];
         $messages = array_column($messages, 'attachments', 'id');
-        $msgsWithAttachments = array_filter($messages, fn ($attachments) => ($attachments !== '[]'));
+        // Only process messages with attachments.
+        $msgsWithAttachments = array_filter($messages, fn ($attachments) => (!empty($attachments)));
         foreach ($msgsWithAttachments as $message_id => $attachments) {
-            // Unpack this message's attachments.
-            $attachments = json_decode($attachments);
-            foreach ($attachments as $attachment) { // Multiple can be stored per message.
-                // Store the attachment record.
+            // Multiple attachments can be stored per message.
+            foreach ($attachments as $attachment) {
+                // Store the attachment record, associated with its message.
                 $attachment['message_id'] = $message_id;
                 $attachInfo = $this->extractStorage->stream($attachment, self::DB_USERROLES, $attachInfo);
-                // Retrieve the file.
-                if ($this->attachmentFolder) {
-                    $path = $this->attachmentFolder . $attachment['filename'];
-                    if (!file_exists($path)) {
-                        $this->originStorage->download($attachment['url'], $path);
-                    } else {
-                        Log::comment("WARNING: Attachment '{$attachment['filename']}' already exists.");
-                    }
-                }
+                // Retrieve the attachment.
+                $this->getFile($attachment['url'], $attachment['filename']);
             }
         }
     }
@@ -553,6 +546,22 @@ class Discord extends Origin
         foreach ($missingUsers as $userid) {
             $endpoint = "users/$userid";
             $this->pull($endpoint, self::DB_USERS, 'discord_users', null, [], self::MAP_USERS);
+        }
+    }
+
+    /**
+     * Retrieve the file.
+     */
+    protected function getFile(string $url, string $filename): void
+    {
+        if (!$this->attachmentFolder) {
+            return;
+        }
+        $path = $this->attachmentFolder . $filename;
+        if (!file_exists($path)) {
+            $this->originStorage->download($url, $path);
+        } else {
+            Log::comment("Notice: Attachment '{$filename}' already exists.");
         }
     }
 }

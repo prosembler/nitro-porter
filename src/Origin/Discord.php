@@ -293,7 +293,8 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
-        $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $info = $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $this->guildUsers = array_column($info['content'], 'id');
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
@@ -353,7 +354,8 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
-        $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis', 'emojis');
+        $info = $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis', 'emojis');
+        $this->guildEmojis = array_column($info['content'], 'id');
     }
 
     /**

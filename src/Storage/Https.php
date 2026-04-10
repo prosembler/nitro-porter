@@ -319,11 +319,13 @@ class Https extends Storage
             try {
                 if ($chunk->isFirst()) {
                     $fileHandles[$url] = fopen($downloads[$url][$destKey], 'wb');
+                    unset($downloads[$url]); // Reduce this array's size as the new one grows.
                     if (false === $fileHandles[$url]) {
                         Log::comment("Error: Could not open stream for `$url`");
                     }
                 } elseif ($chunk->isLast() && $fileHandles[$url]) {
                     fclose($fileHandles[$url]);
+                    unset($fileHandles[$url]); // We may still be growing this array, so prune it as possible.
                 } elseif ($fileHandles[$url]) {
                     fwrite($fileHandles[$url], $chunk->getContent());
                 } // else: Already logged stream did not open.

@@ -340,6 +340,7 @@ class Discord extends Origin
                 $downloads[$attachment['url']] = $attachment;
             }
         }
+        unset($messages); // This could be quite large, and we're about to fire many requests.
 
         // Save records.
         $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads, true);

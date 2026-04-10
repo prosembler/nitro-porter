@@ -295,12 +295,12 @@ class Discord extends Origin
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
         $info = $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
         $this->guildUsers = array_column($info['content'], 'id');
+        $this->extractUserRoles($info['content']);
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
     protected function roles(): void
     {
-        $this->extractUserRoles();
         $endpoint = "guilds/" . $this->getGuildId();
         $this->pull($endpoint, self::DB_ROLES, 'discord_roles', 'roles');
     }
@@ -308,42 +308,43 @@ class Discord extends Origin
     /**
      * Generate intermediary table to unpack user role associations before 'normal' export.
      */
-    protected function extractUserRoles(): void
+    protected function extractUserRoles(array $users): void
     {
-        $start = microtime(true);
-        $info = [];
-        $this->outputStorage->prepare('discord_user_roles', self::DB_USERROLES);
-
-        $users = $this->outputQB()->from('discord_users')->get(['id', 'roles'])->toArray();
-        foreach ($users as $user) {
-            $roles = json_decode($user->roles); // Discord's array got auto-collapsed to JSON.
+        $users = array_column($users, 'roles', 'id');
+        $userRoles = [];
+        foreach ($users as $id => $roles) {
             foreach ($roles as $roleID) {
-                $row = ['user_id' => $user->id, 'role_id' => $roleID];
-                $info = $this->outputStorage->stream($row, self::DB_USERROLES, $info);
+                $userRoles[] = ['user_id' => $id, 'role_id' => $roleID];
             }
         }
-        $this->outputStorage->stream([], [], $info, true);
-        Log::storage('extract', 'discord_user_roles', (microtime(true) - $start), $info['rows'], $info['memory'] ?? 0);
+        $this->extract('discord_user_roles', self::DB_USERROLES, $userRoles, true);
     }
 
     /**
      * Generate intermediary table to unpack attachments from their messages & download them.
+     *
+     * @param array $messages Message records from Discord API. Attachments are a LIST per message.
      */
     protected function extractAttachments(array $messages): void
     {
-        $attachInfo = [];
+        // Collapse messages to a list of downloads.
+        $downloads = [];
+        $folder = $this->getDownloadFolder('attachments');
         $messages = array_column($messages, 'attachments', 'id');
-        // Only process messages with attachments.
-        $msgsWithAttachments = array_filter($messages, fn ($attachments) => (!empty($attachments)));
-        foreach ($msgsWithAttachments as $message_id => $attachments) {
-            // Multiple attachments can be stored per message.
+        foreach ($messages as $message_id => $attachments) {
             foreach ($attachments as $attachment) {
-                // Store the attachment record, associated with its message.
                 $attachment['message_id'] = $message_id;
-                $attachInfo = $this->extractStorage->stream($attachment, self::DB_USERROLES, $attachInfo);
-                // Retrieve the attachment.
-                $this->getFile($attachment['url'], $attachment['filename']);
+                $attachment['download_path'] = $folder . $attachment['id'] . '_' . $attachment['filename'];
+                $downloads[$attachment['url']] = $attachment;
             }
+        }
+
+        // Save records.
+        $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads, true);
+
+        // Retrieve files.
+        if ($folder) {
+            $this->originStorage->asyncDownload($downloads);
         }
     }
 
@@ -508,10 +509,10 @@ class Discord extends Origin
             $this->extractAttachments($info['content']);
 
             // Non-guild emoji.
-            $this->remediateEmoji($info['content']);
+            $this->extractRemedialEmoji($info['content']);
 
             // Non-guild authors.
-            $this->remediateUsers($info['content']);
+            $this->extractRemedialUsers($info['content']);
 
             // Update status.
             if (0 === (int)$info['rows']) {
@@ -537,11 +538,11 @@ class Discord extends Origin
      *
      * Authors are stored as a SINGLE user object on messages.
      */
-    protected function remediateUsers(array $content): void
+    protected function extractRemedialUsers(array $content): void
     {
         $users = array_column($content, 'author', 'id');
         $missingUsers = array_diff_key($users, array_combine($this->guildUsers, $this->guildUsers));
-        $this->outputStorage->store('discord_users', [], self::DB_USERS, $missingUsers, []);
+        $this->extract('discord_users', self::DB_USERS, $missingUsers);
     }
 
     /**
@@ -549,13 +550,18 @@ class Discord extends Origin
      *
      * Reactions are stored as a LIST of emoji objects on messages.
      */
-    protected function remediateEmoji(array $content): void
+    protected function extractRemedialEmoji(array $content): void
     {
         $messages = array_column($content, 'reactions');
         $msgsWithEmojis = array_filter($messages, fn ($reactions) => (!empty($reactions)));
-        foreach ($msgsWithEmojis as $emojis) {
+        foreach ($msgsWithEmojis as $rows) {
+            $emojis = array_column($rows, 'emoji');
+            $emojis = array_filter($emojis, fn ($emoji) => !empty($emoji['id']));
+            if (empty($emojis)) {
+                continue;
+            }
             $missingEmojis = array_diff($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
-            $this->outputStorage->store('discord_emojis', [], self::DB_EMOJIS, $missingEmojis, []);
+            $this->extract('discord_emojis', self::DB_EMOJIS, $missingEmojis);
         }
     }
 

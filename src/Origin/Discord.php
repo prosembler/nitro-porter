@@ -342,12 +342,14 @@ class Discord extends Origin
         }
         unset($messages); // This could be quite large, and we're about to fire many requests.
 
-        // Save records.
-        $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads, true);
+        if (!empty($downloads)) {
+            // Save records.
+            $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads, true);
 
-        // Retrieve files.
-        if ($folder) {
-            $this->originStorage->asyncDownload($downloads);
+            // Retrieve files.
+            if ($folder) {
+                $this->originStorage->asyncDownload($downloads);
+            }
         }
     }
 

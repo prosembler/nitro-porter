@@ -66,8 +66,16 @@ abstract class Origin extends Package
 
         // Retrieve data from the origin.
         $split_send = microtime(true);
-        list($content, $headers) = $this->originStorage->get($endpoint, $query);
+        list($content, $headers, $code) = $this->originStorage->get($endpoint, $query);
         $split_reply = microtime(true);
+
+        // Show request in logs.
+        if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
+            $part = (!empty($query)) ?  json_encode($query) : '';
+            Log::comment("\nSENT: GET ($endpoint) " . $part);
+            //Log::comment('> ' . $this->redactHeaders(['headers']));
+            Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
+        }
 
         // Discard the rest of the content if we only want a key's contents.
         if (!empty($key)) {

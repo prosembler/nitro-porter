@@ -146,13 +146,6 @@ class Https extends Storage
             $options['query'] = $query;
         }
 
-        // Show request in logs.
-        if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
-            $part = (!empty($query)) ?  json_encode($options['query']) : '';
-            Log::comment("\nSENT: GET ($endpoint) " . $part);
-            //Log::comment('> ' . $this->redactHeaders(['headers']));
-        }
-
         while (empty($parsed)) {
             // Detect excessive retries.
             if ($retries > self::MAX_RETRIES) {
@@ -266,11 +259,8 @@ class Https extends Storage
             Log::comment("HTTP $code " . $e->getMessage());
             return []; // RETRY.
         }
-        if (Config::getInstance()->debugEnabled()) { // Show (good) full response in logs.
-            Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
-        }
 
-        return [$content, $headers];
+        return [$content, $headers, $code];
     }
 
     /**

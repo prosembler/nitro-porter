@@ -2,11 +2,10 @@
 
 namespace Porter\Storage;
 
-use Porter\Config;
 use Porter\ConnectionManager;
 use Porter\Log;
 use Porter\Storage;
-use Symfony\Component\HttpClient\Response\AsyncResponse;
+use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -300,21 +299,28 @@ class Https extends Storage
      * Download files in async batches.
      * Gotta go fast? It'll cost you feedback on whether it worked...
      * @see https://symfony.com/doc/current/http_client.html#multiplexing-responses
+     * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults
      */
     public function asyncDownload(array $downloads, string $srcKey = 'url', string $destKey = 'download_path'): void
     {
+        $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
+
         $responses = [];
         foreach ($downloads as $url => $download) {
             if (empty($download[$destKey]) || file_exists($download[$destKey])) {
                 unset($downloads[$url]); // Don't download duplicates.
                 continue;
             }
-            $responses[$download[$srcKey]] = $this->connectionManager->connection()
-                ->request('GET', $download[$srcKey], ['timeout' => 10]);
+            try {
+                $responses[$download[$srcKey]] = $client->request('GET', $download[$srcKey], ['timeout' => 3]);
+            } catch (ExceptionInterface $e) {
+                unset($responses[$download[$srcKey]]);
+                Log::comment("Failed to download {$download[$srcKey]} — " . $e->getMessage());
+            }
         }
 
         $fileHandles = [];
-        foreach ($this->connectionManager->connection()->stream($responses) as $response => $chunk) {
+        foreach ($client->stream($responses) as $response => $chunk) {
             $url = array_search($response, $responses, true);
             try {
                 if ($chunk->isFirst()) {

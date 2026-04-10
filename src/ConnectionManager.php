@@ -50,7 +50,7 @@ class ConnectionManager
         if ($info['type'] === 'database') {
             $this->setupDatabase($info, $prefix);
         } elseif ($info['type'] === 'api') {
-            $this->setupApi($info);
+            $this->setupHttp($info);
         }
     }
 
@@ -175,7 +175,7 @@ class ConnectionManager
      *
      * @param array $info
      */
-    protected function setupApi(array $info): void
+    protected function setupHttp(array $info): void
     {
         // Allowlist http-clients config options.
         $info = array_intersect_key($info, array_flip(['base_uri', 'extra']));

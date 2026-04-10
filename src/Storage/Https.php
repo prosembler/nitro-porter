@@ -6,6 +6,7 @@ use Porter\Config;
 use Porter\ConnectionManager;
 use Porter\Log;
 use Porter\Storage;
+use Symfony\Component\HttpClient\Response\AsyncResponse;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -272,6 +273,10 @@ class Https extends Storage
         return [$content, $headers];
     }
 
+    /**
+     * Download a file & log issues.
+     * @return bool Whether the download was successful.
+     */
     public function download(string $url, string $path): bool
     {
         // Get & validate response.
@@ -299,5 +304,39 @@ class Https extends Storage
         }
 
         return true;
+    }
+
+    /**
+     * Download files in async batches.
+     * Gotta go fast? It'll cost you feedback on whether it worked...
+     * @see https://symfony.com/doc/current/http_client.html#multiplexing-responses
+     */
+    public function asyncDownload(array $downloads, string $srcKey = 'url', string $destKey = 'download_path'): void
+    {
+        $responses = [];
+        foreach ($downloads as $url => $download) {
+            if (empty($download[$destKey]) || file_exists($download[$destKey])) {
+                unset($downloads[$url]); // Don't download duplicates.
+                continue;
+            }
+            $responses[$download[$srcKey]] = $this->connectionManager->connection()
+                ->request('GET', $download[$srcKey], ['timeout' => 10]);
+        }
+
+        $fileHandles = [];
+        foreach ($this->connectionManager->connection()->stream($responses) as $response => $chunk) {
+            $url = array_search($response, $responses, true);
+            try {
+                if ($chunk->isFirst()) {
+                    $fileHandles[$url] = fopen($downloads[$url][$destKey], 'wb');
+                }
+                if ($chunk->isLast()) {
+                    fclose($fileHandles[$url]);
+                } else {
+                    fwrite($fileHandles[$url], $chunk->getContent());
+                }
+            } catch (ExceptionInterface $e) {
+            } // Fail silently.
+        }
     }
 }

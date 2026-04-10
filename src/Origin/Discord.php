@@ -496,7 +496,9 @@ class Discord extends Origin
                 continue; // Channel is done, bail.
             } elseif (false === $status && $hasMessagesTable) { // Resume?
                 $channels[$channelId] = $this->getLastMessageId($channelId);
-                Log::comment("\nResumed channel $channelId at message {$channels[$channelId]}");
+                if (0 !== $channels[$channelId]) {
+                    Log::comment("Resumed channel $channelId at message {$channels[$channelId]}");
+                }
             }
 
             // Setup & pull batch.

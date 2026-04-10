@@ -549,13 +549,16 @@ class Discord extends Origin
      * Get & store data for non-guild emojis to fill in gaps.
      *
      * Reactions are stored as a LIST of emoji objects on messages.
+     * @see https://discord.com/developers/docs/resources/emoji#emoji-object
+     * ex: `[{"emoji":{"id":"742118343112130694","name":"gritty"},"count":1},
+     *       {"emoji":{"id":"976301342576504912","name":"rockon"},"count":9}]`
      */
     protected function extractRemedialEmoji(array $content): void
     {
         $messages = array_column($content, 'reactions');
         $msgsWithEmojis = array_filter($messages, fn ($reactions) => (!empty($reactions)));
         foreach ($msgsWithEmojis as $rows) {
-            $emojis = array_column($rows, 'emoji');
+            $emojis = array_column(array_column($rows, 'emoji'), 'id', 'id');
             $emojis = array_filter($emojis, fn ($emoji) => !empty($emoji['id']));
             if (empty($emojis)) {
                 continue;

@@ -525,7 +525,7 @@ class Discord extends Origin
             if (0 === (int)$info['rows']) {
                 // Change status to 'done' if no more rows found.
                 $channels[$channelId] = true;
-                Log::comment("Channel $channelId has no messages past {$channels[$channelId]}, skipping.");
+                //Log::comment("> channel $channelId has no messages past {$channels[$channelId]}, skipping.");
             } elseif (isset($info['last']['id'])) {
                 // Update offset & report where we are.
                 $id = $channels[$channelId] = $info['last']['id']; // Should be oldest message.

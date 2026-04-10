@@ -69,11 +69,6 @@ abstract class Origin extends Package
         list($content, $headers, $code) = $this->originStorage->get($endpoint, $query);
         $split_reply = microtime(true);
 
-        // Show request in logs.
-        if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
-
-        }
-
         // Discard the rest of the content if we only want a key's contents.
         if (!empty($key)) {
             if (!empty($content) && !empty($content[$key])) {

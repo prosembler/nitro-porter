@@ -2,7 +2,7 @@
 
 namespace Porter;
 
-use Illuminate\Database\Capsule\Manager as Capsule;
+use Illuminate\Database\Capsule\Manager as DatabaseManager;
 use Illuminate\Database\Connection;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -24,8 +24,7 @@ class ConnectionManager
     /** @var Connection|HttpClientInterface Data connection. */
     protected Connection|HttpClientInterface $connection;
 
-    /** @var Capsule Database manager. */
-    public Capsule $dbm;
+    public DatabaseManager $dbm;
 
     /**
      * If no connect alias is give, initiate a test connection.
@@ -163,7 +162,7 @@ class ConnectionManager
      */
     protected function setupDatabase(array $info, string $prefix): void
     {
-        $capsule = new Capsule();
+        $capsule = new DatabaseManager();
         $capsule->addConnection($this->translateDatabaseConfig($info), $info['alias']);
         $this->dbm = $capsule;
         $this->connection = $this->newDatabaseConnection();

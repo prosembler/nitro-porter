@@ -4,7 +4,7 @@ namespace Porter;
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Connection;
-use Symfony\Component\HttpClient\HttpClient as Client;
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -180,6 +180,6 @@ class ConnectionManager
     {
         // Allowlist http-clients config options.
         $info = array_intersect_key($info, array_flip(['base_uri', 'extra']));
-        $this->connection = Client::create()->withOptions($info);
+        $this->connection = HttpClient::create()->withOptions($info);
     }
 }

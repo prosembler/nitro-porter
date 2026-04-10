@@ -20,8 +20,6 @@ class Log
 
     /**
      * Only need one logger for now.
-     *
-     * @return Logger
      */
     public static function getInstance(): Logger
     {
@@ -55,12 +53,6 @@ class Log
 
     /**
      * Add log with results of a table storage action.
-     *
-     * @param string $action
-     * @param string $table
-     * @param float $timeElapsed
-     * @param int $rowCount
-     * @param int $memPeak
      */
     public static function storage(string $action, string $table, float $timeElapsed, int $rowCount, int $memPeak): void
     {
@@ -72,6 +64,25 @@ class Log
             $rowCount,
             Log::formatElapsed($timeElapsed),
             Log::formatBytes($memPeak)
+        );
+        Log::comment($report);
+    }
+
+    /**
+     * Add log with results of a 'pull' action.
+     */
+    public static function pull(string $table, array $info): void
+    {
+        // Format output.
+        $report = sprintf(
+            'pull: %s — %d rows — GET (%s)%s [%s], %s (%s)',
+            $table,
+            count($info['content']),
+            $info['endpoint'],
+            (!empty($info['query'])) ? json_encode($info['query']) : '',
+            $info['http_code'],
+            Log::formatElapsed($info['pull_time']),
+            Log::formatBytes($info['memory'])
         );
         Log::comment($report);
     }

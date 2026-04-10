@@ -71,10 +71,7 @@ abstract class Origin extends Package
 
         // Show request in logs.
         if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
-            $part = (!empty($query)) ?  json_encode($query) : '';
-            Log::comment("\nSENT: GET ($endpoint) " . $part);
-            //Log::comment('> ' . $this->redactHeaders(['headers']));
-            Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
+
         }
 
         // Discard the rest of the content if we only want a key's contents.
@@ -94,11 +91,12 @@ abstract class Origin extends Package
         $info['last'] = end($content);
         $info['first'] = reset($content);
         $info['headers'] = $headers;
+        $info['query'] = $query;
+        $info['http_code'] = $code;
+        $info['endpoint'] = $endpoint;
         $info['api_time'] = $split_reply - $split_send;
         $info['pull_time'] = microtime(true) - $start;
-
-        // Report.
-        Log::storage('pull', $tableName, $info['pull_time'], count($content), $info['memory']);
+        Log::pull($tableName, $info);
 
         return $info;
     }

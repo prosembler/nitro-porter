@@ -170,6 +170,7 @@ class Discord extends Origin
         'width' => 'int',
         'height' => 'int',
         'content_type' => 'varchar(100)',
+        'download_path' => 'text', // where we put the file; not in Discord's response
     ];
 
     protected const array MAP_USERS = [
@@ -334,7 +335,8 @@ class Discord extends Origin
         foreach ($messages as $message_id => $attachments) {
             foreach ($attachments as $attachment) {
                 $attachment['message_id'] = $message_id;
-                $attachment['download_path'] = $folder . $attachment['id'] . '_' . $attachment['filename'];
+                $filename = $this->limitFilenameLength($attachment['filename']);
+                $attachment['download_path'] = $folder . $attachment['id'] . '_' . $filename;
                 $downloads[$attachment['url']] = $attachment;
             }
         }
@@ -582,5 +584,16 @@ class Discord extends Origin
         } else {
             Log::comment("Notice: Attachment '{$filename}' already exists.");
         }
+    }
+
+    /**
+     * Change a filename so that the basename is no more than $length characters.
+     *
+     * Prevents error "Failed to open stream: File name too long".
+     */
+    protected function limitFilenameLength(string $filename, int $length = 100): string
+    {
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        return substr(pathinfo($filename, PATHINFO_BASENAME), 0, $length) . '.' . $ext;
     }
 }

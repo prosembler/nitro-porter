@@ -594,6 +594,6 @@ class Discord extends Origin
     protected function limitFilenameLength(string $filename, int $length = 100): string
     {
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        return substr(pathinfo($filename, PATHINFO_BASENAME), 0, $length) . '.' . $ext;
+        return substr(pathinfo($filename, PATHINFO_FILENAME), 0, $length) . '.' . $ext;
     }
 }

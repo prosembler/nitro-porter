@@ -96,6 +96,29 @@ abstract class Origin extends Package
     }
 
     /**
+     * Extract a list to its own table.
+     */
+    protected function extract(string $tableName, array $fields, array $data, bool $report = false): array
+    {
+        // Start timer.
+        $start = microtime(true);
+
+        // Prepare the storage medium for the incoming structure.
+        $this->extractStorage->protectTable($tableName); // Do not reset data from origins every run.
+        $this->extractStorage->ignoreTable($tableName);  // Allow duplicate inserts.
+        $this->extractStorage->prepare($tableName, $fields);
+
+        // Store the data.
+        $info = $this->extractStorage->store($tableName, [], $fields, $data, []);
+
+        // Report.
+        if ($report) {
+            Log::storage('extract', $tableName, microtime(true) - $start, count($data), $info['memory']);
+        }
+        return $info;
+    }
+
+    /**
      * Folder to download files into.
      *
      * @return string source_root/$name/

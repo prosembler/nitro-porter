@@ -72,9 +72,9 @@ abstract class Origin extends Package
         // Discard the rest of the content if we only want a key's contents.
         if (!empty($key)) {
             if (!empty($content) && !empty($content[$key])) {
-                Log::comment("Warning: Key '{$key}' not found in response from '{$endpoint}'.");
-            } else {
                 $content = $content[$key];
+            } else {
+                Log::comment("Warning: Key '{$key}' not found in response from '{$endpoint}'.");
             }
         }
 

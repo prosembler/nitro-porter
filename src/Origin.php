@@ -100,6 +100,10 @@ abstract class Origin extends Package
      */
     protected function extract(string $tableName, array $fields, array $data, bool $report = false): array
     {
+        if (empty($fields)) {
+            return []; // May be called blindly without checking for records.
+        }
+
         // Start timer.
         $start = microtime(true);
 

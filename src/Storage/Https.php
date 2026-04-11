@@ -322,7 +322,7 @@ class Https extends Storage
                 $responses[$url] = $client->request('GET', $url, ['timeout' => 3]);
             } catch (ExceptionInterface $e) {
                 unset($responses[$url]);
-                Log::comment("Failed to download {$url} — " . $e->getMessage());
+                Log::comment("> failed request: {$url} — " . $e->getMessage());
             }
             $memoryPeak = max(memory_get_usage(), $memoryPeak);
         }
@@ -334,10 +334,10 @@ class Https extends Storage
             try {
                 if ($chunk->isFirst()) {
                     $fileHandles[$url] = fopen($downloads[$url], 'wb');
-                    unset($downloads[$url]); // Reduce this array's size as the new one grows.
                     if (false === $fileHandles[$url]) {
-                        Log::comment("Error: Could not open stream for `$url`");
+                        Log::comment("> failed to open stream: $url —> " . $downloads[$url]);
                     }
+                    unset($downloads[$url]); // Reduce this array's size as the new one grows.
                 } elseif ($chunk->isLast() && $fileHandles[$url]) {
                     fclose($fileHandles[$url]);
                     unset($fileHandles[$url]); // We may still be growing this array, so prune it as possible.
@@ -347,7 +347,13 @@ class Https extends Storage
                 } // else: Already logged stream did not open.
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
-            } // Fail silently.
+                Log::comment("> failed download: {$url} — " . $e->getMessage());
+                if (is_resource($fileHandles[$url])) {
+                    // @todo cleanup? unlink if file_exists(stream_get_meta_data($fileHandles[$url])['uri'])
+                    fclose($fileHandles[$url]); // Attempt to prevent runaway memory usage.
+                }
+                unset($fileHandles[$url]); // Don't come back to this one.
+            }
         }
 
         // Report.

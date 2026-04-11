@@ -300,31 +300,32 @@ class Https extends Storage
      * Gotta go fast? It'll cost you feedback on whether it worked...
      * @see https://symfony.com/doc/current/http_client.html#multiplexing-responses
      * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults
+     * @param array $downloads URL => SAVE_PATH
      */
-    public function asyncDownload(array $downloads, string $srcKey = 'url', string $destKey = 'download_path'): void
+    public function asyncDownload(array $downloads): void
     {
         $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
 
         $responses = [];
-        foreach ($downloads as $url => $download) {
-            if (empty($download[$destKey]) || file_exists($download[$destKey])) {
+        foreach ($downloads as $url => $path) {
+            if (empty($path) || file_exists($path)) {
                 unset($downloads[$url]); // Don't download duplicates.
                 continue;
             }
             try {
-                $responses[$download[$srcKey]] = $client->request('GET', $download[$srcKey], ['timeout' => 3]);
+                $responses[$url] = $client->request('GET', $url, ['timeout' => 3]);
             } catch (ExceptionInterface $e) {
-                unset($responses[$download[$srcKey]]);
-                Log::comment("Failed to download {$download[$srcKey]} — " . $e->getMessage());
+                unset($responses[$url]);
+                Log::comment("Failed to download {$url} — " . $e->getMessage());
             }
         }
 
         $fileHandles = [];
         foreach ($client->stream($responses) as $response => $chunk) {
-            $url = array_search($response, $responses, true);
+            $url = array_search($response, $responses, true); // Returned key is the URL.
             try {
                 if ($chunk->isFirst()) {
-                    $fileHandles[$url] = fopen($downloads[$url][$destKey], 'wb');
+                    $fileHandles[$url] = fopen($downloads[$url], 'wb');
                     unset($downloads[$url]); // Reduce this array's size as the new one grows.
                     if (false === $fileHandles[$url]) {
                         Log::comment("Error: Could not open stream for `$url`");

@@ -330,6 +330,7 @@ class Discord extends Origin
     {
         // Collapse messages to a list of downloads.
         $downloads = [];
+        $files = [];
         $folder = $this->getDownloadFolder('attachments');
         $messages = array_column($messages, 'attachments', 'id');
         foreach ($messages as $message_id => $attachments) {
@@ -338,6 +339,8 @@ class Discord extends Origin
                 $filename = $this->limitFilenameLength($attachment['filename']);
                 $attachment['download_path'] = $folder . $attachment['id'] . '_' . $filename;
                 $downloads[$attachment['url']] = $attachment;
+                // Smaller array for asyncDownloads();
+                $files[$attachment['url']] = $attachment['download_path'];
             }
         }
         unset($messages); // This could be quite large, and we're about to fire many requests.
@@ -345,10 +348,11 @@ class Discord extends Origin
         if (!empty($downloads)) {
             // Save records.
             $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads, true);
+            unset($downloads);
 
             // Retrieve files.
             if ($folder) {
-                $this->originStorage->asyncDownload($downloads);
+                $this->originStorage->asyncDownload($files);
             }
         }
     }
@@ -497,7 +501,7 @@ class Discord extends Origin
             } elseif (false === $status && $hasMessagesTable) { // Resume?
                 $channels[$channelId] = $this->getLastMessageId($channelId);
                 if (0 !== $channels[$channelId]) {
-                    Log::comment("Resumed channel $channelId at message {$channels[$channelId]}");
+                    Log::comment("Resuming channel $channelId at message {$channels[$channelId]}:");
                 }
             }
 

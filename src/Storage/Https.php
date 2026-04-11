@@ -299,7 +299,8 @@ class Https extends Storage
      * Download files in async batches.
      * Gotta go fast? It'll cost you feedback on whether it worked...
      * @see https://symfony.com/doc/current/http_client.html#multiplexing-responses
-     * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults
+     * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults.
+     * @see https://www.php.net/manual/en/resource.php for what counts as a 'stream' resource in PHP.
      * @param array $downloads URL => SAVE_PATH
      */
     public function asyncDownload(array $downloads): void
@@ -310,6 +311,7 @@ class Https extends Storage
         $countResponses = 0;
         $memoryPeak = memory_get_usage();
         $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
+        array_map('fclose', get_resources('stream')); // Close ANY open streams to prevent memory creep.
 
         // Send requests.
         $responses = [];
@@ -347,7 +349,7 @@ class Https extends Storage
                 } // else: Already logged stream did not open.
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
-                Log::comment("> failed download: {$url} — " . $e->getMessage());
+                Log::comment("> failed download: {$url} [msg: " . $e->getMessage() . ']');
                 if (is_resource($fileHandles[$url])) {
                     // @todo cleanup? unlink if file_exists(stream_get_meta_data($fileHandles[$url])['uri'])
                     fclose($fileHandles[$url]); // Attempt to prevent runaway memory usage.

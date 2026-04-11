@@ -26,7 +26,7 @@ abstract class Storage
     ): array {
         $info = [
             'rows' => 0,
-            'memory' => 0,
+            'memory' => memory_get_usage(),
             'name' => $name,
         ];
 

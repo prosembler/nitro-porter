@@ -304,8 +304,14 @@ class Https extends Storage
      */
     public function asyncDownload(array $downloads): void
     {
+        // Setup.
+        $start = microtime(true);
+        $countRequests = count($downloads);
+        $countResponses = 0;
+        $memoryPeak = memory_get_usage();
         $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
 
+        // Send requests.
         $responses = [];
         foreach ($downloads as $url => $path) {
             if (empty($path) || file_exists($path)) {
@@ -318,8 +324,10 @@ class Https extends Storage
                 unset($responses[$url]);
                 Log::comment("Failed to download {$url} — " . $e->getMessage());
             }
+            $memoryPeak = max(memory_get_usage(), $memoryPeak);
         }
 
+        // Process responses async.
         $fileHandles = [];
         foreach ($client->stream($responses) as $response => $chunk) {
             $url = array_search($response, $responses, true); // Returned key is the URL.
@@ -333,11 +341,21 @@ class Https extends Storage
                 } elseif ($chunk->isLast() && $fileHandles[$url]) {
                     fclose($fileHandles[$url]);
                     unset($fileHandles[$url]); // We may still be growing this array, so prune it as possible.
+                    $countResponses++;
                 } elseif ($fileHandles[$url]) {
                     fwrite($fileHandles[$url], $chunk->getContent());
                 } // else: Already logged stream did not open.
+                $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
             } // Fail silently.
         }
+
+        // Report.
+        Log::download(
+            memory: max(memory_get_usage(), $memoryPeak),
+            elapsed: microtime(true) - $start,
+            countRequest: $countRequests,
+            countResponse: $countResponses,
+        );
     }
 }

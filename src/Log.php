@@ -88,7 +88,23 @@ class Log
     }
 
     /**
+     * Add log with results of file downalods.
+     * @see \Porter\Storage\Https::asyncDownload()x
+     */
+    public static function download(
+        int $memory = 0,
+        float $elapsed = 0,
+        int $countRequest = 0,
+        int $countResponse = 0,
+    ): void {
+        $bytes = Log::formatBytes($memory);
+        $time = Log::formatElapsed($elapsed);
+        Log::comment("download: {$countResponse}/{$countRequest} files in $time ($bytes)");
+    }
+
+    /**
      * For outputting how long the export took.
+     * @see microtime()
      */
     public static function formatElapsed(float $elapsed): string
     {
@@ -99,6 +115,7 @@ class Log
 
     /**
      * Human-readable filesize output.
+     * @see memory_get_usage()
      */
     public static function formatBytes(int $size): string
     {

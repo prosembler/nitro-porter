@@ -350,10 +350,8 @@ class Https extends Storage
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
                 Log::comment("> failed download: {$url} [msg: " . $e->getMessage() . ']');
-                if (is_resource($fileHandles[$url])) {
-                    // @todo cleanup? unlink if file_exists(stream_get_meta_data($fileHandles[$url])['uri'])
-                    fclose($fileHandles[$url]); // Attempt to prevent runaway memory usage.
-                }
+                // @todo cleanup? unlink if file_exists(stream_get_meta_data($fileHandles[$url])['uri'])
+                fclose($fileHandles[$url]); // Attempt to prevent runaway memory usage.
                 unset($fileHandles[$url]); // Don't come back to this one.
             }
         }

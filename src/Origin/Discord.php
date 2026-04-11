@@ -296,6 +296,7 @@ class Discord extends Origin
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
         $info = $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
         $this->guildUsers = array_column($info['content'], 'id');
+        $this->guildUsers = array_combine($this->guildUsers, $this->guildUsers);
         $this->extractUserRoles($info['content']);
     }
 
@@ -551,8 +552,12 @@ class Discord extends Origin
      */
     protected function extractRemedialUsers(array $content): void
     {
-        $users = array_column($content, 'author', 'id');
-        $missingUsers = array_diff_key($users, array_combine($this->guildUsers, $this->guildUsers));
+        $messages = array_column($content, 'author', 'id');
+        $users = [];
+        foreach ($messages as $messageID => $author) {
+            $users[$author['id']] = $author;
+        }
+        $missingUsers = array_diff_key($users, $this->guildUsers);
         $this->extract('discord_users', self::DB_USERS, $missingUsers);
     }
 
@@ -574,7 +579,7 @@ class Discord extends Origin
             if (empty($emojis)) {
                 continue;
             }
-            $missingEmojis = array_diff($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
+            $missingEmojis = array_diff_key($emojis, $this->guildEmojis);
             $this->extract('discord_emojis', self::DB_EMOJIS, $missingEmojis);
         }
     }

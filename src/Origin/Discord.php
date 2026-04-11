@@ -318,7 +318,7 @@ class Discord extends Origin
                 $userRoles[] = ['user_id' => $id, 'role_id' => $roleID];
             }
         }
-        $this->extract('discord_user_roles', self::DB_USERROLES, $userRoles, true);
+        $this->extract('discord_user_roles', self::DB_USERROLES, $userRoles);
     }
 
     /**
@@ -347,7 +347,7 @@ class Discord extends Origin
 
         if (!empty($downloads)) {
             // Save records.
-            $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads, true);
+            $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads);
             unset($downloads);
 
             // Retrieve files.

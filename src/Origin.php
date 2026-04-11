@@ -99,7 +99,7 @@ abstract class Origin extends Package
     /**
      * Extract a list to its own table.
      */
-    protected function extract(string $tableName, array $fields, array $data, bool $report = false): array
+    protected function extract(string $tableName, array $fields, array $data): array
     {
         if (empty($fields)) {
             return []; // May be called blindly without checking for records.
@@ -117,9 +117,8 @@ abstract class Origin extends Package
         $info = $this->extractStorage->store($tableName, [], $fields, $data, []);
 
         // Report.
-        if ($report) {
-            Log::storage('extract', $tableName, microtime(true) - $start, count($data), $info['memory']);
-        }
+        Log::storage('extract', $tableName, microtime(true) - $start, count($data), $info['memory']);
+
         return $info;
     }
 

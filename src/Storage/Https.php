@@ -339,7 +339,6 @@ class Https extends Storage
                     if (false === $fileHandles[$url]) {
                         Log::comment("> failed to open stream: $url —> " . $downloads[$url]);
                     }
-                    unset($downloads[$url]); // Reduce this array's size as the new one grows.
                 } elseif ($chunk->isLast() && $fileHandles[$url]) {
                     fclose($fileHandles[$url]);
                     unset($fileHandles[$url]); // We may still be growing this array, so prune it as possible.
@@ -350,9 +349,11 @@ class Https extends Storage
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
                 Log::comment("> failed download: {$url} [msg: " . $e->getMessage() . ']');
-                // @todo cleanup? unlink if file_exists(stream_get_meta_data($fileHandles[$url])['uri'])
-                fclose($fileHandles[$url]); // Attempt to prevent runaway memory usage.
-                unset($fileHandles[$url]); // Don't come back to this one.
+                if (isset($fileHandles[$url])) {
+                    fclose($fileHandles[$url]); // Attempt to ternimate stream to prevent runaway memory usage.
+                    unset($fileHandles[$url]); // Don't come back to this one.
+                }
+                unlink($downloads[$url]); // Attempt file cleanup so we can retry.
             }
         }
 

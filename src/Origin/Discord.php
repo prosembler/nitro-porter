@@ -207,12 +207,12 @@ class Discord extends Origin
         $this->attachmentFolder = $this->getDownloadFolder('attachments');
 
         // Guild users & roles
-        $this->users();
-        $this->roles();
+        //$this->users();
+        //$this->roles();
 
         // Guild taxonomy & emoji
-        $this->emojis();
-        $this->channels();
+        //$this->emojis();
+        //$this->channels();
         $this->threads();
 
         // Guild content + non-guild users/emoji.
@@ -560,7 +560,10 @@ class Discord extends Origin
             $users[$author['id']] = $author;
         }
         $missingUsers = array_diff_key($users, $this->guildUsers);
-        $this->extract('discord_users', self::DB_USERS, $missingUsers);
+        $info = $this->extract('discord_users', self::DB_USERS, $missingUsers);
+        if ($info['rows'] === count($missingUsers)) { // All missing users were inserted.
+            $this->guildUsers = array_merge($this->guildUsers, $missingUsers);
+        }
     }
 
     /**

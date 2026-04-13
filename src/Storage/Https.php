@@ -319,7 +319,7 @@ class Https extends Storage
                 $responses[$url] = $client->request('GET', $url, ['timeout' => 3]);
             } catch (ExceptionInterface $e) {
                 unset($responses[$url]);
-                Log::comment("> failed request: {$url} — " . $e->getMessage());
+                Log::comment("> failed request: $url — " . $e->getMessage());
             }
             $memoryPeak = max(memory_get_usage(), $memoryPeak);
         }
@@ -343,12 +343,17 @@ class Https extends Storage
                 } // else: Already logged stream did not open.
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
-                Log::comment("> failed download: {$url} [msg: " . $e->getMessage() . ']');
+                Log::comment("> failed download: $url [msg: " . $e->getMessage() . ']');
+                $response->cancel(); // Terminate the response to clear its cached data.
+                unset($responses[$url]);
                 if (isset($fileHandles[$url])) {
                     fclose($fileHandles[$url]); // Attempt to ternimate stream to prevent runaway memory usage.
                     unset($fileHandles[$url]); // Don't come back to this one.
                 }
-                unlink($downloads[$url]); // Attempt file cleanup so we can retry.
+                if (file_exists($downloads[$url])) {
+                    unlink($downloads[$url]); // Attempt file cleanup so we can retry.
+                }
+                gc_collect_cycles(); // Force garbage collection to preserve memory.
             }
         }
 

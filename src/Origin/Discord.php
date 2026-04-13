@@ -560,7 +560,7 @@ class Discord extends Origin
         }
         $missingUsers = array_diff_key($users, $this->guildUsers);
         $info = $this->extract('discord_users', self::DB_USERS, $missingUsers);
-        if ($info['rows'] === count($missingUsers)) { // All missing users were inserted.
+        if (!empty($info['rows']) && $info['rows'] === count($missingUsers)) { // All missing users were inserted.
             $this->guildUsers = array_merge($this->guildUsers, $missingUsers);
         }
     }

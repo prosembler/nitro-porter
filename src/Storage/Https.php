@@ -311,7 +311,6 @@ class Https extends Storage
         $countResponses = 0;
         $memoryPeak = memory_get_usage();
         $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
-        array_map('fclose', get_resources('stream')); // Close ANY open streams to prevent memory creep.
 
         // Send requests.
         $responses = [];

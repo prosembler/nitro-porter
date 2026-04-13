@@ -316,10 +316,6 @@ class Https extends Storage
         // Send requests.
         $responses = [];
         foreach ($downloads as $url => $path) {
-            if (empty($path) || file_exists($path)) {
-                unset($downloads[$url]); // Don't download duplicates.
-                continue;
-            }
             try {
                 $responses[$url] = $client->request('GET', $url, ['timeout' => 3]);
             } catch (ExceptionInterface $e) {

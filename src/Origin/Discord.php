@@ -340,8 +340,10 @@ class Discord extends Origin
                 $filename = $this->limitFilenameLength($attachment['filename']);
                 $attachment['download_path'] = $folder . $attachment['id'] . '_' . $filename;
                 $downloads[$attachment['url']] = $attachment;
-                // Smaller array for asyncDownloads();
-                $files[$attachment['url']] = $attachment['download_path'];
+                // Smaller array for asyncDownloads(); Don't request downloading duplicates or to empty paths.
+                if (!empty($attachment['download_path']) && !file_exists($attachment['download_path'])) {
+                    $files[$attachment['url']] = $attachment['download_path'];
+                }
             }
         }
         unset($messages); // This could be quite large, and we're about to fire many requests.

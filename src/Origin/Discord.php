@@ -207,7 +207,7 @@ class Discord extends Origin
         $this->attachmentFolder = $this->getDownloadFolder('attachments');
 
         // Guild users & roles
-        $this->users();
+        $this->users(); // @todo Timing issue: setting $guildUsers for messages()
         $this->roles();
 
         // Guild taxonomy & emoji
@@ -496,7 +496,6 @@ class Discord extends Origin
     protected function messageLoop(array $channels): array
     {
         $hasMessagesTable = $this->outputStorage->exists('discord_messages');
-        $this->outputStorage->prepare('discord_attachments', self::DB_ATTACHMENTS);
         foreach ($channels as $channelId => $status) {
             // Check status.
             if (true === $status) {

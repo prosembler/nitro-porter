@@ -207,12 +207,12 @@ class Discord extends Origin
         $this->attachmentFolder = $this->getDownloadFolder('attachments');
 
         // Guild users & roles
-        //$this->users();
-        //$this->roles();
+        $this->users();
+        $this->roles();
 
         // Guild taxonomy & emoji
-        //$this->emojis();
-        //$this->channels();
+        $this->emojis();
+        $this->channels();
         $this->threads();
 
         // Guild content + non-guild users/emoji.

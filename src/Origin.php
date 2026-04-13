@@ -101,7 +101,7 @@ abstract class Origin extends Package
      */
     protected function extract(string $tableName, array $fields, array $data): array
     {
-        if (empty($fields)) {
+        if (empty($data)) {
             return []; // May be called blindly without checking for records.
         }
 

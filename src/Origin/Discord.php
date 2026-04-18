@@ -84,6 +84,12 @@ class Discord extends Origin
         ],
     ];
 
+    protected const array DB_REACTIONS = [
+        'user_id' => 'varchar(100)',
+        'message_id' => 'varchar(100)',
+        'emoji_id' => 'varchar(100)',
+    ];
+
     protected const array DB_ROLES = [
         'id' => 'varchar(100)',
         'name' => 'varchar(100)',
@@ -296,7 +302,6 @@ class Discord extends Origin
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
         $info = $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
         $this->guildUsers = array_column($info['content'], 'id');
-        $this->guildUsers = array_combine($this->guildUsers, $this->guildUsers);
         $this->extractUserRoles($info['content']);
     }
 
@@ -521,11 +526,11 @@ class Discord extends Origin
             // Attachments.
             $this->extractAttachments($info['content']);
 
-            // Non-guild emoji.
-            $this->extractRemedialEmoji($info['content']);
+            // Reactions & non-guild emoji used in them.
+            $this->extractReactions($info['content']);
 
             // Non-guild authors.
-            $this->extractRemedialUsers($info['content']);
+            $this->extractAuthors($info['content']);
 
             // Update status.
             if (0 === (int)$info['rows']) {
@@ -551,41 +556,81 @@ class Discord extends Origin
      *
      * Authors are stored as a SINGLE user object on messages.
      */
-    protected function extractRemedialUsers(array $content): void
+    protected function extractAuthors(array $content): void
     {
         $messages = array_column($content, 'author', 'id');
         $users = [];
-        foreach ($messages as $messageID => $author) {
+        foreach ($messages as $author) {
             $users[$author['id']] = $author;
         }
-        $missingUsers = array_diff_key($users, $this->guildUsers);
+
+        // Find missing IDs.
+        $missingUserIDs = array_diff(array_keys($users), $this->guildUsers);
+        if (empty($missingUserIDs)) {
+            return;
+        }
+
+        // Insert missing users.
+        $missingUsers = array_intersect_key($users, $missingUserIDs);
         $info = $this->extract('discord_users', self::DB_USERS, $missingUsers);
-        if (!empty($info['rows']) && $info['rows'] === count($missingUsers)) { // All missing users were inserted.
-            $this->guildUsers = array_merge($this->guildUsers, $missingUsers);
+
+        // Log actions & mark users as "found".
+        if (!empty($info['rows'])) { // Missing users were inserted.
+            Log::comment("> non-guid user(s) added: " . implode(',', $missingUsers));
+            if ($info['rows'] !== count($missingUsers)) { // Some missing users weren't inserted.
+                $countSkipped = count($missingUsers) - $info['rows'];
+                Log::comment("> WARNING: $countSkipped user(s) were not captured");
+            }
+            $this->guildUsers = array_merge($this->guildUsers, $missingUserIDs);
         }
     }
 
     /**
-     * Get & store data for non-guild emojis to fill in gaps.
-     *
      * Reactions are stored as a LIST of emoji objects on messages.
+     * @see https://docs.discord.com/developers/resources/message#reaction-object
      * @see https://discord.com/developers/docs/resources/emoji#emoji-object
      * ex: `[{"emoji":{"id":"742118343112130694","name":"gritty"},"count":1},
-     *       {"emoji":{"id":"976301342576504912","name":"rockon"},"count":9}]`
-     */
-    protected function extractRemedialEmoji(array $content): void
+     *       {"emoji":{"id":"976301342576504912","name":"rockon"},"count":9},
+     *       {"emoji":{"id":null,"name": "🔥"},"count":3},
+     * }]`
+    */
+    protected function extractReactions(array $content): void
     {
-        $messages = array_column($content, 'reactions');
-        $msgsWithEmojis = array_filter($messages, fn ($reactions) => (!empty($reactions)));
-        foreach ($msgsWithEmojis as $rows) {
-            $emojis = array_column(array_column($rows, 'emoji'), 'id', 'id');
-            $emojis = array_filter($emojis, fn ($emoji) => !empty($emoji['id']));
-            if (empty($emojis)) {
-                continue;
+        $reactions = array_filter(array_column($content, 'reactions', 'id'), fn ($reactions) => (!empty($reactions)));
+        $reactData = [];
+        foreach ($reactions as $msgID => $reactionSet) {
+            $emojiList = array_column($reactionSet, 'emoji');
+            foreach ($emojiList as $emoji) {
+                $reactData[] = [
+                    'emoji_id' => $emoji['id'] ?? $emoji['name'], // Standard unicode emoji have null ID.
+                    'user_id' => $emoji['user']['id'],
+                    'message_id' => $msgID,
+                ];
             }
-            $missingEmojis = array_diff_key($emojis, $this->guildEmojis);
-            $this->extract('discord_emojis', self::DB_EMOJIS, $missingEmojis);
+            $this->extract('discord_reactions', self::DB_REACTIONS, $reactData);
+            $this->extractEmoji($emojiList);
         }
+    }
+
+    /**
+     * Get & store data for non-standard, non-guild emojis to fill in gaps.
+     */
+    protected function extractEmoji(array $emojis): void
+    {
+        $emojis = array_column($emojis, 'id', 'id');
+        $emojis = array_filter($emojis, fn ($emoji) => is_numeric($emoji['id']));
+        if (empty($emojis)) {
+            return;
+        }
+        $missingEmojis = array_diff(array_column($emojis, 'id'), $this->guildEmojis);
+        if (empty($missingEmojis)) {
+            return;
+        }
+
+        // Found "missing" emojis.
+        $this->extract('discord_emojis', self::DB_EMOJIS, $missingEmojis);
+        $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojis);
+        Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojis));
     }
 
     /**

@@ -6,9 +6,9 @@
 
 namespace Porter;
 
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
 use Monolog\Handler\FirePHPHandler;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
 
 /**
  * Monolog wrapper
@@ -20,8 +20,6 @@ class Log
 
     /**
      * Only need one logger for now.
-     *
-     * @return Logger
      */
     public static function getInstance(): Logger
     {
@@ -55,12 +53,6 @@ class Log
 
     /**
      * Add log with results of a table storage action.
-     *
-     * @param string $action
-     * @param string $table
-     * @param float $timeElapsed
-     * @param int $rowCount
-     * @param int $memPeak
      */
     public static function storage(string $action, string $table, float $timeElapsed, int $rowCount, int $memPeak): void
     {
@@ -70,9 +62,67 @@ class Log
             $action,
             $table,
             $rowCount,
-            formatElapsed($timeElapsed),
-            formatBytes($memPeak)
+            Log::formatElapsed($timeElapsed),
+            Log::formatBytes($memPeak)
         );
         Log::comment($report);
+    }
+
+    /**
+     * Add log with results of a 'pull' action.
+     */
+    public static function pull(string $table, array $info): void
+    {
+        // Format output.
+        $report = sprintf(
+            'pull: %s — %d rows — GET (%s)%s [%s], %s (%s)',
+            $table,
+            count($info['content']),
+            $info['endpoint'],
+            (!empty($info['query'])) ? json_encode($info['query']) : '',
+            $info['http_code'],
+            Log::formatElapsed($info['pull_time']),
+            Log::formatBytes($info['memory'])
+        );
+        Log::comment($report);
+    }
+
+    /**
+     * Add log with results of file downalods.
+     * @see \Porter\Storage\Https::asyncDownload()x
+     */
+    public static function download(
+        int $memory = 0,
+        float $elapsed = 0,
+        int $countRequest = 0,
+        int $countResponse = 0,
+    ): void {
+        $bytes = Log::formatBytes($memory);
+        $time = Log::formatElapsed($elapsed);
+        Log::comment("download: {$countResponse}/{$countRequest} files in $time ($bytes)");
+    }
+
+    /**
+     * For outputting how long the export took.
+     * @see microtime()
+     */
+    public static function formatElapsed(float $elapsed): string
+    {
+        $m = floor($elapsed / 60);
+        $s = $elapsed - $m * 60;
+        return ($m) ? sprintf('%d:%05.2f', $m, $s) : sprintf('%05.2fs', $s);
+    }
+
+    /**
+     * Human-readable filesize output.
+     * @see memory_get_usage()
+     */
+    public static function formatBytes(int $size): string
+    {
+        if (!$size) {
+            return '0b';
+        }
+        $unit = ['b', 'kb', 'mb', 'gb', 'tb', 'pb'];
+        return @round($size / pow(1024, ($i = (int)floor(log($size, 1024)))), 1) . $unit[$i];
     }
 }

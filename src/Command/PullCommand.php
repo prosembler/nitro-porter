@@ -16,7 +16,7 @@ class PullCommand extends Command
             ->option('-r --origin', 'Origin package alias')
             ->option('-i --input', 'Target connection alias (defined in config)')
             ->usage(
-                '<bold>  pull -s discord -i myserver </end><eol/>' .
+                '<bold>  pull -r discord -i myserver </end><eol/>' .
                 '<comment>  Pull data from Discord into database with alias `myserver` (in config.php). ' .
                 'While it is the output of this step, we use --input per the overall migration process.</end><eol/>'
             );

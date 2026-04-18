@@ -2,16 +2,18 @@
 
 namespace Porter\Storage;
 
-use Porter\Config;
 use Porter\ConnectionManager;
 use Porter\Log;
 use Porter\Storage;
+use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Https extends Storage
 {
@@ -66,10 +68,21 @@ class Https extends Storage
      */
     public function addError(array $errorInfo): void
     {
+        // Store the error.
         $this->errors[] = $errorInfo;
-        Log::comment("HTTP {$errorInfo['code']} ({$errorInfo['endpoint']}) " .
-            $errorInfo['message'] . " | " . $errorInfo['exception']->getMessage());
-        Log::comment('HEADERS: ' . json_encode($errorInfo['headers']));
+
+        // HTTP code & message log.
+        $endpoint = (!empty($errorInfo['endpoint'])) ? $errorInfo['endpoint'] . ' ' : '';
+        $msg = (!empty($errorInfo['message'])) ? $errorInfo['message'] . ' ' : '';
+        $exception = (!empty($errorInfo['exception'])) ? $errorInfo['exception']->getMessage() : '';
+        Log::comment("HTTP {$errorInfo['code']} " . $endpoint . $msg . "| " . $exception);
+
+        // Header log.
+        if (!empty($errorInfo['headers'])) {
+            Log::comment('HEADERS: ' . json_encode($errorInfo['headers']));
+        }
+
+        // Cooldown.
         if (count($this->getErrors()) >= self::MAX_ERRORS) {
             $this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
         } else {
@@ -118,61 +131,40 @@ class Https extends Storage
 
     /**
      * Send the request & retrieve the response content.
-     * @param string $endpoint URI, no `/` at start or path of base_uri will be overwritten.
-     * @param array $query paramName => value
+     * @param string $endpoint URI to fetch.
+     * @param array $query paramName => value.
      * @param int $retries How many times we've tried (recursively).
      * @return array Response content.
      */
     public function get(string $endpoint, array $query, int $retries = 0): array
     {
-        // Detect excessive retries.
-        if ($retries > self::MAX_RETRIES) {
-            $this->abort("MAX_RETRIES (" . self::MAX_RETRIES . ") reached");
-        }
-        $retries++;
-
-        // Send request.
+        // Build request.
+        $endpoint = ltrim($endpoint, '/'); // No `/` at start or path of base_uri will be overwritten.
         $options = ['headers' => $this->getHeaders()];
         if (!empty($query)) {
             $options['query'] = $query;
         }
-        if (Config::getInstance()->debugEnabled()) { // Show full request in logs.
-            Log::comment("\nSENT: GET ($endpoint)\n> " . json_encode($this->redactHeaders($options)));
-        }
-        try {
-            $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
-        } catch (TransportExceptionInterface $e) { // Bad option passed.
-            $this->abort("GET ($endpoint) " . $e->getMessage());
-            exit(); // Stan is throwing a tantrum.
-        }
 
-        // Parse response.
-        $code = 0;
-        $headers = [];
-        $message = '';
-        try {
-            $headers = $response->getHeaders(false); // Forcibly retrieve headers.
-            $message = $response->getContent(false); //gdt Forcibly retrieve body.
-            $code = $response->getStatusCode();
-            $content = $response->toArray();
-        } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
-            // Handle 429 (rate limit) errors & retries.
-            if ($this->retry($code, $headers)) {
-                return $this->get($endpoint, $query, $retries); // TRY AGAIN.
+        while (empty($parsed)) {
+            // Detect excessive retries.
+            if ($retries > self::MAX_RETRIES) {
+                $this->abort("MAX_RETRIES (" . self::MAX_RETRIES . ") reached");
             }
-            // Collect & log (non-429) error before trying again.
-            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
-            return $this->get($endpoint, $query, $retries); // TRY AGAIN.
-        } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
-            // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
-            Log::comment("HTTP $code ($endpoint) " . $e->getMessage());
-            return $this->get($endpoint, $query, $retries); // TRY AGAIN.
-        }
-        if (Config::getInstance()->debugEnabled()) { // Show (good) full response in logs.
-            Log::comment("REPLY: HTTP $code (" . count($content) . " records)");
+            $retries++;
+
+            // Send request.
+            try {
+                $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
+            } catch (TransportExceptionInterface $e) { // Bad option passed.
+                $this->abort("GET ($endpoint) " . $e->getMessage());
+                exit(); // Stan is throwing a tantrum.
+            }
+
+            // Parse request.
+            $parsed = $this->parseResponse($response);
         }
 
-        return [$content, $headers];
+        return $parsed;
     }
 
     /**
@@ -237,5 +229,140 @@ class Https extends Storage
     public function stream(array $row, array $structure, array $info = [], bool $final = false): array
     {
         return [];
+    }
+
+    /**
+     * Parse `ResponseInterface` from get() for content & headers.
+     * @return array Empty means retry.
+     */
+    protected function parseResponse(ResponseInterface $response): array
+    {
+        $code = 0;
+        $headers = [];
+        $message = '';
+        try {
+            $headers = $response->getHeaders(false); // Forcibly retrieve headers.
+            $message = $response->getContent(false); // Forcibly retrieve body.
+            $code = $response->getStatusCode();
+            $content = $response->toArray();
+        } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
+            // Handle 429 (rate limit) errors & retries.
+            if ($this->retry($code, $headers)) {
+                return []; // RETRY.
+            }
+            // Collect & log (non-429) error before trying again.
+            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
+            return []; // RETRY.
+        } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
+            // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
+            Log::comment("HTTP $code " . $e->getMessage());
+            return []; // RETRY.
+        }
+
+        return [$content, $headers, $code];
+    }
+
+    /**
+     * Download a file & log issues.
+     * @return bool Whether the download was successful.
+     */
+    public function download(string $url, string $path): bool
+    {
+        // Get & validate response.
+        try {
+            $response = $this->connectionManager->connection()->request('GET', $url);
+            $response->getStatusCode();
+        } catch (ClientExceptionInterface $e) {
+            Log::comment("4xx error downloading [$url]", false);
+            return false;
+        } catch (ExceptionInterface $e) {
+            $type = str_replace('ExceptionInterface', '', get_class($e));
+            Log::comment("$type error downloading [$url] " . $e->getMessage());
+            return false;
+        }
+
+        // Write file.
+        $fileHandler = fopen($path, 'w');
+        try {
+            foreach ($this->connectionManager->connection()->stream($response) as $chunk) {
+                fwrite($fileHandler, $chunk->getContent());
+            }
+        } catch (ExceptionInterface $e) {
+            Log::comment("Failed to write $url to $path");
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Download files in async batches.
+     * Gotta go fast? It'll cost you feedback on whether it worked...
+     * @see https://symfony.com/doc/current/http_client.html#multiplexing-responses
+     * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults.
+     * @see https://www.php.net/manual/en/resource.php for what counts as a 'stream' resource in PHP.
+     * @param array $downloads URL => SAVE_PATH
+     */
+    public function asyncDownload(array $downloads): void
+    {
+        // Setup.
+        $start = microtime(true);
+        $countRequests = count($downloads);
+        $countResponses = 0;
+        $memoryPeak = memory_get_usage();
+        $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
+
+        // Send requests.
+        $responses = [];
+        foreach ($downloads as $url => $path) {
+            try {
+                $responses[$url] = $client->request('GET', $url, ['timeout' => 3]);
+            } catch (ExceptionInterface $e) {
+                unset($responses[$url]);
+                Log::comment("> failed request: $url — " . $e->getMessage());
+            }
+            $memoryPeak = max(memory_get_usage(), $memoryPeak);
+        }
+
+        // Process responses async.
+        $fileHandles = [];
+        foreach ($client->stream($responses) as $response => $chunk) {
+            $url = array_search($response, $responses, true); // Returned key is the URL.
+            try {
+                if ($chunk->isFirst()) {
+                    $fileHandles[$url] = fopen($downloads[$url], 'wb');
+                    if (false === $fileHandles[$url]) {
+                        Log::comment("> failed to open stream: $url —> " . $downloads[$url]);
+                    }
+                } elseif ($chunk->isLast() && $fileHandles[$url]) {
+                    fclose($fileHandles[$url]);
+                    unset($fileHandles[$url]); // We may still be growing this array, so prune it as possible.
+                    $countResponses++;
+                } elseif ($fileHandles[$url]) {
+                    fwrite($fileHandles[$url], $chunk->getContent());
+                } // else: Already logged stream did not open.
+                $memoryPeak = max(memory_get_usage(), $memoryPeak);
+            } catch (ExceptionInterface $e) {
+                Log::comment("> failed download: $url [msg: " . $e->getMessage() . ']');
+                $response->cancel(); // Terminate the response to clear its cached data.
+                unset($responses[$url]);
+                if (isset($fileHandles[$url])) {
+                    fclose($fileHandles[$url]); // Attempt to ternimate stream to prevent runaway memory usage.
+                    unset($fileHandles[$url]); // Don't come back to this one.
+                }
+                if (file_exists($downloads[$url])) {
+                    unlink($downloads[$url]); // Attempt file cleanup so we can retry.
+                }
+                gc_collect_cycles(); // Force garbage collection to preserve memory.
+            }
+        }
+
+        // Report.
+        Log::download(
+            memory: max(memory_get_usage(), $memoryPeak),
+            elapsed: microtime(true) - $start,
+            countRequest: $countRequests,
+            countResponse: $countResponses,
+        );
     }
 }

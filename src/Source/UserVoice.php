@@ -95,7 +95,7 @@ class UserVoice extends Source
 
             //$PicPath = str_replace('/avat', '/pavat', $photoPath);
             $thumbPath = str_replace('/pavat', '/navat', $photoPath);
-            generateThumbnail($photoPath, $thumbPath, $thumbnail, $thumbnail);
+            self::generateThumbnail($photoPath, $thumbPath, $thumbnail, $thumbnail);
             $count++;
         }
         //$port->status("$count Hex Encoded.\n");

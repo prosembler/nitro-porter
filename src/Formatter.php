@@ -3,9 +3,9 @@
 namespace Porter;
 
 use nadar\quill\Lexer as Quill;
+use Porter\Bundle\Vanilla as Vanilla;
 use s9e\TextFormatter\Bundles\Fatdown as Markdown;
 use s9e\TextFormatter\Bundles\Forum as BBCode;
-use Porter\Bundle\Vanilla as Vanilla;
 
 class Formatter
 {
@@ -53,7 +53,7 @@ class Formatter
         }
 
         // Record memory usage from user map.
-        Log::comment('Mentions map memory usage at ' . formatBytes(memory_get_usage()));
+        Log::comment('Mentions map memory usage at ' . Log::formatBytes(memory_get_usage()));
 
         $this->userMap = $users;
     }

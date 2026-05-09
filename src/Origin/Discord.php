@@ -85,9 +85,9 @@ class Discord extends Origin
     ];
 
     protected const array DB_REACTIONS = [
-        'user_id' => 'varchar(100)',
         'message_id' => 'varchar(100)',
         'emoji_id' => 'varchar(100)',
+        'count' => 'int',
     ];
 
     protected const array DB_ROLES = [
@@ -587,6 +587,8 @@ class Discord extends Origin
 
     /**
      * Reactions are stored as a LIST of emoji objects on messages.
+     *
+     * Discord doesn't provide individual reaction user_ids or timestamps, only counts.
      * @see https://docs.discord.com/developers/resources/message#reaction-object
      * @see https://discord.com/developers/docs/resources/emoji#emoji-object
      * ex: `[{"emoji":{"id":"742118343112130694","name":"gritty"},"count":1},
@@ -597,18 +599,20 @@ class Discord extends Origin
     protected function extractReactions(array $content): void
     {
         $reactions = array_filter(array_column($content, 'reactions', 'id'), fn ($reactions) => (!empty($reactions)));
+
+        // Collect & store missing emoji.
+        $emojiList = array_column($reactions, 'emoji');
+        $this->extractEmoji($emojiList);
+
+        // Get reaction counts.
         $reactData = [];
-        foreach ($reactions as $msgID => $reactionSet) {
-            $emojiList = array_column($reactionSet, 'emoji');
-            foreach ($emojiList as $emoji) {
-                $reactData[] = [
-                    'emoji_id' => $emoji['id'] ?? $emoji['name'], // Standard unicode emoji have null ID.
-                    'user_id' => $emoji['user']['id'],
-                    'message_id' => $msgID,
-                ];
-            }
+        foreach ($reactions as $msgID => $reaction) {
+            $reactData[] = [
+                'emoji_id' => $reaction['emoji']->id ?? $reaction['emoji']->name, // Std unicode emoji ID = null.
+                'count' => $reaction['count'],
+                'message_id' => $msgID,
+            ];
             $this->extract('discord_reactions', self::DB_REACTIONS, $reactData);
-            $this->extractEmoji($emojiList);
         }
     }
 
@@ -618,7 +622,7 @@ class Discord extends Origin
     protected function extractEmoji(array $emojis): void
     {
         $emojis = array_column($emojis, 'id', 'id');
-        $emojis = array_filter($emojis, fn ($emoji) => is_numeric($emoji['id']));
+        $emojis = array_filter($emojis, fn ($emoji) => (!empty($emoji['id']) && is_numeric($emoji['id'])));
         if (empty($emojis)) {
             return;
         }

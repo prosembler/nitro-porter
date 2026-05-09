@@ -249,14 +249,14 @@ class Discord extends Origin
         //Log::comment("lim=$limit, rem=$remaining, res=$reset, aft=$after, bkt=$bucket");
 
         // Enforce rate limit with sleep.
-        $wait = self::MIN_MICROSECONDS; // min pause to not reach CloudFlare limit.
-        $wait = $wait - (int)($replySeconds * self::MICROSECONDS_PER_SEC); // Synchronous = subtract cycle time.
-        if ($wait < 0) {
-            $wait = 0;
-        }
+        // Min pause to not reach CloudFlare limit = MIN_MICROSECONDS; synchronous reqs = subtract cycle time.
+        $wait = self::MIN_MICROSECONDS - (int)($replySeconds * self::MICROSECONDS_PER_SEC);
+        // Wait must be betwen zero & self::MIN_MICROSECONDS.
+        $wait = max(min($wait, self::MIN_MICROSECONDS), 0);
         if (!is_null($remaining) && empty($remaining)) { // Zero, not null
             if (!empty($after) && is_numeric($after)) {
                 $wait = ceil($after) * self::MICROSECONDS_PER_SEC;
+                Log::comment("INFO: Ran out of requests, pausing for reset-after: $after");
             } else {
                 $wait = 60 * self::MICROSECONDS_PER_SEC; // 1 minute fallback.
                 Log::comment("INFO: Failed to find rate limit info, but limit ($limit) exhausted; pausing 1 minute.");

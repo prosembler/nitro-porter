@@ -325,30 +325,30 @@ class Https extends Storage
         }
 
         // Process responses async.
-        $fileHandles = [];
+        $files = []; // File handles for fopen() etc.
         foreach ($client->stream($responses) as $response => $chunk) {
             $url = array_search($response, $responses, true); // Returned key is the URL.
             try {
                 if ($chunk->isFirst()) {
-                    $fileHandles[$url] = fopen($downloads[$url], 'wb');
-                    if (false === $fileHandles[$url]) {
+                    $files[$url] = fopen($downloads[$url], 'wb');
+                    if (false === $files[$url]) {
                         Log::comment("> failed to open stream: $url —> " . $downloads[$url]);
                     }
-                } elseif ($chunk->isLast() && $fileHandles[$url]) {
-                    fclose($fileHandles[$url]);
-                    unset($fileHandles[$url]); // We may still be growing this array, so prune it as possible.
+                } elseif ($chunk->isLast() && $files[$url]) {
+                    fclose($files[$url]);
+                    unset($files[$url]); // We may still be growing this array, so prune it as possible.
                     $countResponses++;
-                } elseif ($fileHandles[$url]) {
-                    fwrite($fileHandles[$url], $chunk->getContent());
+                } elseif ($files[$url]) {
+                    fwrite($files[$url], $chunk->getContent());
                 } // else: Already logged stream did not open.
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
                 Log::comment("> failed download: $url [msg: " . $e->getMessage() . ']');
                 $response->cancel(); // Terminate the response to clear its cached data.
                 unset($responses[$url]);
-                if (isset($fileHandles[$url])) {
-                    fclose($fileHandles[$url]); // Attempt to ternimate stream to prevent runaway memory usage.
-                    unset($fileHandles[$url]); // Don't come back to this one.
+                if (isset($files[$url])) {
+                    fclose($files[$url]); // Attempt to ternimate stream to prevent runaway memory usage.
+                    unset($files[$url]); // Don't come back to this one.
                 }
                 if (file_exists($downloads[$url])) {
                     unlink($downloads[$url]); // Attempt file cleanup so we can retry.

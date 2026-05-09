@@ -297,7 +297,15 @@ class Https extends Storage
 
     /**
      * Download files in async batches.
+     *
      * Gotta go fast? It'll cost you feedback on whether it worked...
+     * This is one of the most memory-intense pieces of Porter.
+     * Be extraordinarily careful with memory management when modifying.
+     *
+     * Apr 2026: Suspect memory leak in HttpClient.
+     *   - On HTTP error, memory footprint still grows despite response::cancel(), fclose(), gc_collect_cycles().
+     *   - Hack/sidestep would be destroy/recreate HttpClient per batch, but it'd add significant complexity.
+     *
      * @see https://symfony.com/doc/current/http_client.html#multiplexing-responses
      * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults.
      * @see https://www.php.net/manual/en/resource.php for what counts as a 'stream' resource in PHP.
@@ -330,20 +338,25 @@ class Https extends Storage
             $url = array_search($response, $responses, true); // Returned key is the URL.
             try {
                 if ($chunk->isFirst()) {
+                    // Start a file.
                     $files[$url] = fopen($downloads[$url], 'wb');
                     if (false === $files[$url]) {
                         Log::comment("> failed to open stream: $url —> " . $downloads[$url]);
                     }
                 } elseif ($chunk->isLast() && $files[$url]) {
+                    // Finish a file.
                     fclose($files[$url]);
                     unset($files[$url]); // We may still be growing this array, so prune it as possible.
                     $countResponses++;
                 } elseif ($files[$url]) {
+                    // Continue a file.
                     fwrite($files[$url], $chunk->getContent());
                 } // else: Already logged stream did not open.
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
                 Log::comment("> failed download: $url [msg: " . $e->getMessage() . ']');
+
+                // Aggressively purge the file from memory.
                 $response->cancel(); // Terminate the response to clear its cached data.
                 unset($responses[$url]);
                 if (isset($files[$url])) {

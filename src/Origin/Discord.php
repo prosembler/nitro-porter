@@ -609,21 +609,24 @@ class Discord extends Origin
     protected function extractReactions(array $content): void
     {
         $reactions = array_filter(array_column($content, 'reactions', 'id'), fn ($reactions) => (!empty($reactions)));
-
-        // Collect & store missing emoji.
-        $emojiList = array_column($reactions, 'emoji');
-        $this->extractEmoji($emojiList);
-
-        // Get reaction counts.
-        $reactData = [];
-        foreach ($reactions as $msgID => $reaction) {
-            $reactData[] = [
-                'emoji_id' => $reaction['emoji']->id ?? $reaction['emoji']->name, // Std unicode emoji ID = null.
-                'count' => $reaction['count'],
-                'message_id' => $msgID,
-            ];
-            $this->extract('discord_reactions', self::DB_REACTIONS, $reactData);
+        if (empty($reactions)) {
+            return;
         }
+        $emojiList = [];
+        $reactList = [];
+        foreach ($reactions as $msgID => $msgReactions) {
+            foreach ($msgReactions as $reaction) {
+                $emojiList[] = $reaction['emoji'];
+                $reactList[] = [
+                    'emoji_id' => $reaction['emoji']['id'] ?? 0, // Std unicode emoji ID = null.
+                    'emoji_name' => $reaction['emoji']['name'] ?? '',
+                    'count' => $reaction['count'] ?? 0,
+                    'message_id' => $msgID,
+                ];
+            }
+        }
+        $this->extractEmoji($emojiList);
+        $this->extract('discord_reactions', self::DB_REACTIONS, $reactList);
     }
 
     /**

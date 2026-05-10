@@ -374,7 +374,8 @@ class Https extends Storage
                 $response->cancel(); // Terminate the response to clear its cached data.
                 unset($responses[$url]);
                 if (isset($files[$url])) {
-                    fclose($files[$url]); // Attempt to ternimate stream to prevent runaway memory usage.
+                    fflush($files[$url]); // Dump stream buffer.
+                    fclose($files[$url]); // Attempt to terminate stream.
                     unset($files[$url]); // Don't come back to this one.
                 }
                 if (file_exists($downloads[$url])) {

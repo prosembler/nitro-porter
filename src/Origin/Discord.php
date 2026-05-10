@@ -267,7 +267,7 @@ class Discord extends Origin
         if (!is_null($remaining) && empty($remaining)) { // Zero, not null
             if (!empty($after) && is_numeric($after)) {
                 $wait = ceil($after) * self::MICROSECONDS_PER_SEC;
-                Log::comment("INFO: Ran out of requests, pausing for reset-after: $after");
+                Log::comment("> Rate limited, pausing " . round($after, 1) . "s (per `reset-after`)");
             } else {
                 $wait = 60 * self::MICROSECONDS_PER_SEC; // 1 minute fallback.
                 Log::comment("INFO: Failed to find rate limit info, but limit ($limit) exhausted; pausing 1 minute.");

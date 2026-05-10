@@ -65,10 +65,10 @@ class Discord extends Origin
         'nick' => 'varchar(100)',
         'avatar' => 'varchar(100)',
         'roles' => 'text',
-        'joined_at' => 'varchar(100)',
-        'premium_since' => 'varchar(100)',
+        'joined_at' => 'datetime',
+        'premium_since' => 'datetime',
         // Under 'user' object
-        'id' => 'varchar(100)',
+        'id' => 'bigint',
         'username' => 'varchar(100)',
         'discriminator' => 'varchar(100)',
         'global_name' => 'varchar(100)',
@@ -85,13 +85,14 @@ class Discord extends Origin
     ];
 
     protected const array DB_REACTIONS = [
-        'message_id' => 'varchar(100)',
-        'emoji_id' => 'varchar(100)',
+        'message_id' => 'bigint',
+        'emoji_id' => 'bigint',
+        'emoji_name' => 'varchar(100)',
         'count' => 'int',
     ];
 
     protected const array DB_ROLES = [
-        'id' => 'varchar(100)',
+        'id' => 'bigint',
         'name' => 'varchar(100)',
         'position' => 'int',
         'managed' => 'tinyint',
@@ -99,24 +100,24 @@ class Discord extends Origin
     ];
 
     protected const array DB_EMOJIS = [
-        'id' => 'varchar(100)',
+        'id' => 'bigint',
         'name' => 'varchar(100)',
         'user' => 'text', // author
         'animated' => 'tinyint',
     ];
 
     protected const array DB_CHANNELS = [
-        'id' => 'varchar(100)',
+        'id' => 'bigint',
         'type' => 'int', //@todo key?
-        'guild_id' => 'varchar(100)',
+        'guild_id' => 'bigint',
         'position' => 'varchar(100)',
         'name' => 'text',
         'topic' => 'text',
-        'last_message_id' => 'varchar(100)',
-        'parent_id' => 'varchar(100)',
+        'last_message_id' => 'bigint',
+        'parent_id' => 'bigint',
         'message_count' => 'int',
         // thread-only
-        'owner_id' => 'varchar(100)',
+        'owner_id' => 'bigint',
         'member_count' => 'int',
         'thread_metadata' => 'text',
         'keys' => [
@@ -132,11 +133,11 @@ class Discord extends Origin
      * @see \Porter\Source::renumber() for why an index is important.
      */
     protected const array DB_MESSAGES = [
-        'id' => 'varchar(100)',
-        'channel_id' => 'varchar(100)', //@todo key?
+        'id' => 'bigint',
+        'channel_id' => 'bigint',
         'content' => 'text',
-        'timestamp' => 'varchar(100)', //@todo key?
-        'edited_timestamp' => 'varchar(100)',
+        'timestamp' => 'datetime',
+        'edited_timestamp' => 'datetime',
         'pinned' => 'tinyint',
         'type' => 'int',
         // OBJECTS
@@ -144,7 +145,7 @@ class Discord extends Origin
         'message_reference' => 'text',
         'thread' => 'text',
         'author' => 'text',
-        'authorid' => 'text', // Derived from author.id — flattened to allow Source to filter.
+        'authorid' => 'bigint', // Derived from author.id — flattened to allow Source to filter.
         // OBJECTS[]
         'poll' => 'text', // @see https://discord.com/developers/docs/resources/poll#poll-object
         'attachments' => 'text', // @see https://discord.com/developers/docs/resources/message#attachment-object
@@ -154,10 +155,16 @@ class Discord extends Origin
         'mentions' => 'text',
         'mention_roles' => 'text',
         'mention_channels' => 'text',
-        'keys' => [ //  Index any keys that may require renumbering (for auto-joins).
+        'keys' => [
+            //  Index any keys that may require renumbering (for auto-joins).
             'discord_messages_id_primary' => [
                 'type' => 'primary',
                 'columns' => ['id'],
+            ],
+            // Covering index for resuming message pulls [select id where channel_id=x order by timestamp].
+            'discord_messages_resuming_index' => [
+                'type' => 'index',
+                'columns' => ['channel_id','timestamp'], // 'id' (pk) is implicitly in index
             ]
         ],
     ];
@@ -168,8 +175,8 @@ class Discord extends Origin
     ];
 
     protected const array DB_ATTACHMENTS = [
-        'id' => 'text',
-        'message_id' => 'bigint', // renumber?
+        'id' => 'bigint',
+        'message_id' => 'bigint',
         'filename' => 'text',
         'url' => 'text',
         'size' => 'bigint',
@@ -506,9 +513,12 @@ class Discord extends Origin
             if (true === $status) {
                 continue; // Channel is done, bail.
             } elseif (false === $status && $hasMessagesTable) { // Resume?
+                $start = microtime(true);
                 $channels[$channelId] = $this->getLastMessageId($channelId);
+                $elapsed = microtime(true) - $start;
+                $append = ($elapsed > 0.5) ? " (lookup was " . round($elapsed, 2) . "s)" : '';
                 if (0 !== $channels[$channelId]) {
-                    Log::comment("Resuming channel $channelId at message {$channels[$channelId]}:");
+                    Log::comment("Resuming channel $channelId at message {$channels[$channelId]}$append:");
                 }
             }
 

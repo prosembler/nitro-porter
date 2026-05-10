@@ -343,18 +343,16 @@ class Discord extends Origin
      */
     protected function extractAttachments(array $messages): void
     {
-        // Collapse messages to a list of downloads.
-        $downloads = []; // Store to database.
+        $data = []; // Store to database.
         $files = []; // Smaller list for asyncDownloads().
         $messages = array_column($messages, 'attachments', 'id');
         foreach ($messages as $message_id => $attachments) {
             foreach ($attachments as $attachment) {
                 $attachment['message_id'] = $message_id;
-                $attachment['download_path'] = $this->getDownloadPath($attachment);
-                if (!empty($attachment['download_path'])) {
+                if ($attachment['download_path'] = $this->getDownloadPath($attachment)) {
                     $files[$attachment['url']] = $attachment['download_path'];
                 }
-                $downloads[$attachment['url']] = $attachment;
+                $data[$attachment['url']] = $attachment;
 
                 // Batch downloads.
                 if (count($files) >= self::MAX_FILE_BATCH) {
@@ -363,13 +361,12 @@ class Discord extends Origin
                 }
             }
         }
-
-        // Save records to database.
-        if (!empty($downloads)) {
-            $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads);
-        }
+        $this->extract('discord_attachments', self::DB_ATTACHMENTS, $data);
     }
 
+    /**
+     * Use attachment data to generate a file path for downloading it.
+     */
     protected function getDownloadPath(array $attachment): string
     {
         $filename = $this->limitFilenameLength($attachment['filename']);

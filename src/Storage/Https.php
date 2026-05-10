@@ -334,7 +334,7 @@ class Https extends Storage
         $responses = [];
         foreach ($downloads as $url => $path) {
             try {
-                $responses[$url] = $client->request('GET', $url, ['timeout' => 3]);
+                $responses[$url] = $client->request('GET', $url, ['timeout' => 3, 'buffer' => false]);
             } catch (ExceptionInterface $e) {
                 $errors++;
                 unset($responses[$url]);

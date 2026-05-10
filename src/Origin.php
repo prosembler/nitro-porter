@@ -117,7 +117,7 @@ abstract class Origin extends Package
         $info = $this->extractStorage->store($tableName, [], $fields, $data, []);
 
         // Report.
-        Log::storage('extract', $tableName, microtime(true) - $start, count($data), $info['memory']);
+        Log::storage('> extract', $tableName, microtime(true) - $start, count($data), $info['memory']);
 
         return $info;
     }

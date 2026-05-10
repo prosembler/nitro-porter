@@ -99,7 +99,7 @@ class Log
     ): void {
         $bytes = Log::formatBytes($memory);
         $time = Log::formatElapsed($elapsed);
-        Log::comment("download: {$countResponse}/{$countRequest} files in $time ($bytes)");
+        Log::comment("> downloads: {$countResponse}/{$countRequest} in $time ($bytes)");
     }
 
     /**

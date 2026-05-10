@@ -504,7 +504,9 @@ class Discord extends Origin
             // Report.
             $warn = (1 === $remaining) ? " Expect 5-second timeouts." : '';
             $now = date('H:i:s e');
-            Log::comment("\nINFO: $remaining channels incomplete after pass $k at $now.$warn\n");
+            if (empty($warn) || ($k % 10 === 0)) { // Only output every 10 runs after down to 1 channel.
+                Log::comment("\nINFO: $remaining channels incomplete after pass $k at $now.$warn\n");
+            }
         } while (0 !== $remaining);
     }
 

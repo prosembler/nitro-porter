@@ -353,6 +353,8 @@ class Discord extends Origin
         if ($errors >= self::MAX_FILE_ERRORS) {
             $this->originStorage->resetConnection('discord'); // @todo Use originName.
             Log::comment("\nINFO: HttpClient reset after [$errors] file download errors.\n");
+            $errors = 0; // Reset counter.
+            gc_collect_cycles(); // Force garbage collection.
         }
 
         foreach ($messages as $message) {

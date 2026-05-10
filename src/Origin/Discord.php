@@ -364,6 +364,7 @@ class Discord extends Origin
                 }
             }
         }
+        $this->originStorage->asyncDownload($files); // Final batch.
         $this->extract('discord_attachments', self::DB_ATTACHMENTS, $data);
     }
 

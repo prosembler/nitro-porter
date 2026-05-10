@@ -635,7 +635,9 @@ class Discord extends Origin
         $reactList = [];
         foreach ($reactions as $msgID => $msgReactions) {
             foreach ($msgReactions as $reaction) {
-                $emojiList[] = $reaction['emoji'];
+                if (!empty($reaction['emoji']['id'])) {
+                    $emojiList[$reaction['emoji']['id']] = $reaction['emoji']; // Only collect non-standard emoji.
+                }
                 $reactList[] = [
                     'emoji_id' => $reaction['emoji']['id'] ?? 0, // Std unicode emoji ID = null.
                     'emoji_name' => $reaction['emoji']['name'] ?? '',
@@ -653,20 +655,14 @@ class Discord extends Origin
      */
     protected function extractEmoji(array $emojis): void
     {
-        $emojis = array_column($emojis, 'id', 'id');
-        $emojis = array_filter($emojis, fn ($emoji) => (!empty($emoji['id']) && is_numeric($emoji['id'])));
-        if (empty($emojis)) {
-            return;
+        $missingEmojiIDs = array_diff(array_keys($emojis), $this->guildEmojis);
+        if (empty($missingEmojiIDs)) {
+            return; // No missing emojis found.
         }
-        $missingEmojis = array_diff(array_column($emojis, 'id'), $this->guildEmojis);
-        if (empty($missingEmojis)) {
-            return;
-        }
-
-        // Found "missing" emojis.
-        $this->extract('discord_emojis', self::DB_EMOJIS, $missingEmojis);
-        $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojis);
-        Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojis));
+        $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojiIDs); // Update in-memory list.
+        $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
+        $this->extract('discord_emojis', self::DB_EMOJIS, $emojiData); // Store new emoji.
+        Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojiIDs));
     }
 
     /**

@@ -384,6 +384,7 @@ class Https extends Storage
                 gc_collect_cycles(); // Force garbage collection to preserve memory.
             }
         }
+        flush(); // Clear system write buffers.
 
         // Report.
         Log::download(

@@ -313,10 +313,14 @@ class Https extends Storage
      */
     public function asyncDownload(array $downloads): void
     {
+        // Verify work to do.
+        $countRequests = count($downloads);
+        if (!$countRequests) {
+            return;
+        }
+
         // Setup.
         $start = microtime(true);
-        $countRequests = count($downloads);
-        $countResponses = 0;
         $memoryPeak = memory_get_usage();
         $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
 
@@ -334,6 +338,7 @@ class Https extends Storage
 
         // Process responses async.
         $files = []; // File handles for fopen() etc.
+        $countResponses = 0;
         foreach ($client->stream($responses) as $response => $chunk) {
             $url = array_search($response, $responses, true); // Returned key is the URL.
             try {

@@ -525,7 +525,7 @@ class Discord extends Origin
                 $elapsed = microtime(true) - $start;
                 $append = ($elapsed > 0.5) ? " (lookup was " . round($elapsed, 2) . "s)" : '';
                 if (0 !== $channels[$channelId]) {
-                    Log::comment("\nResuming channel $channelId at message {$channels[$channelId]}$append:");
+                    Log::comment("\nResuming channel $channelId @ msg_id={$channels[$channelId]}$append:");
                 }
             }
 

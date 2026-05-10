@@ -42,6 +42,12 @@ class Https extends Storage
         $this->setHeader('User-Agent', self::USER_AGENT);
     }
 
+    /** Allow an Origin to reset the connection. */
+    public function resetConnection(string $originName): void
+    {
+        $this->connectionManager = new ConnectionManager($originName);
+    }
+
     /**
      * Add a header to be sent.
      * @param string $name Header name.
@@ -54,7 +60,6 @@ class Https extends Storage
 
     /**
      * Headers to be sent.
-     * @return array
      */
     public function getHeaders(): array
     {
@@ -64,7 +69,6 @@ class Https extends Storage
     /**
      * Log & store an HTTP error.
      * EXIT if MAX_ERRORS exceeded. otherwise pause.
-     * @param array $errorInfo
      */
     public function addError(array $errorInfo): void
     {
@@ -310,18 +314,20 @@ class Https extends Storage
      * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults.
      * @see https://www.php.net/manual/en/resource.php for what counts as a 'stream' resource in PHP.
      * @param array $downloads URL => SAVE_PATH
+     * @return int Number of errors encountered.
      */
-    public function asyncDownload(array $downloads): void
+    public function asyncDownload(array $downloads): int
     {
         // Verify work to do.
         $countRequests = count($downloads);
         if (!$countRequests) {
-            return;
+            return 0;
         }
 
         // Setup.
         $start = microtime(true);
         $memoryPeak = memory_get_usage();
+        $errors = 0;
         $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
 
         // Send requests.
@@ -330,6 +336,7 @@ class Https extends Storage
             try {
                 $responses[$url] = $client->request('GET', $url, ['timeout' => 3]);
             } catch (ExceptionInterface $e) {
+                $errors++;
                 unset($responses[$url]);
                 Log::comment("> failed request: $url — " . $e->getMessage());
             }
@@ -346,6 +353,7 @@ class Https extends Storage
                     // Start a file.
                     $files[$url] = fopen($downloads[$url], 'wb');
                     if (false === $files[$url]) {
+                        $errors++;
                         Log::comment("> failed to open stream: $url —> " . $downloads[$url]);
                     }
                 } elseif ($chunk->isLast() && $files[$url]) {
@@ -359,6 +367,7 @@ class Https extends Storage
                 } // else: Already logged stream did not open.
                 $memoryPeak = max(memory_get_usage(), $memoryPeak);
             } catch (ExceptionInterface $e) {
+                $errors++;
                 Log::comment("> failed download: $url [msg: " . $e->getMessage() . ']');
 
                 // Aggressively purge the file from memory.
@@ -382,5 +391,7 @@ class Https extends Storage
             countRequest: $countRequests,
             countResponse: $countResponses,
         );
+
+        return $errors;
     }
 }

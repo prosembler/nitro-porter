@@ -56,6 +56,8 @@ class Discord extends Origin
 
     public const int MAX_FILE_BATCH = 25;
 
+    public const int MAX_FILE_ERRORS = 10;
+
     public const array TEXT_CHANNEL_TYPES = [
         0 => 'GUILD_TEXT',
         5 => 'GUILD_ANNOUNCEMENT',
@@ -345,6 +347,14 @@ class Discord extends Origin
     {
         $data = []; // Store to database.
         $files = []; // Smaller list for asyncDownloads().
+
+        // Allow HttpClient to get trashed to sidestep memory leak from errors.
+        static $errors = 0;
+        if ($errors >= self::MAX_FILE_ERRORS) {
+            $this->originStorage->resetConnection('discord'); // @todo Use originName.
+            Log::comment("\nINFO: HttpClient reset after [$errors] file download errors.\n");
+        }
+
         foreach ($messages as $message) {
             if (empty($message['attachments'])) {
                 continue;
@@ -359,12 +369,12 @@ class Discord extends Origin
 
                 // Batch downloads.
                 if (count($files) >= self::MAX_FILE_BATCH) {
-                    $this->originStorage->asyncDownload($files);
+                    $errors += $this->originStorage->asyncDownload($files);
                     $files = []; // reset
                 }
             }
         }
-        $this->originStorage->asyncDownload($files); // Final batch.
+        $errors += $this->originStorage->asyncDownload($files); // Final batch.
         $this->extract('discord_attachments', self::DB_ATTACHMENTS, $data);
     }
 

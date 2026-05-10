@@ -345,11 +345,14 @@ class Discord extends Origin
     {
         $data = []; // Store to database.
         $files = []; // Smaller list for asyncDownloads().
-        $messages = array_column($messages, 'attachments', 'id');
-        foreach ($messages as $message_id => $attachments) {
-            foreach ($attachments as $attachment) {
-                $attachment['message_id'] = $message_id;
-                if ($attachment['download_path'] = $this->getDownloadPath($attachment)) {
+        foreach ($messages as $message) {
+            if (empty($message['attachments'])) {
+                continue;
+            }
+            $year = date('Y', strtotime($message['timestamp']));
+            foreach ($message['attachments'] as $attachment) {
+                $attachment['message_id'] = $message['id'];
+                if ($attachment['download_path'] = $this->getDownloadPath($attachment, $year)) {
                     $files[$attachment['url']] = $attachment['download_path'];
                 }
                 $data[$attachment['url']] = $attachment;
@@ -367,10 +370,10 @@ class Discord extends Origin
     /**
      * Use attachment data to generate a file path for downloading it.
      */
-    protected function getDownloadPath(array $attachment): string
+    protected function getDownloadPath(array $attachment, string $year): string
     {
         $filename = $this->limitFilenameLength($attachment['filename']);
-        $folder = $this->getDownloadFolder('attachments');
+        $folder = $this->getDownloadFolder('attachments/' . $year);
         $path = $folder . $attachment['id'] . '_' . $filename;
         return (file_exists($path)) ? '' : $path; // Don't request downloading duplicates.
     }

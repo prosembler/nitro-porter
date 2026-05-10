@@ -129,6 +129,11 @@ abstract class Origin extends Package
      */
     protected function getDownloadFolder(string $name): string
     {
+        static $folders = [];
+        if (!empty($folders[$name])) {
+            return $folders[$name];
+        }
+
         // Get the source_root.
         $srcRoot = Config::getInstance()->get('source_root');
         if (empty($srcRoot)) {
@@ -139,6 +144,7 @@ abstract class Origin extends Package
         // Build the path & return it.
         $folder = rtrim($srcRoot, '/') . '/' . trim($name, '/');
         $exists = touchFolder($folder);
-        return ($exists) ? $folder . '/' : '';
+        $folders[$name] = ($exists) ? $folder . '/' : '';
+        return $folders[$name];
     }
 }

@@ -54,6 +54,8 @@ class Discord extends Origin
 
     public const int MAX_CHANNEL_QUERIES = 10000; // Channels + threads.
 
+    public const int MAX_FILE_BATCH = 25;
+
     public const array TEXT_CHANNEL_TYPES = [
         0 => 'GUILD_TEXT',
         5 => 'GUILD_ANNOUNCEMENT',
@@ -342,34 +344,38 @@ class Discord extends Origin
     protected function extractAttachments(array $messages): void
     {
         // Collapse messages to a list of downloads.
-        $downloads = [];
-        $files = [];
-        $folder = $this->getDownloadFolder('attachments');
+        $downloads = []; // Store to database.
+        $files = []; // Smaller list for asyncDownloads().
         $messages = array_column($messages, 'attachments', 'id');
         foreach ($messages as $message_id => $attachments) {
             foreach ($attachments as $attachment) {
                 $attachment['message_id'] = $message_id;
-                $filename = $this->limitFilenameLength($attachment['filename']);
-                $attachment['download_path'] = $folder . $attachment['id'] . '_' . $filename;
-                $downloads[$attachment['url']] = $attachment;
-                // Smaller array for asyncDownloads(); Don't request downloading duplicates or to empty paths.
-                if (!empty($attachment['download_path']) && !file_exists($attachment['download_path'])) {
+                $attachment['download_path'] = $this->getDownloadPath($attachment);
+                if (!empty($attachment['download_path'])) {
                     $files[$attachment['url']] = $attachment['download_path'];
+                }
+                $downloads[$attachment['url']] = $attachment;
+
+                // Batch downloads.
+                if (count($files) >= self::MAX_FILE_BATCH) {
+                    $this->originStorage->asyncDownload($files);
+                    $files = []; // reset
                 }
             }
         }
-        unset($messages); // This could be quite large, and we're about to fire many requests.
 
+        // Save records to database.
         if (!empty($downloads)) {
-            // Save records.
             $this->extract('discord_attachments', self::DB_ATTACHMENTS, $downloads);
-            unset($downloads);
-
-            // Retrieve files.
-            if ($folder) {
-                $this->originStorage->asyncDownload($files);
-            }
         }
+    }
+
+    protected function getDownloadPath(array $attachment): string
+    {
+        $filename = $this->limitFilenameLength($attachment['filename']);
+        $folder = $this->getDownloadFolder('attachments');
+        $path = $folder . $attachment['id'] . '_' . $filename;
+        return (file_exists($path)) ? '' : $path; // Don't request downloading duplicates.
     }
 
     /**

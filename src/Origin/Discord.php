@@ -403,6 +403,8 @@ class Discord extends Origin
     }
 
     /**
+     * Discord supplies all versions regardless of original.
+     *
      * @see https://discord.com/developers/docs/reference#image-formatting
      * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
      *   >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
@@ -416,18 +418,13 @@ class Discord extends Origin
             Log::comment("Found " . count($emojis) . " emojis.");
             foreach ($emojis as $emoji) {
                 $url = self::CDN_BASE_URI . 'emojis/' . $emoji->id . '.';
-                $types = ['webp', 'png', 'jpg', 'gif', 'jpeg']; // By probability-ish.
-                // Originals may be PNG, JPEG, WebP, or GIF. Only WebP is guaranteed to exist.
-                $found = 0;
+                $types = ['webp', 'png', 'jpg', 'gif'];
                 foreach ($types as $type) {
                     $path = $folder . $emoji->name . '.' . $type;
                     if (!file_exists($path)) {
                         $this->originStorage->download($url . $type, $path);
                         $downloadCount++;
                         echo "."; // Dotted line to show progress.
-                    }
-                    if (2 === $found++) {
-                        break; // There aren't more than two variants (non-webp original + webp).
                     }
                 }
             }

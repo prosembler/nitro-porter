@@ -434,10 +434,10 @@ class Discord extends Origin
     protected function downloadAvatars(): void
     {
         if ($folder = $this->getDownloadFolder('avatars')) {
-            $ids = $this->outputQB()->from('discord_users')->get('id')->toArray();
-            foreach ($ids as $id) {
-                $url = self::CDN_BASE_URI . 'avatars/' . $id . '/user_avatar.png';
-                $path = $folder . 'avatar_' . $id . '.png';
+            $users = $this->outputQB()->from('discord_users')->get('id')->toArray();
+            foreach ($users as $user) {
+                $url = self::CDN_BASE_URI . 'avatars/' . $user->id . '/user_avatar.png';
+                $path = $folder . 'avatar_' . $user->id . '.png';
                 if (!file_exists($path)) {
                     $this->originStorage->download($url, $path);
                 }

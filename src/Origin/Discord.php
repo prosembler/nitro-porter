@@ -225,7 +225,7 @@ class Discord extends Origin
 
         // Guild users & roles
         $this->users(); // @todo Timing issue: setting $guildUsers for messages()
-        /*$this->roles();
+        $this->roles();
 
         // Guild taxonomy & emoji
         $this->emojis();
@@ -233,7 +233,7 @@ class Discord extends Origin
         $this->threads();
 
         // Guild content + non-guild users/emoji.
-        $this->messages();*/
+        $this->messages();
 
         // Download last to catch late additions.
         $this->downloadAvatars();

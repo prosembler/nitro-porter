@@ -10,6 +10,10 @@ namespace Porter\Source;
 
 use Porter\Source;
 
+/**
+ * Formatting issues?
+ * @see https://github.com/prosembler/vanilla/tree/main/plugins/IPBFormatter
+ */
 class IpBoard4 extends Source
 {
     public const SUPPORTED = [
@@ -75,7 +79,7 @@ class IpBoard4 extends Source
         $filters = [
             'msg_date' => 'timestampToDate',
         ];
-        $query = "select m.*, 'IPB' as Format from :_core_message_posts m";
+        $query = "select m.*, 'Html' as Format from :_core_message_posts m";
         $this->export('ConversationMessage', $query, $map, $filters);
 
         // User Conversation.
@@ -184,14 +188,10 @@ class IpBoard4 extends Source
             'start_date' => 'timestampToDate',
             'edit_time' => 'timestampToDate',
         ];
-        $query = "select t.*,
-                $descriptionSQL as post,
-                IF(t.state = 'closed', 1, 0) as closed,
-                'BBCode' as Format,
-                p.edit_time
+        $query = "select t.*, $descriptionSQL as post, 
+                IF(t.state = 'closed', 1, 0) as closed, 'Html' as Format, p.edit_time
             from :_forums_topics t
-            left join :_forums_posts p
-                on t.topic_firstpost = p.pid";
+            left join :_forums_posts p on t.topic_firstpost = p.pid";
         $this->export('Discussion', $query, $map, $filters);
     }
 
@@ -212,11 +212,9 @@ class IpBoard4 extends Source
             'post_date' => 'timestampToDate',
             'edit_time' => 'timestampToDate',
         ];
-        $query = "select p.*,
-                'BBCode' as Format
+        $query = "select p.*, 'Html' as Format
             from :_forums_posts p
-            join :_forums_topics t
-                on p.topic_id = t.tid
+            join :_forums_topics t on p.topic_id = t.tid
             where p.pid <> t.topic_firstpost";
         $this->export('Comment', $query, $map, $filters);
     }

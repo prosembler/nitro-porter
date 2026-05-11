@@ -12,6 +12,10 @@ use Porter\Source;
 
 class Smf1 extends Source
 {
+    protected const array FLAGS = [
+        'hasDiscussionBody' => true, // SMF stores the OP body in the discussion export.
+    ];
+
     public const SUPPORTED = [
         'name' => 'Simple Machines 1',
         'defaultTablePrefix' => 'smf_',

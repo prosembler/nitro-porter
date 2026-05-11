@@ -12,6 +12,10 @@ namespace Porter\Source;
 
 use Porter\Source;
 
+/**
+ * Formatting issues?
+ * @see https://github.com/prosembler/vanilla/tree/main/plugins/IPBFormatter
+ */
 class IpBoard3 extends Source
 {
     public const SUPPORTED = [

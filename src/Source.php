@@ -355,7 +355,7 @@ abstract class Source extends Package
                 $missingTables[] = $table;
             } else {
                 foreach ($columns as $col) {
-                    if (!$this->hasInputSchema($table, $col)) { // Column is missing.
+                    if (!$this->hasInputSchema($table, [$col])) { // Column is missing.
                         $missingColumns[] = $table . '.' . $col;
                     }
                 }

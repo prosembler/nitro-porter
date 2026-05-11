@@ -405,6 +405,7 @@ class Discord extends Origin
     /**
      * Discord supplies all versions regardless of original.
      *
+     * Only downloads gif version if animated=1, otherwise png/webp.
      * @see https://discord.com/developers/docs/reference#image-formatting
      * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
      *   >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
@@ -413,15 +414,17 @@ class Discord extends Origin
     protected function downloadEmojis(): void
     {
         if ($folder = $this->getDownloadFolder('emojis')) {
-            $emojis = $this->outputQB()->from('discord_emojis')->get(['id', 'name'])->toArray();
+            $emojis = $this->outputQB()->from('discord_emojis')->get(['id', 'name', 'animated'])->toArray();
             $downloadCount = 0;
             Log::comment("Found " . count($emojis) . " emojis.");
             foreach ($emojis as $emoji) {
                 $url = self::CDN_BASE_URI . 'emojis/' . $emoji->id . '.';
-                $types = ['webp', 'png', 'jpg', 'gif'];
+                $types = ['webp', 'png', 'gif']; // 'jpg', 'jpeg' also valid
                 foreach ($types as $type) {
                     $path = $folder . $emoji->name . '.' . $type;
-                    if (!file_exists($path)) {
+                    $stillNonGif = ('gif' !== $type && 0 === $emoji->animated);
+                    $animatedGif = ('gif' === $type && 1 === $emoji->animated);
+                    if (!file_exists($path) && ($animatedGif || $stillNonGif)) {
                         $this->originStorage->download($url . $type, $path);
                         $downloadCount++;
                         echo "."; // Dotted line to show progress.

@@ -444,7 +444,7 @@ class Discord extends Origin
             foreach ($users as $user) {
                 $url = $this->getAvatarUrl($user);
                 $path = $folder . 'avatar_' . $user->id . '.png';
-                if (!file_exists($path)) {
+                if ($url && !file_exists($path)) {
                     $this->originStorage->download($url, $path);
                     $downloadCount++;
                     echo "."; // Dotted line to show progress.
@@ -708,6 +708,10 @@ class Discord extends Origin
      */
     protected function getAvatarUrl(object $user): string
     {
+        if (!$user->global_avatar && !$user->avatar) {
+            return '';
+        }
+
         $url = 'avatars/' . $user->id . '/' . $user->global_avatar;
         if ($user->avatar) {
             $url = 'guilds/' . $this->getGuildId() . '/users/' . $user->id . '/avatars/' . $user->avatar;

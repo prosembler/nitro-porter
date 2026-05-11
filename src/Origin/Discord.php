@@ -53,6 +53,10 @@ class Discord extends Origin
 
     public const int MAX_CHANNEL_QUERIES = 10000; // Channels + threads.
 
+    public const int MAX_FILE_BATCH = 25;
+
+    public const int MAX_FILE_ERRORS = 10;
+
     public const array TEXT_CHANNEL_TYPES = [
         0 => 'GUILD_TEXT',
         5 => 'GUILD_ANNOUNCEMENT',
@@ -60,14 +64,14 @@ class Discord extends Origin
         15 => 'GUILD_FORUM',
     ];
 
-    protected const array DB_STRUCTURE_USERS = [
+    protected const array DB_USERS = [
         'nick' => 'varchar(100)',
         'avatar' => 'varchar(100)',
         'roles' => 'text',
-        'joined_at' => 'varchar(100)',
-        'premium_since' => 'varchar(100)',
+        'joined_at' => 'datetime',
+        'premium_since' => 'datetime',
         // Under 'user' object
-        'id' => 'varchar(100)',
+        'id' => 'bigint',
         'username' => 'varchar(100)',
         'discriminator' => 'varchar(100)',
         'global_name' => 'varchar(100)',
@@ -83,33 +87,40 @@ class Discord extends Origin
         ],
     ];
 
-    protected const array DB_STRUCTURE_ROLES = [
-        'id' => 'varchar(100)',
+    protected const array DB_REACTIONS = [
+        'message_id' => 'bigint',
+        'emoji_id' => 'bigint',
+        'emoji_name' => 'varchar(100)',
+        'count' => 'int',
+    ];
+
+    protected const array DB_ROLES = [
+        'id' => 'bigint',
         'name' => 'varchar(100)',
         'position' => 'int',
         'managed' => 'tinyint',
         'mentionable' => 'tinyint',
     ];
 
-    protected const array DB_STRUCTURE_EMOJIS = [
-        'id' => 'varchar(100)',
+    protected const array DB_EMOJIS = [
+        'id' => 'bigint',
         'name' => 'varchar(100)',
         'user' => 'text', // author
         'animated' => 'tinyint',
     ];
 
-    protected const array DB_STRUCTURE_CHANNELS = [
-        'id' => 'varchar(100)',
+    protected const array DB_CHANNELS = [
+        'id' => 'bigint',
         'type' => 'int', //@todo key?
-        'guild_id' => 'varchar(100)',
+        'guild_id' => 'bigint',
         'position' => 'varchar(100)',
         'name' => 'text',
         'topic' => 'text',
-        'last_message_id' => 'varchar(100)',
-        'parent_id' => 'varchar(100)',
+        'last_message_id' => 'bigint',
+        'parent_id' => 'bigint',
         'message_count' => 'int',
         // thread-only
-        'owner_id' => 'varchar(100)',
+        'owner_id' => 'bigint',
         'member_count' => 'int',
         'thread_metadata' => 'text',
         'keys' => [
@@ -124,12 +135,12 @@ class Discord extends Origin
      * @var array Name => column type
      * @see \Porter\Source::renumber() for why an index is important.
      */
-    protected const array DB_STRUCTURE_MESSAGES = [
-        'id' => 'varchar(100)',
-        'channel_id' => 'varchar(100)', //@todo key?
+    protected const array DB_MESSAGES = [
+        'id' => 'bigint',
+        'channel_id' => 'bigint',
         'content' => 'text',
-        'timestamp' => 'varchar(100)', //@todo key?
-        'edited_timestamp' => 'varchar(100)',
+        'timestamp' => 'datetime',
+        'edited_timestamp' => 'datetime',
         'pinned' => 'tinyint',
         'type' => 'int',
         // OBJECTS
@@ -137,7 +148,7 @@ class Discord extends Origin
         'message_reference' => 'text',
         'thread' => 'text',
         'author' => 'text',
-        'authorid' => 'int', // Derived from author.id — flattened to allow Source to filter.
+        'authorid' => 'bigint', // Derived from author.id — flattened to allow Source to filter.
         // OBJECTS[]
         'poll' => 'text', // @see https://discord.com/developers/docs/resources/poll#poll-object
         'attachments' => 'text', // @see https://discord.com/developers/docs/resources/message#attachment-object
@@ -147,18 +158,58 @@ class Discord extends Origin
         'mentions' => 'text',
         'mention_roles' => 'text',
         'mention_channels' => 'text',
-        'keys' => [ //  Index any keys that may require renumbering (for auto-joins).
+        'keys' => [
+            //  Index any keys that may require renumbering (for auto-joins).
             'discord_messages_id_primary' => [
                 'type' => 'primary',
                 'columns' => ['id'],
+            ],
+            // Covering index for resuming message pulls [select id where channel_id=x order by timestamp].
+            'discord_messages_resuming_index' => [
+                'type' => 'index',
+                'columns' => ['channel_id','timestamp'], // 'id' (pk) is implicitly in index
             ]
         ],
     ];
 
-    protected const array DB_STRUCTURE_USERROLES = [
+    protected const array DB_USERROLES = [
         'user_id' => 'bigint',
         'role_id' => 'bigint',
     ];
+
+    protected const array DB_ATTACHMENTS = [
+        'id' => 'bigint',
+        'message_id' => 'bigint',
+        'filename' => 'text',
+        'url' => 'text',
+        'size' => 'bigint',
+        'width' => 'int',
+        'height' => 'int',
+        'content_type' => 'varchar(100)',
+        'download_path' => 'text', // where we put the file; not in Discord's response
+    ];
+
+    protected const array MAP_USERS = [
+        'user' => [ // obj.param => flatName
+            'id' => 'id',
+            'username' => 'username',
+            'discriminator' => 'discriminator',
+            'global_name' => 'global_name',
+            'avatar' => 'global_avatar',
+            'email' => 'email',
+            'bot' => 'bot',
+            'verified' => 'verified',
+        ],
+    ];
+
+    /** @var string Folder path to download attachment files into. */
+    protected string $attachmentFolder;
+
+    /** @var array IDs of guild users used to find non-guild users. */
+    protected array $guildUsers;
+
+    /** @var array IDs of guild emojis used to find non-guild emojis. */
+    protected array $guildEmojis;
 
     /**
      * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
@@ -168,27 +219,24 @@ class Discord extends Origin
     public function run(): void
     {
         // Discord-specific setup.
-        $this->inputStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
+        $this->originStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
+        $this->attachmentFolder = $this->getDownloadFolder('attachments');
 
-        // Users
-        $this->users();
+        // Guild users & roles
+        $this->users(); // @todo Timing issue: setting $guildUsers for messages()
         $this->roles();
-        $this->extractUserRoles();
 
-        // Channels
+        // Guild taxonomy & emoji
+        $this->emojis();
         $this->channels();
-        $channelIds = $this->getTextChannels(); // Before polluting with threads.
-        $this->activeThreads();
-        $this->archivedThreads($channelIds);
+        $this->threads();
 
-        // Messages
-        $channelIds = $this->getTextChannels(); // Now including threads.
-        $this->messages($channelIds);
+        // Guild content + non-guild users/emoji.
+        $this->messages();
 
-        // Files
-        //$this->emojis();
-        //$this->avatars();
-        //$this->attachments();
+        // Download last to catch late additions.
+        $this->downloadAvatars();
+        $this->downloadEmojis();
     }
 
     private function getGuildId(): string
@@ -197,7 +245,7 @@ class Discord extends Origin
     }
 
     /** @see Https::get() for handling of 429s via `retry-after` header. */
-    private function rateLimit(array $headers, int $replySeconds = 0): void
+    private function rateLimit(array $headers, float $replySeconds = 0): void
     {
         // Get header info.
         $limit = $headers['x-ratelimit-limit'][0] ?? null; // total number that can be made
@@ -211,14 +259,14 @@ class Discord extends Origin
         //Log::comment("lim=$limit, rem=$remaining, res=$reset, aft=$after, bkt=$bucket");
 
         // Enforce rate limit with sleep.
-        $wait = self::MIN_MICROSECONDS; // min pause to not reach CloudFlare limit.
-        $wait = $wait - (int)($replySeconds * self::MICROSECONDS_PER_SEC); // Synchronous = subtract cycle time.
-        if ($wait < 0) {
-            $wait = 0;
-        }
+        // Min pause to not reach CloudFlare limit = MIN_MICROSECONDS; synchronous reqs = subtract cycle time.
+        $wait = self::MIN_MICROSECONDS - (int)($replySeconds * self::MICROSECONDS_PER_SEC);
+        // Wait must be betwen zero & self::MIN_MICROSECONDS.
+        $wait = max(min($wait, self::MIN_MICROSECONDS), 0);
         if (!is_null($remaining) && empty($remaining)) { // Zero, not null
             if (!empty($after) && is_numeric($after)) {
                 $wait = ceil($after) * self::MICROSECONDS_PER_SEC;
+                Log::comment("> Rate limited, pausing " . round($after, 1) . "s (per `reset-after`)");
             } else {
                 $wait = 60 * self::MICROSECONDS_PER_SEC; // 1 minute fallback.
                 Log::comment("INFO: Failed to find rate limit info, but limit ($limit) exhausted; pausing 1 minute.");
@@ -230,7 +278,7 @@ class Discord extends Origin
     /**
      * Get channel id list.
      */
-    private function getTextChannels(): array
+    private function getTextChannels(array $types): array
     {
         // Allow config list to override.
         if (!empty($this->config['extra']['channels']) && count($this->config['extra']['channels'])) {
@@ -240,7 +288,7 @@ class Discord extends Origin
         // Get channels from database.
         $channels = $this->outputQB()->from('discord_channels')
             ->distinct()->limit(10000) // Safety from repeat pulls & invalid data.
-            ->whereIn('type', array_keys(self::TEXT_CHANNEL_TYPES))
+            ->whereIn('type', array_keys($types))
             ->get('id')->toArray();
         return array_column($channels, 'id');
     }
@@ -257,74 +305,89 @@ class Discord extends Origin
         return $message->id ?? 0;
     }
 
-    private function getUserIDs(): array
-    {
-        return $this->outputQB()->from('discord_users')->get('id')->toArray();
-    }
-
     /** @see https://discord.com/developers/docs/resources/guild#list-guild-members */
     protected function users(): void
     {
-        $query = ['limit' => '1000'];
-        $guildId = $this->getGuildId();
-        $map = [
-            'user' => [ // obj.param => flatName
-                'id' => 'id',
-                'username' => 'username',
-                'discriminator' => 'discriminator',
-                'global_name' => 'global_name',
-                'avatar' => 'global_avatar',
-                'email' => 'email',
-                'bot' => 'bot',
-                'verified' => 'verified',
-            ],
-        ];
-        $this->pull("guilds/$guildId/members", self::DB_STRUCTURE_USERS, 'discord_users', null, $query, $map);
+        $query = ['limit' => '1000']; // @todo Loop to find remaining users.
+        $endpoint = "guilds/" . $this->getGuildId() . "/members";
+        $info = $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $this->guildUsers = array_column($info['content'], 'id');
+        $this->extractUserRoles($info['content']);
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
     protected function roles(): void
     {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId", self::DB_STRUCTURE_ROLES, 'discord_roles', 'roles');
+        $endpoint = "guilds/" . $this->getGuildId();
+        $this->pull($endpoint, self::DB_ROLES, 'discord_roles', 'roles');
     }
 
     /**
      * Generate intermediary table to unpack user role associations before 'normal' export.
      */
-    protected function extractUserRoles(): void
+    protected function extractUserRoles(array $users): void
     {
-        $start = microtime(true);
-        $info = [];
-        $this->outputStorage->prepare('discord_user_roles', self::DB_STRUCTURE_USERROLES);
-
-        $users = $this->outputQB()->from('discord_users')->get(['id', 'roles'])->toArray();
-        foreach ($users as $user) {
-            $roles = json_decode($user->roles); // Discord's array got auto-collapsed to JSON.
+        $users = array_column($users, 'roles', 'id');
+        $userRoles = [];
+        foreach ($users as $id => $roles) {
             foreach ($roles as $roleID) {
-                $row = ['user_id' => $user->id, 'role_id' => $roleID];
-                $info = $this->outputStorage->stream($row, self::DB_STRUCTURE_USERROLES, $info);
+                $userRoles[] = ['user_id' => $id, 'role_id' => $roleID];
             }
         }
-        $this->outputStorage->stream([], [], $info, true);
-        Log::storage('extract', 'discord_user_roles', (microtime(true) - $start), $info['rows'], $info['memory'] ?? 0);
+        $this->extract('discord_user_roles', self::DB_USERROLES, $userRoles);
     }
 
     /**
-     * @see https://discord.com/developers/docs/reference#image-formatting
-     * > The returned format can be changed by changing the extension name at the end of the URL.
-     * >> The returned size can be changed by appending a querystring of ?size=desired_size to the URL.
-     * >> Image size can be any power of two between 16 and 4096.
-     * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
-     * >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
-     * >> WebP and AVIF formats must be requested as WebP since they don't convert well to other formats.
-     * > Ex data URI format: `data:image/jpeg;base64,BASE64_ENCODED_JPEG_IMAGE_DATA`
-     * >> Ensure content type (image/jpeg, image/png, image/gif) matches the image data being provided.
-     * @param int $id
+     * Generate intermediary table to unpack attachments from their messages & download them.
+     *
+     * @param array $messages Message records from Discord API. Attachments are a LIST per message.
      */
-    protected function getImage(int $id): void
+    protected function extractAttachments(array $messages): void
     {
-        // @todo
+        $data = []; // Store to database.
+        $files = []; // Smaller list for asyncDownloads().
+
+        // Allow HttpClient to get trashed to sidestep memory leak from errors.
+        static $errors = 0;
+        if ($errors >= self::MAX_FILE_ERRORS) {
+            $this->originStorage->resetConnection('discord'); // @todo Use originName.
+            Log::comment("\nINFO: HttpClient reset after [$errors] file download errors.\n");
+            $errors = 0; // Reset counter.
+            gc_collect_cycles(); // Force garbage collection.
+        }
+
+        foreach ($messages as $message) {
+            if (empty($message['attachments'])) {
+                continue;
+            }
+            $year = date('Y', strtotime($message['timestamp']));
+            foreach ($message['attachments'] as $attachment) {
+                $attachment['message_id'] = $message['id'];
+                if ($attachment['download_path'] = $this->getDownloadPath($attachment, $year)) {
+                    $files[$attachment['url']] = $attachment['download_path'];
+                }
+                $data[$attachment['url']] = $attachment;
+
+                // Batch downloads.
+                if (count($files) >= self::MAX_FILE_BATCH) {
+                    $errors += $this->originStorage->asyncDownload($files);
+                    $files = []; // reset
+                }
+            }
+        }
+        $errors += $this->originStorage->asyncDownload($files); // Final batch.
+        $this->extract('discord_attachments', self::DB_ATTACHMENTS, $data);
+    }
+
+    /**
+     * Use attachment data to generate a file path for downloading it.
+     */
+    protected function getDownloadPath(array $attachment, string $year): string
+    {
+        $filename = $this->limitFilenameLength($attachment['filename']);
+        $folder = $this->getDownloadFolder('attachments/' . $year);
+        $path = $folder . $attachment['id'] . '_' . $filename;
+        return (file_exists($path)) ? '' : $path; // Don't request downloading duplicates.
     }
 
     /**
@@ -333,27 +396,61 @@ class Discord extends Origin
      */
     protected function emojis(): void
     {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId", self::DB_STRUCTURE_EMOJIS, 'discord_emojis', 'emojis');
-        // Files
-        // @todo self::CDN_BASE_URI . emojis/emoji_id.png
+        $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
+        $info = $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis');
+        $this->guildEmojis = array_column($info['content'], 'id');
     }
 
-    /** @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls */
-    protected function attachments(): void
+    /**
+     * Discord supplies all versions regardless of original.
+     *
+     * Only downloads gif version if animated=1, otherwise png/webp.
+     * @see https://discord.com/developers/docs/reference#image-formatting
+     * > **** For Custom Emoji, we highly recommend requesting emojis as WebP for maximum performance and compatibility.
+     *   >> Emojis can be uploaded as JPEG, PNG, GIF, WebP, and AVIF formats.
+     *   >> WebP and AVIF formats must be requested as WebP since they don't convert well to other formats.
+     */
+    protected function downloadEmojis(): void
     {
-        // @todo https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png
-        // ?ex=65d903de - Hex timestamp indicating when an attachment CDN URL will expire
-        // &is=65c68ede - Hex timestamp indicating when the URL was issued
-        // &hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f& - Signature
+        if ($folder = $this->getDownloadFolder('emojis')) {
+            $emojis = $this->outputQB()->from('discord_emojis')->get(['id', 'name', 'animated'])->toArray();
+            $downloadCount = 0;
+            Log::comment("Found " . count($emojis) . " emojis.");
+            foreach ($emojis as $emoji) {
+                $url = self::CDN_BASE_URI . 'emojis/' . $emoji->id . '.';
+                $types = ['webp', 'png', 'gif']; // 'jpg', 'jpeg' also valid
+                foreach ($types as $type) {
+                    $path = $folder . $emoji->name . '.' . $type;
+                    $stillNonGif = ('gif' !== $type && 0 === $emoji->animated);
+                    $animatedGif = ('gif' === $type && 1 === $emoji->animated);
+                    if (!file_exists($path) && ($animatedGif || $stillNonGif)) {
+                        $this->originStorage->download($url . $type, $path);
+                        $downloadCount++;
+                        echo "."; // Dotted line to show progress.
+                    }
+                }
+            }
+            Log::comment("Downloaded $downloadCount emoji variants.");
+        }
     }
 
     /** @see https://discord.com/developers/docs/reference#image-formatting-cdn-endpoints */
-    protected function avatars(): void
+    protected function downloadAvatars(): void
     {
-        $ids = $this->getUserIDs();
-        foreach ($ids as $id) {
-            // @todo self:: CDN_BASE_URI . avatars/user_id/user_avatar.png
+        if ($folder = $this->getDownloadFolder('avatars')) {
+            $users = $this->outputQB()->from('discord_users')->get(['id', 'avatar', 'global_avatar'])->toArray();
+            $downloadCount = 0;
+            Log::comment("Finding avatars for " . count($users) . " users.");
+            foreach ($users as $user) {
+                $url = $this->getAvatarUrl($user);
+                $path = $folder . 'avatar_' . $user->id . '.png';
+                if ($url && !file_exists($path)) {
+                    $this->originStorage->download($url, $path);
+                    $downloadCount++;
+                    echo "."; // Dotted line to show progress.
+                }
+            }
+            Log::comment("Downloaded $downloadCount avatars.");
         }
     }
 
@@ -364,29 +461,26 @@ class Discord extends Origin
      */
     protected function channels(): void
     {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/channels", self::DB_STRUCTURE_CHANNELS, 'discord_channels');
+        $endpoint = "guilds/" . $this->getGuildId() . "/channels";
+        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels');
     }
 
     /**
-     * Active threads PER GUILD (1).
+     * Active threads per GUILD (1) & public archived threads per CHANNEL.
      * @see https://discord.com/developers/docs/resources/guild#list-active-guild-threads
-     */
-    protected function activeThreads(): void
-    {
-        $guildId = $this->getGuildId();
-        $this->pull("guilds/$guildId/threads/active", self::DB_STRUCTURE_CHANNELS, 'discord_channels', 'threads');
-    }
-
-    /**
-     * Public archived threads PER CHANNEL.
      * @see https://discord.com/developers/docs/resources/channel#list-public-archived-threads
      */
-    protected function archivedThreads(array $channelIds): void
+    protected function threads(): void
     {
+        // Active threads.
+        $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
+        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
+
+        // Archived threads.
+        $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::DB_STRUCTURE_CHANNELS, 'discord_channels', 'threads');
+            $info = $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
             $this->rateLimit($info['headers']);
         }
     }
@@ -398,8 +492,9 @@ class Discord extends Origin
      * It gives a 5-sec timeout every ~10 "identical" requests, which slows things down badly.
      * This means you're effectively limited to ~5K messages per minute if you don't cycle channels.
      */
-    protected function messages(array $channelIds): void
+    protected function messages(): void
     {
+        $channelIds = $this->getTextChannels(self::TEXT_CHANNEL_TYPES);
         if (count($channelIds) > self::MAX_CHANNEL_QUERIES) {
             Log::comment("INFO: Found more than MAX_CHANNEL_QUERIES.");
             return;
@@ -418,7 +513,9 @@ class Discord extends Origin
             // Report.
             $warn = (1 === $remaining) ? " Expect 5-second timeouts." : '';
             $now = date('H:i:s e');
-            Log::comment("\nINFO: $remaining channels incomplete after pass $k at $now.$warn\n");
+            if (empty($warn) || ($k % 10 === 0)) { // Only output every 10 runs after down to 1 channel.
+                Log::comment("\nINFO: $remaining channels incomplete after pass $k at $now.$warn\n");
+            }
         } while (0 !== $remaining);
     }
 
@@ -428,18 +525,31 @@ class Discord extends Origin
      *  > Returns an array of message objects from newest to oldest on success.
      * @see https://discord.com/developers/docs/resources/message
      * @see https://discord.com/developers/docs/resources/message#message-object-message-types (types)
-     * @param array $channels
-     * @return array
+     *
+     * Attachments should be collected now, while we're sure the timeouts are still fresh
+     *   and we are tracking iterative backups so we can grab only new ones.
+     * @see https://discord.com/developers/docs/reference#signed-attachment-cdn-urls
+     * @see https://docs.discord.com/developers/resources/message#attachment-object
+     * @example https://cdn.discordapp.com/attachments/1012345678900020080/1234567891233211234/my_image.png
+     *       ?ex=65d903de - Hex timestamp indicating when an attachment CDN URL will expire
+     *       &is=65c68ede - Hex timestamp indicating when the URL was issued
+     *       &hm=2481f30dd67f503f54d020ae3b5533b9987fae4e55f2b4e3926e08a3fa3ee24f& - Signature
      */
     protected function messageLoop(array $channels): array
     {
+        $hasMessagesTable = $this->outputStorage->exists('discord_messages');
         foreach ($channels as $channelId => $status) {
             // Check status.
             if (true === $status) {
                 continue; // Channel is done, bail.
-            } elseif (false === $status) { // Resume?
+            } elseif (false === $status && $hasMessagesTable) { // Resume?
+                $start = microtime(true);
                 $channels[$channelId] = $this->getLastMessageId($channelId);
-                Log::comment("\nResumed channel $channelId at message {$channels[$channelId]}");
+                $elapsed = microtime(true) - $start;
+                $append = ($elapsed > 0.5) ? " (lookup was " . round($elapsed, 2) . "s)" : '';
+                if (0 !== $channels[$channelId]) {
+                    Log::comment("\nResuming channel $channelId @ msg_id={$channels[$channelId]}$append:");
+                }
             }
 
             // Setup & pull batch.
@@ -451,19 +561,27 @@ class Discord extends Origin
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::DB_STRUCTURE_MESSAGES, 'discord_messages', null, $query, $map);
+            $info = $this->pull($endpoint, self::DB_MESSAGES, 'discord_messages', null, $query, $map);
+
+            // Attachments.
+            $this->extractAttachments($info['content']);
+
+            // Reactions & non-guild emoji used in them.
+            $this->extractReactions($info['content']);
+
+            // Non-guild authors.
+            $this->extractAuthors($info['content']);
 
             // Update status.
             if (0 === (int)$info['rows']) {
                 // Change status to 'done' if no more rows found.
                 $channels[$channelId] = true;
-                Log::comment("Channel $channelId has no messages past {$channels[$channelId]}, skipping.");
+                //Log::comment("> channel $channelId has no messages past {$channels[$channelId]}, skipping.");
             } elseif (isset($info['last']['id'])) {
                 // Update offset & report where we are.
                 $id = $channels[$channelId] = $info['last']['id']; // Should be oldest message.
-                $elapsed = formatElapsed($info['api_time']);
                 $time = $info['last']['timestamp'] ?? '';
-                Log::comment("> $elapsed; last message id=$id; timestamp=" . $time);
+                Log::comment("> last_msg=$id @ " . $time);
             }
 
             // Rate limit.
@@ -471,5 +589,133 @@ class Discord extends Origin
         }
 
         return $channels;
+    }
+
+    /**
+     * Get & store data for non-guild users to fill in gaps.
+     *
+     * Authors are stored as a SINGLE user object on messages.
+     */
+    protected function extractAuthors(array $content): void
+    {
+        $messages = array_column($content, 'author', 'id');
+        $users = [];
+        foreach ($messages as $author) {
+            $users[$author['id']] = $author;
+        }
+
+        // Find missing IDs.
+        $missingUserIDs = array_diff(array_keys($users), $this->guildUsers);
+        if (empty($missingUserIDs)) {
+            return;
+        }
+
+        // Insert missing users.
+        $missingUsers = array_intersect_key($users, $missingUserIDs);
+        $info = $this->extract('discord_users', self::DB_USERS, $missingUsers);
+
+        // Log actions & mark users as "found".
+        if (!empty($info['rows'])) { // Missing users were inserted.
+            Log::comment("> non-guid user(s) added: " . implode(',', $missingUsers));
+            if ($info['rows'] !== count($missingUsers)) { // Some missing users weren't inserted.
+                $countSkipped = count($missingUsers) - $info['rows'];
+                Log::comment("> WARNING: $countSkipped user(s) were not captured");
+            }
+            $this->guildUsers = array_merge($this->guildUsers, $missingUserIDs);
+        }
+    }
+
+    /**
+     * Reactions are stored as a LIST of emoji objects on messages.
+     *
+     * Discord doesn't provide individual reaction user_ids or timestamps, only counts.
+     * @see https://docs.discord.com/developers/resources/message#reaction-object
+     * @see https://discord.com/developers/docs/resources/emoji#emoji-object
+     * ex: `[{"emoji":{"id":"742118343112130694","name":"gritty"},"count":1},
+     *       {"emoji":{"id":"976301342576504912","name":"rockon"},"count":9},
+     *       {"emoji":{"id":null,"name": "🔥"},"count":3},
+     * }]`
+    */
+    protected function extractReactions(array $content): void
+    {
+        $reactions = array_filter(array_column($content, 'reactions', 'id'), fn ($reactions) => (!empty($reactions)));
+        if (empty($reactions)) {
+            return;
+        }
+        $emojiList = [];
+        $reactList = [];
+        foreach ($reactions as $msgID => $msgReactions) {
+            foreach ($msgReactions as $reaction) {
+                if (!empty($reaction['emoji']['id'])) {
+                    $emojiList[$reaction['emoji']['id']] = $reaction['emoji']; // Only collect non-standard emoji.
+                }
+                $reactList[] = [
+                    'emoji_id' => $reaction['emoji']['id'] ?? 0, // Std unicode emoji ID = null.
+                    'emoji_name' => $reaction['emoji']['name'] ?? '',
+                    'count' => $reaction['count'] ?? 0,
+                    'message_id' => $msgID,
+                ];
+            }
+        }
+        $this->extractEmoji($emojiList);
+        $this->extract('discord_reactions', self::DB_REACTIONS, $reactList);
+    }
+
+    /**
+     * Get & store data for non-standard, non-guild emojis to fill in gaps.
+     */
+    protected function extractEmoji(array $emojis): void
+    {
+        $missingEmojiIDs = array_diff(array_keys($emojis), $this->guildEmojis);
+        if (empty($missingEmojiIDs)) {
+            return; // No missing emojis found.
+        }
+        $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojiIDs); // Update in-memory list.
+        $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
+        $this->extract('discord_emojis', self::DB_EMOJIS, $emojiData); // Store new emoji.
+        Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojiIDs));
+    }
+
+    /**
+     * Retrieve the file.
+     */
+    protected function getFile(string $url, string $filename): void
+    {
+        if (!$this->attachmentFolder) {
+            return;
+        }
+        $path = $this->attachmentFolder . $filename;
+        if (!file_exists($path)) {
+            $this->originStorage->download($url, $path);
+        } else {
+            Log::comment("Notice: Attachment '{$filename}' already exists.");
+        }
+    }
+
+    /**
+     * Change a filename so that the basename is no more than $length characters.
+     *
+     * Prevents error "Failed to open stream: File name too long".
+     */
+    protected function limitFilenameLength(string $filename, int $length = 100): string
+    {
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        return substr(pathinfo($filename, PATHINFO_FILENAME), 0, $length) . '.' . $ext;
+    }
+
+    /**
+     * Get URL for a user's Discord avatar.
+     */
+    protected function getAvatarUrl(object $user): string
+    {
+        if (!$user->global_avatar && !$user->avatar) {
+            return '';
+        }
+
+        $url = 'avatars/' . $user->id . '/' . $user->global_avatar;
+        if ($user->avatar) {
+            $url = 'guilds/' . $this->getGuildId() . '/users/' . $user->id . '/avatars/' . $user->avatar;
+        }
+        return self::CDN_BASE_URI . $url . '.png';
     }
 }

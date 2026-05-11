@@ -67,7 +67,6 @@
         },
         "files": [
             "src/Functions/core.php",
-            "src/Functions/factory.php",
             "src/Functions/filter.php"
         ]
     }

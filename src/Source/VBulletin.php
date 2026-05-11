@@ -392,7 +392,7 @@ class VBulletin extends Source
                 }
 
                 $thumbPath = str_replace('/avat', '/navat', $path);
-                generateThumbnail($picPath, $thumbPath, $thumbnail, $thumbnail);
+                self::generateThumbnail($picPath, $thumbPath, $thumbnail, $thumbnail);
             }
             $count++;
         }

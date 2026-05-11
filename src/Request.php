@@ -66,12 +66,12 @@ class Request
         if (!empty($this->sourceName)) {
             $this->inputTablePrefix = $inputTablePrefix ??
                 (Config::getInstance()->get('source_prefix') ??
-                    sourceFactory($this->sourceName)->getPrefix());
+                    Factory::source($this->sourceName)->getPrefix());
         }
         if (!empty($this->targetName)) {
             $this->outputTablePrefix = $outputTablePrefix ??
                 (Config::getInstance()->get('target_prefix') ??
-                    targetFactory($this->targetName)->getPrefix());
+                    Factory::target($this->targetName)->getPrefix());
         }
         $this->cdnPrefix = $cdnPrefix ?? Config::getInstance()->get('option_cdn_prefix');
 

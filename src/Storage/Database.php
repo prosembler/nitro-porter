@@ -100,9 +100,7 @@ class Database extends Storage
         }
 
         // Measure highest memory usage before potential send.
-        if (!empty($info['memory'])) {
-            $info['memory'] = max(memory_get_usage(), $info['memory']);
-        }
+        $info['memory'] = max(memory_get_usage(), $info['memory'] ?? 0);
 
         if (self::INSERT_BATCH === count($batch) || $final) {
             $this->sendBatch($batch);

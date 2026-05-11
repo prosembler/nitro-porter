@@ -26,7 +26,7 @@ abstract class Storage
     ): array {
         $info = [
             'rows' => 0,
-            'memory' => 0,
+            'memory' => memory_get_usage(),
             'name' => $name,
         ];
 
@@ -153,7 +153,7 @@ abstract class Storage
             // Allow flattening of nested data (1 level).
             if (is_array($dest)) {
                 $row = $this->mapNestedData($row, $dest, $src);
-                continue; // No need to map again.
+                continue; // No need to map again & do not unset so raw data can be preserved.
             }
 
             // Simple-map remaining values.
@@ -248,7 +248,6 @@ abstract class Storage
                 $row[$dest] = $row[$columnName][$src];
             }
         }
-        unset($row[$columnName]);
-        return $row; // Remove column that was an array value.
+        return $row;
     }
 }

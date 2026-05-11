@@ -9,11 +9,6 @@
  *
  * @see Migration::filterData()
  * @see \Porter\Target\Flarum::comments()
- *
- * @param ?string $value
- * @param string $column
- * @param array $row
- * @return string
  */
 function filterFlarumContent(?string $value, string $column, array $row): string
 {
@@ -26,11 +21,6 @@ function filterFlarumContent(?string $value, string $column, array $row): string
  *
  * Check for '[Deleted User]' (and variants) as username and replace.
  * Violates a unique key constraint on the target db's username field.
- *
- * @param string|null $value
- * @param string $column
- * @param array $row
- * @return string|null
  */
 function fixDuplicateDeletedNames(?string $value, string $column, array $row): ?string
 {
@@ -49,10 +39,7 @@ function fixDuplicateDeletedNames(?string $value, string $column, array $row): ?
 }
 
 /**
- * @param mixed $value
- * @param string $column
- * @param array $row
- * @return string
+ * When value is null, return 'blank_email_{id}'.
  */
 function fixNullEmails(mixed $value, string $column, array $row): string
 {
@@ -63,10 +50,7 @@ function fixNullEmails(mixed $value, string $column, array $row): string
 }
 
 /**
- * @param mixed $value
- * @param string $column
- * @param array $row
- * @return string
+ * Create a URL-friendly representation of the value.
  */
 function createDiscussionSlugs(mixed $value, string $column, array $row): string
 {
@@ -74,14 +58,11 @@ function createDiscussionSlugs(mixed $value, string $column, array $row): string
 }
 
 /**
- * Don't allow zero-equivalent dates.
- *
- * @param string $value
- * @return string
+ * Disallow zero-equivalent dates.
  */
 function forceDate(string $value): string
 {
-    if (!$value || preg_match('`0000-00-00`', $value)) {
+    if (!$value || str_contains($value, '0000-00-00')) {
         return gmdate('Y-m-d H:i:s');
     }
 
@@ -89,10 +70,7 @@ function forceDate(string $value): string
 }
 
 /**
- * Only allow IPv4 addresses to pass.
- *
- * @param string $ip
- * @return string|null Valid IPv4 address or nuthin'.
+ * Return a valid IPv4 addresses or null.
  */
 function forceIP4(string $ip): ?string
 {
@@ -403,9 +381,6 @@ function HTMLDecoder(string $value): string
 
 /**
  * Inverse int value.
- *
- * @param mixed $value
- * @return int
  */
 function notFilter(mixed $value): int
 {
@@ -416,9 +391,6 @@ function notFilter(mixed $value): int
  * Convert empty values to zero.
  *
  * Useful for 'not null' columns with default=0.
- *
- * @param mixed $value
- * @return mixed Original $value or zero if empty.
  */
 function emptyToZero(mixed $value): mixed
 {
@@ -429,9 +401,6 @@ function emptyToZero(mixed $value): mixed
  * Convert a timestamp to MySQL date format.
  *
  * Do this in MySQL with FROM_UNIXTIME() instead whenever possible.
- *
- * @param mixed $value
- * @return ?string
  */
 function timestampToDate(mixed $value): ?string
 {
@@ -444,9 +413,6 @@ function timestampToDate(mixed $value): ?string
 
 /**
  * Wrapper for long2ip that nulls 'non-digit' values.
- *
- * @param mixed $value
- * @return ?string
  */
 function long2ipf(mixed $value): ?string
 {
@@ -455,9 +421,6 @@ function long2ipf(mixed $value): ?string
 
 /**
  * Convert 'y/n' to boolean.
- *
- * @param mixed $value
- * @return int
  */
 function YNBool(mixed $value): int
 {
@@ -470,13 +433,10 @@ function YNBool(mixed $value): int
 
 /**
  * Guess the Format of the Body.
- *
- * @param mixed $value
- * @return string
  */
 function guessFormat(mixed $value): string
 {
-    if (strpos($value, '[') !== false) {
+    if (str_contains($value, '[')) {
         return 'BBCode';
     } elseif (str_contains($value, '<')) {
         return 'Html';
@@ -487,44 +447,21 @@ function guessFormat(mixed $value): string
 
 /**
  * Derive mimetype from file extension.
- *
- * @param string $value
- * @return string
  */
 function mimeTypeFromExtension(string $value): string
 {
     $value = pathinfo($value, PATHINFO_EXTENSION);
-    switch ($value) {
-        case 'png':
-        case 'jpg':
-        case 'jpeg':
-        case 'gif':
-        case 'bmp':
-        case 'webp':
-            return 'image/' . $value;
-        case 'zip':
-        case 'doc':
-        case 'docx':
-        case 'pdf':
-        case 'xls':
-        case 'swf':
-            return 'application/' . $value;
-        case 'txt':
-        case 'htm':
-        case 'html':
-            return 'text/' . $value;
-        case 'mov':
-        case 'avi':
-            return 'video/' . $value;
-    }
-    return '';
+    return match ($value) {
+        'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp' => 'image/' . $value,
+        'zip', 'doc', 'docx', 'pdf', 'xls', 'swf' => 'application/' . $value,
+        'txt', 'htm', 'html' => 'text/' . $value,
+        'mov', 'avi' => 'video/' . $value,
+        default => '',
+    };
 }
 
 /**
  * Change square brackets to braces.
- *
- * @param mixed $value
- * @return mixed
  */
 function cleanBodyBrackets(mixed $value): mixed
 {
@@ -536,8 +473,7 @@ function cleanBodyBrackets(mixed $value): mixed
 }
 
 /**
- * @param string $text
- * @return string
+ * Filter for bb_Code_Trick_Reverse.
  */
 function bbPressTrim(string $text): string
 {
@@ -545,8 +481,8 @@ function bbPressTrim(string $text): string
 }
 
 /**
- * @param string $text
- * @return string
+ * Fixes bbPress text formatting issues.
+ * @see bbPressTrim()
  */
 function bb_Code_Trick_Reverse(string $text): string
 {
@@ -561,8 +497,8 @@ function bb_Code_Trick_Reverse(string $text): string
 }
 
 /**
- * @param array $matches
- * @return string
+ * Callback for bbPressTrim filter.
+ * @see bb_Code_Trick_Reverse
  */
 function bb_Decodeit(array $matches): string
 {

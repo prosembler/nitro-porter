@@ -25,7 +25,6 @@
 
 namespace Porter\Origin;
 
-use Illuminate\Database\Query\Builder;
 use Porter\Log;
 use Porter\Origin;
 

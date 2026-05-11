@@ -225,7 +225,7 @@ class Discord extends Origin
 
         // Guild users & roles
         $this->users(); // @todo Timing issue: setting $guildUsers for messages()
-        $this->roles();
+        /*$this->roles();
 
         // Guild taxonomy & emoji
         $this->emojis();
@@ -233,7 +233,7 @@ class Discord extends Origin
         $this->threads();
 
         // Guild content + non-guild users/emoji.
-        $this->messages();
+        $this->messages();*/
 
         // Download last to catch late additions.
         $this->downloadAvatars();
@@ -412,6 +412,8 @@ class Discord extends Origin
     {
         if ($folder = $this->getDownloadFolder('emojis')) {
             $emojis = $this->outputQB()->from('discord_emojis')->get(['id', 'name'])->toArray();
+            $downloadCount = 0;
+            Log::comment("Found " . count($emojis) . " emojis.");
             foreach ($emojis as $emoji) {
                 $url = self::CDN_BASE_URI . 'emojis/' . $emoji->id . '.';
                 $types = ['webp', 'png', 'jpg', 'gif', 'jpeg']; // By probability-ish.
@@ -421,12 +423,15 @@ class Discord extends Origin
                     $path = $folder . $emoji->name . '.' . $type;
                     if (!file_exists($path)) {
                         $this->originStorage->download($url . $type, $path);
+                        $downloadCount++;
+                        echo "."; // Dotted line to show progress.
                     }
                     if (2 === $found++) {
                         break; // There aren't more than two variants (non-webp original + webp).
                     }
                 }
             }
+            Log::comment("Downloaded $downloadCount emoji variants.");
         }
     }
 
@@ -435,13 +440,18 @@ class Discord extends Origin
     {
         if ($folder = $this->getDownloadFolder('avatars')) {
             $users = $this->outputQB()->from('discord_users')->get('id')->toArray();
+            $downloadCount = 0;
+            Log::comment("Finding avatars for " . count($users) . " users.");
             foreach ($users as $user) {
                 $url = self::CDN_BASE_URI . 'avatars/' . $user->id . '/user_avatar.png';
                 $path = $folder . 'avatar_' . $user->id . '.png';
                 if (!file_exists($path)) {
                     $this->originStorage->download($url, $path);
+                    $downloadCount++;
+                    echo "."; // Dotted line to show progress.
                 }
             }
+            Log::comment("Downloaded $downloadCount avatars.");
         }
     }
 

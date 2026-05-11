@@ -438,11 +438,11 @@ class Discord extends Origin
     protected function downloadAvatars(): void
     {
         if ($folder = $this->getDownloadFolder('avatars')) {
-            $users = $this->outputQB()->from('discord_users')->get('id')->toArray();
+            $users = $this->outputQB()->from('discord_users')->get(['id', 'avatar', 'global_avatar'])->toArray();
             $downloadCount = 0;
             Log::comment("Finding avatars for " . count($users) . " users.");
             foreach ($users as $user) {
-                $url = self::CDN_BASE_URI . 'avatars/' . $user->id . '/user_avatar.png';
+                $url = $this->getAvatarUrl($user);
                 $path = $folder . 'avatar_' . $user->id . '.png';
                 if (!file_exists($path)) {
                     $this->originStorage->download($url, $path);
@@ -701,5 +701,17 @@ class Discord extends Origin
     {
         $ext = pathinfo($filename, PATHINFO_EXTENSION);
         return substr(pathinfo($filename, PATHINFO_FILENAME), 0, $length) . '.' . $ext;
+    }
+
+    /**
+     * Get URL for a user's Discord avatar.
+     */
+    protected function getAvatarUrl(object $user): string
+    {
+        $url = 'avatars/' . $user->id . '/' . $user->global_avatar;
+        if ($user->avatar) {
+            $url = 'guilds/' . $this->getGuildId() . '/users/' . $user->id . '/avatars/' . $user->avatar;
+        }
+        return self::CDN_BASE_URI . $url . '.png';
     }
 }

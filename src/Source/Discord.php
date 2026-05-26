@@ -45,7 +45,7 @@ class Discord extends Source
     protected const array FLAGS = [
         'hasDiscussionBody' => false,
         'fileTransferSupport' => true,
-        'renumberIndices' => true,  // @todo respect this flag
+        'renumberIndices' => true,
     ];
 
     protected function users(): void
@@ -114,7 +114,7 @@ class Discord extends Source
         $filters = [
             'parent_id' => fn($val, $col, $row) // Text channels use 'id' as 'parent_id' — they are their own category.
                 => (Discord::CHANNEL_TYPE['GUILD_TEXT'] === $row['type']) ? $row['id'] : $row['parent_id'],
-            'derived_timestamp' => __NAMESPACE__ . '\Discord::timestampFromSnoflake',
+            'derived_timestamp' => __NAMESPACE__ . '\Discord::timestampFromSnowflake',
         ];
         $query = $this->sourceQB()->from('discord_channels')->select('discord_channels.*')
             ->selectRaw('id as derived_timestamp')
@@ -177,7 +177,7 @@ class Discord extends Source
      * @param mixed $value A Discord SnowflakeID
      * @return int|null Unix timestamp
      */
-    protected function timestampFromSnoflake(mixed $value): ?int
+    protected function timestampFromSnowflake(mixed $value): ?int
     {
         if (empty($value)) {
             return null;

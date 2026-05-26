@@ -277,6 +277,12 @@ return array(
         'DateInserted' => 'datetime',
         'DateUpdated' => 'datetime'
     ),*/
+    'Emoji' => array(
+        'EmojiID' => 'int',
+        'Name' => 'varchar(100)',
+        'InsertUserID' => 'int',
+        'Animated' => 'tinyint',
+    ),
     'Event' => array(
         'EventID' => 'int',
         'Name' => 'varchar(255)',

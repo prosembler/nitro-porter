@@ -171,6 +171,61 @@ class Discord extends Source
         $this->export('Emoji', $query, $map);
     }
 
+    protected function reactions(): void
+    {
+        // todo non-custom emoji reactions => Tags
+        $map = [
+            'EmojiID' => 'TagID',
+        ];
+        $query = $this->sourceQB()->from('discord_emojis')->select('discord_emojis.*')
+            ->selectRaw('"reaction" as Type');
+        $this->export('Tag', $query, $map);
+
+        // All tags are reactions.
+        $query = $this->porterQB()->from('Tag')->select(['Name', 'TagID']);
+        $this->export('ReactionType', $query);
+
+        $map = [
+            'TagID',
+            'DiscussionID',
+            'DateInserted',
+        ];
+        $query = $this->sourceQB()->from('discord_reactions')->select('discord_reactions.*');
+        $this->export('TagDiscussion', $query, $map);
+    }
+
+    protected function polls(): void
+    {
+        $map = [
+            'id' => 'PollID',
+            'name' => 'Name',
+            //'DiscussionID',
+            'message_id' => 'CommentID',
+            //'CountOptions',
+            //'CountVotes',
+            //'DateInserted',
+            //'InsertUserID',
+        ];
+        $query = $this->sourceQB()->from('discord_polls')->select('discord_polls.*');
+        $this->export('Poll', $query, $map);
+
+        $map = [
+            'id' => 'PollOptionID',
+            //'PollID',
+            //'Body',
+            //'CountVotes',
+        ];
+        $query = $this->sourceQB()->from('discord_polloptions')->select('discord_polloptions.*');
+        $this->export('PollOptions', $query, $map);
+
+        $map = [
+            //'UserID',
+            //'PollOptionID',
+        ];
+        $query = $this->sourceQB()->from('discord_pollvotes')->select('discord_pollvotes.*');
+        $this->export('PollVote', $query, $map);
+    }
+
     /**
      * Discord SnowflakeIDs have timestamps embedded within them.
      *

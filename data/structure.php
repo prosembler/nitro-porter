@@ -495,6 +495,7 @@ return array(
         'PollID' => 'int',
         'Name' => 'text',
         'DiscussionID' => 'int',
+        'CommentID' => 'int', // Added 2026-05 for Discord
         'CountOptions' => 'int',
         'CountVotes' => 'int',
         'Anonymous' => 'int',

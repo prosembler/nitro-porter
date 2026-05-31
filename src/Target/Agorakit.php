@@ -6,7 +6,6 @@
 
 namespace Porter\Target;
 
-use Porter\Migration;
 use Porter\Target;
 
 /**
@@ -14,32 +13,28 @@ use Porter\Target;
  */
 class Agorakit extends Target
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Agorakit',
         'defaultTablePrefix' => '',
         //'avatarPath' => '',
         //'attachmentPath' => '',
         'features' => [
-            // round 0 - base
             'Users' => 1,
             'Passwords' => 1,
             'Discussions' => 1,
             'Comments' => 1,
-            // round 1 - mash
-            'Categories' => 0, // @todo TAGS
-            'Tags' => 0, // @todo ALSO TAGS
-            'Roles' => 0, // @todo GROUPS
-            'Groups' => 0, // @todo ALSO GROUPS
-            // round 2 - kludge
-            'Avatars' => 0, // @todo FILES
-            'Attachments' => 0, // @todo ALSO FILES
-            'Reactions' => 0, // @todo REACTIONS ???
-            // round 3 - create
-            'Bookmarks' => 0, // @todo no support
-            'Polls' => 0, // @todo no support
-            'Badges' => 0, // @todo no support
-            // round 4 - rethink
-            'PrivateMessages' => 0, // @todo no support
+            'Categories' => 1, // @todo TAGS
+            'Roles' => 1, // @todo GROUPS
+            'Attachments' => 1, // @todo FILES
+            'Avatars' => 1,
+            // @todo Figure out support options.
+            'Tags' => 0,
+            'Groups' => 0,
+            'Reactions' => 0,
+            'Bookmarks' => 0,
+            'Polls' => 0,
+            'Badges' => 0,
+            'PrivateMessages' => 0,
         ]
     ];
 
@@ -51,32 +46,14 @@ class Agorakit extends Target
     protected int $discussionPostOffset = 0;
 
     /**
-     * Main import process.
-     */
-    public function run(Migration $port): void
-    {
-        $this->users($port);
-        $this->roles($port);
-        $this->categories($port);
-
-        $this->discussions($port);
-        $this->comments($port);
-    }
-
-    /**
      * Check for issues that will break the import.
-     *
-     * @param Migration $port
      */
-    public function validate(Migration $port): void
+    public function validate(): void
     {
         //
     }
 
-    /**
-     * @param Migration $port
-     */
-    protected function users(Migration $port): void
+    protected function users(): void
     {
         $structure = [
             'id' => 'int',
@@ -94,35 +71,31 @@ class Agorakit extends Target
             'FullName' => 'name',
             'Email' => 'email',
             'Password' => 'password',
-            'Confirmed' => 'verified',//
+            'Confirmed' => 'verified',
             //'Photo' => 'avatar_url',
             'DateInserted' => 'created_at',
             'Admin' => 'admin',
         ];
         $filters = [];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('User')
             ->select();
 
-        $port->import('users', $query, $structure, $map, $filters);
+        $this->import('users', $query, $structure, $map, $filters);
     }
 
-    /**
-     *
-     * @param Migration $port
-     */
-    protected function roles(Migration $port): void
+    protected function roles(): void
     {
         $structure = [
             'id' => 'int',
             'name_singular' => 'varchar(100)',
         ];
         $map = [];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Role')
             ->select();
 
-        $port->import('groups', $query, $structure, $map);
+        $this->import('groups', $query, $structure, $map);
 
         // User Role.
         $structure = [
@@ -133,17 +106,14 @@ class Agorakit extends Target
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('UserRole')
             ->select();
 
-        $port->import('group_user', $query, $structure, $map);
+        $this->import('group_user', $query, $structure, $map);
     }
 
-    /**
-     * @param Migration $port
-     */
-    protected function categories(Migration $port): void
+    protected function categories(): void
     {
         $structure = [
             'id' => 'int',
@@ -167,18 +137,15 @@ class Agorakit extends Target
         $filters = [
             'CountDiscussions' => 'emptyToZero',
         ];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Category')
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
 
-        $port->import('tags', $query, $structure, $map, $filters);
+        $this->import('tags', $query, $structure, $map, $filters);
     }
 
-    /**
-     * @param Migration $port
-     */
-    protected function discussions(Migration $port): void
+    protected function discussions(): void
     {
         $structure = [];
         $map = [
@@ -198,17 +165,14 @@ class Agorakit extends Target
             //'Closed' => '',
         ];
         $filters = [];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Discussion')
             ->select();
 
-        $port->import('discussions', $query, $structure, $map, $filters);
+        $this->import('discussions', $query, $structure, $map, $filters);
     }
 
-    /**
-     * @param Migration $port
-     */
-    protected function comments(Migration $port): void
+    protected function comments(): void
     {
         $structure = [];
         $map = [
@@ -220,12 +184,12 @@ class Agorakit extends Target
             'Body' => 'body'
         ];
         $filters = [];
-        $query = $port->targetQB()
+        $query = $this->porterQB()
             ->from('Comment')
             ->select();
 
         // @todo !hasDiscussionBody support
 
-        $port->import('posts', $query, $structure, $map, $filters);
+        $this->import('posts', $query, $structure, $map, $filters);
     }
 }

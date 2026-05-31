@@ -572,6 +572,9 @@ class Discord extends Origin
             // Non-guild authors.
             $this->extractAuthors($info['content']);
 
+            // Polls.
+            $this->extractPolls($info['content']);
+
             // Update status.
             if (0 === (int)$info['rows']) {
                 // Change status to 'done' if no more rows found.
@@ -649,6 +652,7 @@ class Discord extends Origin
                 if (!empty($reaction['emoji']['id'])) {
                     $emojiList[$reaction['emoji']['id']] = $reaction['emoji']; // Only collect non-standard emoji.
                 }
+                // todo https://docs.discord.com/developers/resources/message#get-reactions
                 $reactList[] = [
                     'emoji_id' => $reaction['emoji']['id'] ?? 0, // Std unicode emoji ID = null.
                     'emoji_name' => $reaction['emoji']['name'] ?? '',
@@ -674,6 +678,27 @@ class Discord extends Origin
         $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
         $this->extract('discord_emojis', self::DB_EMOJIS, $emojiData); // Store new emoji.
         Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojiIDs));
+    }
+
+    /**
+     * Polls are stored as an object on messages.
+     *
+     * @see https://docs.discord.com/developers/resources/poll
+     */
+    protected function extractPolls(array $content): void
+    {
+        //question (obj)
+        //answers (objs) max 10
+            // answer_id
+            // poll_media
+        //expiry
+        //allow_multiselect
+        //layout_type
+        //results? (obj)
+            //is_finalized
+            //answer_counts (objs) - all answers
+                // id
+                // count
     }
 
     /**

@@ -45,6 +45,61 @@ class Agorakit extends Target
     /** @var int Offset for inserting OP content into the posts table. */
     protected int $discussionPostOffset = 0;
 
+    protected const SCHEMA_USER = [
+        'id' => 'int',
+        'name' => 'varchar(100)',
+        'username' => 'varchar(100)',
+        'email' => 'varchar(100)',
+        'verified' => 'tinyint',
+        'password' => 'varchar(100)',
+        'created_at' => 'datetime',
+        'admin' => 'tinyint',
+    ];
+
+    protected const SCHEMA_DISCUSSIONS = [
+        'id' => 'int',
+        'group_id' => 'int',
+        'user_id' => 'int',
+        'status' => 'int',
+        'name' => 'varchar(100)',
+        'body' => 'text',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+        'total_comments' => 'int',
+    ];
+    protected const SCHEMA_COMMENTS = [
+        'id' => 'int',
+        'discussion_id' => 'int',
+        'user_id' => 'int',
+        'body' => 'text',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
+    ];
+
+    protected const SCHEMA_CATEGORIES = [
+        'id' => 'int',
+        'name' => 'varchar(100)',
+        'slug' => 'varchar(100)',
+        'description' => 'text',
+        'parent_id' => 'int',
+        'position' => 'int',
+        'discussion_count' => 'int',
+        'is_hidden' => 'tinyint',
+        'is_restricted' => 'tinyint',
+    ];
+
+    protected const SCHEMA_GROUPS = [
+        'id' => 'int',
+        'name_singular' => 'varchar(100)',
+    ];
+
+    protected const SCHEMA_MEMBERSHIP = [
+        'user_id' => 'int',
+        'group_id' => 'int',
+    ];
+
     /**
      * Check for issues that will break the import.
      */
@@ -55,16 +110,6 @@ class Agorakit extends Target
 
     protected function users(): void
     {
-        $structure = [
-            'id' => 'int',
-            'name' => 'varchar(100)',
-            'username' => 'varchar(100)',
-            'email' => 'varchar(100)',
-            'verified' => 'tinyint',
-            'password' => 'varchar(100)',
-            'created_at' => 'datetime',
-            'admin' => 'tinyint',
-        ];
         $map = [
             'UserID' => 'id',
             'Name' => 'username',
@@ -81,27 +126,18 @@ class Agorakit extends Target
             ->from('User')
             ->select();
 
-        $this->import('users', $query, $structure, $map, $filters);
+        $this->import('users', $query, self::SCHEMA_USER, $map, $filters);
     }
 
     protected function roles(): void
     {
-        $structure = [
-            'id' => 'int',
-            'name_singular' => 'varchar(100)',
-        ];
         $map = [];
         $query = $this->porterQB()
             ->from('Role')
             ->select();
-
-        $this->import('groups', $query, $structure, $map);
+        $this->import('groups', $query, self::SCHEMA_GROUPS, $map);
 
         // User Role.
-        $structure = [
-            'user_id' => 'int',
-            'group_id' => 'int',
-        ];
         $map = [
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
@@ -109,23 +145,11 @@ class Agorakit extends Target
         $query = $this->porterQB()
             ->from('UserRole')
             ->select();
-
-        $this->import('group_user', $query, $structure, $map);
+        $this->import('membership', $query, self::SCHEMA_MEMBERSHIP, $map);
     }
 
     protected function categories(): void
     {
-        $structure = [
-            'id' => 'int',
-            'name' => 'varchar(100)',
-            'slug' => 'varchar(100)',
-            'description' => 'text',
-            'parent_id' => 'int',
-            'position' => 'int',
-            'discussion_count' => 'int',
-            'is_hidden' => 'tinyint',
-            'is_restricted' => 'tinyint',
-        ];
         $map = [
             'CategoryID' => 'id',
             'Name' => 'name',
@@ -142,12 +166,11 @@ class Agorakit extends Target
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
 
-        $this->import('tags', $query, $structure, $map, $filters);
+        $this->import('tags', $query, self::SCHEMA_CATEGORIES, $map, $filters);
     }
 
     protected function discussions(): void
     {
-        $structure = [];
         $map = [
             'DiscussionID' => 'id',
             'InsertUserID' => 'user_id',
@@ -169,12 +192,11 @@ class Agorakit extends Target
             ->from('Discussion')
             ->select();
 
-        $this->import('discussions', $query, $structure, $map, $filters);
+        $this->import('discussions', $query, self::SCHEMA_DISCUSSIONS, $map, $filters);
     }
 
     protected function comments(): void
     {
-        $structure = [];
         $map = [
             'CommentID' => 'id',
             'DiscussionID' => 'discussion_id',
@@ -190,6 +212,6 @@ class Agorakit extends Target
 
         // @todo !hasDiscussionBody support
 
-        $this->import('posts', $query, $structure, $map, $filters);
+        $this->import('posts', $query, self::SCHEMA_COMMENTS, $map, $filters);
     }
 }

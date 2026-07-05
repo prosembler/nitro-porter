@@ -202,9 +202,6 @@ class Discord extends Origin
         ],
     ];
 
-    /** @var string Folder path to download attachment files into. */
-    protected string $attachmentFolder;
-
     /** @var array IDs of guild users used to find non-guild users. */
     protected array $guildUsers;
 
@@ -701,32 +698,7 @@ class Discord extends Origin
                 // count
     }
 
-    /**
-     * Retrieve the file.
-     */
-    protected function getFile(string $url, string $filename): void
-    {
-        if (!$this->attachmentFolder) {
-            return;
-        }
-        $path = $this->attachmentFolder . $filename;
-        if (!file_exists($path)) {
-            $this->originStorage->download($url, $path);
-        } else {
-            Log::comment("Notice: Attachment '{$filename}' already exists.");
-        }
-    }
 
-    /**
-     * Change a filename so that the basename is no more than $length characters.
-     *
-     * Prevents error "Failed to open stream: File name too long".
-     */
-    protected function limitFilenameLength(string $filename, int $length = 100): string
-    {
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        return substr(pathinfo($filename, PATHINFO_FILENAME), 0, $length) . '.' . $ext;
-    }
 
     /**
      * Get URL for a user's Discord avatar.

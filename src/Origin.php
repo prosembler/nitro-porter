@@ -12,6 +12,9 @@ abstract class Origin extends Package
     /** @var Storage\Https Where the origin data is from (read-only HTTPS). */
     protected Storage\Https $originStorage;
 
+    /** @var string Folder path to download attachment files into. */
+    protected string $attachmentFolder;
+
     /**
      * @throws \Exception
      */
@@ -146,5 +149,32 @@ abstract class Origin extends Package
         $exists = touchFolder($folder);
         $folders[$name] = ($exists) ? $folder . '/' : '';
         return $folders[$name];
+    }
+
+    /**
+     * Retrieve the file.
+     */
+    protected function getFile(string $url, string $filename): void
+    {
+        if (!$this->attachmentFolder) {
+            return;
+        }
+        $path = $this->attachmentFolder . $filename;
+        if (!file_exists($path)) {
+            $this->originStorage->download($url, $path);
+        } else {
+            Log::comment("Notice: Attachment '{$filename}' already exists.");
+        }
+    }
+
+    /**
+     * Change a filename so that the basename is no more than $length characters.
+     *
+     * Prevents error "Failed to open stream: File name too long".
+     */
+    protected function limitFilenameLength(string $filename, int $length = 100): string
+    {
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        return substr(pathinfo($filename, PATHINFO_FILENAME), 0, $length) . '.' . $ext;
     }
 }

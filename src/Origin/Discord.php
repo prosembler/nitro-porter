@@ -64,7 +64,7 @@ class Discord extends Origin
         15 => 'GUILD_FORUM',
     ];
 
-    protected const array DB_USERS = [
+    protected const array SCHEMA_USERS = [
         'nick' => 'varchar(100)',
         'avatar' => 'varchar(100)',
         'roles' => 'text',
@@ -87,14 +87,14 @@ class Discord extends Origin
         ],
     ];
 
-    protected const array DB_REACTIONS = [
+    protected const array SCHEMA_REACTIONS = [
         'message_id' => 'bigint',
         'emoji_id' => 'bigint',
         'emoji_name' => 'varchar(100)',
         'count' => 'int',
     ];
 
-    protected const array DB_ROLES = [
+    protected const array SCHEMA_ROLES = [
         'id' => 'bigint',
         'name' => 'varchar(100)',
         'position' => 'int',
@@ -102,14 +102,14 @@ class Discord extends Origin
         'mentionable' => 'tinyint',
     ];
 
-    protected const array DB_EMOJIS = [
+    protected const array SCHEMA_EMOJIS = [
         'id' => 'bigint',
         'name' => 'varchar(100)',
         'user' => 'text', // author
         'animated' => 'tinyint',
     ];
 
-    protected const array DB_CHANNELS = [
+    protected const array SCHEMA_CHANNELS = [
         'id' => 'bigint',
         'type' => 'int', //@todo key?
         'guild_id' => 'bigint',
@@ -135,7 +135,7 @@ class Discord extends Origin
      * @var array Name => column type
      * @see \Porter\Source::renumber() for why an index is important.
      */
-    protected const array DB_MESSAGES = [
+    protected const array SCHEMA_MESSAGES = [
         'id' => 'bigint',
         'channel_id' => 'bigint',
         'content' => 'text',
@@ -172,12 +172,12 @@ class Discord extends Origin
         ],
     ];
 
-    protected const array DB_USERROLES = [
+    protected const array SCHEMA_USERROLES = [
         'user_id' => 'bigint',
         'role_id' => 'bigint',
     ];
 
-    protected const array DB_ATTACHMENTS = [
+    protected const array SCHEMA_ATTACHMENTS = [
         'id' => 'bigint',
         'message_id' => 'bigint',
         'filename' => 'text',
@@ -307,7 +307,7 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
-        $info = $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS);
         $this->guildUsers = array_column($info['content'], 'id');
         $this->extractUserRoles($info['content']);
     }
@@ -316,7 +316,7 @@ class Discord extends Origin
     protected function roles(): void
     {
         $endpoint = "guilds/" . $this->getGuildId();
-        $this->pull($endpoint, self::DB_ROLES, 'discord_roles', 'roles');
+        $this->pull($endpoint, self::SCHEMA_ROLES, 'discord_roles', 'roles');
     }
 
     /**
@@ -331,7 +331,7 @@ class Discord extends Origin
                 $userRoles[] = ['user_id' => $id, 'role_id' => $roleID];
             }
         }
-        $this->extract('discord_user_roles', self::DB_USERROLES, $userRoles);
+        $this->extract('discord_user_roles', self::SCHEMA_USERROLES, $userRoles);
     }
 
     /**
@@ -373,7 +373,7 @@ class Discord extends Origin
             }
         }
         $errors += $this->originStorage->asyncDownload($files); // Final batch.
-        $this->extract('discord_attachments', self::DB_ATTACHMENTS, $data);
+        $this->extract('discord_attachments', self::SCHEMA_ATTACHMENTS, $data);
     }
 
     /**
@@ -394,7 +394,7 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
-        $info = $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis');
+        $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis');
         $this->guildEmojis = array_column($info['content'], 'id');
     }
 
@@ -459,7 +459,7 @@ class Discord extends Origin
     protected function channels(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/channels";
-        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels');
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels');
     }
 
     /**
@@ -471,13 +471,13 @@ class Discord extends Origin
     {
         // Active threads.
         $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
-        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
 
         // Archived threads.
         $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
+            $info = $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
             $this->rateLimit($info['headers']);
         }
     }
@@ -558,7 +558,7 @@ class Discord extends Origin
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::DB_MESSAGES, 'discord_messages', null, $query, $map);
+            $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map);
 
             // Attachments.
             $this->extractAttachments($info['content']);
@@ -612,7 +612,7 @@ class Discord extends Origin
 
         // Insert missing users.
         $missingUsers = array_intersect_key($users, $missingUserIDs);
-        $info = $this->extract('discord_users', self::DB_USERS, $missingUsers);
+        $info = $this->extract('discord_users', self::SCHEMA_USERS, $missingUsers);
 
         // Log actions & mark users as "found".
         if (!empty($info['rows'])) { // Missing users were inserted.
@@ -659,7 +659,7 @@ class Discord extends Origin
             }
         }
         $this->extractEmoji($emojiList);
-        $this->extract('discord_reactions', self::DB_REACTIONS, $reactList);
+        $this->extract('discord_reactions', self::SCHEMA_REACTIONS, $reactList);
     }
 
     /**
@@ -673,7 +673,7 @@ class Discord extends Origin
         }
         $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojiIDs); // Update in-memory list.
         $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
-        $this->extract('discord_emojis', self::DB_EMOJIS, $emojiData); // Store new emoji.
+        $this->extract('discord_emojis', self::SCHEMA_EMOJIS, $emojiData); // Store new emoji.
         Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojiIDs));
     }
 

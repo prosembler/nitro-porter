@@ -277,6 +277,12 @@ return array(
         'DateInserted' => 'datetime',
         'DateUpdated' => 'datetime'
     ),*/
+    'Emoji' => array(
+        'EmojiID' => 'int',
+        'Name' => 'varchar(100)',
+        'InsertUserID' => 'int',
+        'Animated' => 'tinyint',
+    ),
     'Event' => array(
         'EventID' => 'int',
         'Name' => 'varchar(255)',
@@ -489,6 +495,7 @@ return array(
         'PollID' => 'int',
         'Name' => 'text',
         'DiscussionID' => 'int',
+        'CommentID' => 'int', // Added 2026-05 for Discord
         'CountOptions' => 'int',
         'CountVotes' => 'int',
         'Anonymous' => 'int',

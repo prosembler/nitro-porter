@@ -116,6 +116,27 @@ class Discord extends Origin
         'animated' => 'tinyint',
     ];
 
+    protected const array SCHEMA_POLLS = [
+        'id' => 'bigint',
+        'is_final' => 'tinyint',
+        'text' => 'text',
+        'emoji' => 'bigint',
+        'expiry' => 'datetime',
+        'allow_multiselect' => 'tinyint',
+    ];
+
+    protected const array SCHEMA_POLL_ANSWERS = [
+        'poll_id' => 'bigint',
+        'answer_id' => 'bigint',
+        'count' => 'int',
+    ];
+
+    protected const array SCHEMA_POLL_USER_ANSWERS = [
+        'poll_id' => 'bigint',
+        'answer_id' => 'bigint',
+        'user_id' => 'bigint',
+    ];
+
     protected const array SCHEMA_CHANNELS = [
         'id' => 'bigint',
         'type' => 'int', //@todo key?
@@ -577,7 +598,7 @@ class Discord extends Origin
             $this->extractAuthors($info['content']);
 
             // Polls.
-            $this->extractPolls($info['content']);
+            $this->extractPolls($info['content'], $channelId);
 
             // Update status.
             if (0 === (int)$info['rows']) {
@@ -698,7 +719,7 @@ class Discord extends Origin
             }
         }
 
-        // Use collected lists.
+        // Store collected lists.
         $this->extractEmoji($emojiList);
         $this->extract('discord_reactions', self::SCHEMA_REACTIONS, $reactList);
     }
@@ -719,27 +740,78 @@ class Discord extends Origin
     }
 
     /**
-     * Polls are stored as an object on messages.
+     * From a list of messages, extract & store all polls.
      *
+     * Polls are stored as an object on messages.
      * @see https://docs.discord.com/developers/resources/poll
+     *
+     * Answers are stored as a list of objects.
+     * @see https://docs.discord.com/developers/resources/poll#poll-answer-object-poll-answer-object-structure
+     *
+     * Answer voters are a LIST of user objects per answer.
+     * @see https://docs.discord.com/developers/resources/poll#get-answer-voters
+     * ex: /channels/{channel.id}/polls/{message.id}/answers/{answer_id}
+     *
+     * Ignores edge case where a custom emoji used in a poll option was never used as a reaction.
      */
-    protected function extractPolls(array $content): void
+    protected function extractPolls(array $content, int $channelId): void
     {
-        //question (obj)
-        //answers (objs) max 10
-            // answer_id
-            // poll_media
-        //expiry
-        //allow_multiselect
-        //layout_type
-        //results? (obj)
-            //is_finalized
-            //answer_counts (objs) - all answers
-                // id
-                // count
+        // Filter to messages with polls and discard other message data.
+        $msgsWithPolls = array_filter(
+            array_column($content, 'poll', 'id'),
+            fn ($poll) => (!empty($poll))
+        );
+        if (empty($msgsWithPolls)) {
+            return;
+        }
+
+        // Build lists of all polls & answers.
+        $pollData = [];
+        $answerData = [];
+
+        // Process all messages with reactions.
+        foreach ($msgsWithPolls as $msgId => $poll) {
+            // Build list of all polls in these messages.
+            $pollData = [
+                'message_id' => $msgId, // 1:1 poll:msg associations, so this is the poll_id too.
+                'text' => $poll['text'],
+                'allow_multiselect' => $poll['allow_multiselect'],
+                'expiry' => $poll['expiry'],
+                'emoji_id' => $poll['question']['emoji']['id'],
+                'is_finalized' => (!empty($poll['results'])) ? $poll['results']['is_finalized'] : 0,
+            ];
+
+            // Build list of all answers in these messages w/ counts for storage.
+            $counts = null;
+            if (!empty($poll['results'])) {
+                // Index answer counts by id so they can be referenced in the loop.
+                $counts = array_column($poll['results']['answer_counts'], 'count', 'id');
+            }
+            foreach ($poll['answers'] as $answer) {
+                $answerData = [
+                    'message_id' => $msgId, // 'poll_id' would be the same.
+                    'answer_id' => $answer['answer_id'],
+                    'text' => $answer['poll_media']['text'],
+                    'emoji_id' => $answer['poll_media']['emoji']['id'],
+                    'count' => ($counts) ? $counts[$answer['answer_id']] : 0,
+                ];
+
+                // Pull user-answers. We only need `user_id` from the API.
+                $this->pull(
+                    endpoint: "/channels/$channelId/polls/$msgId/answers/" . $answer['answer_id'],
+                    fields: self::SCHEMA_POLL_USER_ANSWERS,
+                    tableName: 'discord_poll_user_answers',
+                    key: 'users',
+                    map: ['id' => 'user_id'],
+                    storeAll: ['poll_id' => $msgId, 'answer_id' => $answer['answer_id']]
+                );
+            }
+        }
+
+        // Store collected lists.
+        $this->extract('discord_polls', self::SCHEMA_POLLS, $pollData);
+        $this->extract('discord_poll_answers', self::SCHEMA_POLL_ANSWERS, $answerData);
     }
-
-
 
     /**
      * Get URL for a user's Discord avatar.

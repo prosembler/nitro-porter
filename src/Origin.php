@@ -48,6 +48,7 @@ abstract class Origin extends Package
      * @param string|null $key A non-null value will discard other data & use this key (only) as the data.
      * @param array $query
      * @param array $map
+     * @param array $storeAll A set of [name => value] to insert into ALL resulting records.
      * @return array $info from store()
      * @see Migration::import() for comparison.
      */
@@ -57,7 +58,8 @@ abstract class Origin extends Package
         string $tableName,
         ?string $key = null,
         array $query = [],
-        array $map = []
+        array $map = [],
+        array $storeAll = []
     ): array {
         // Start timer.
         $start = microtime(true);
@@ -79,6 +81,11 @@ abstract class Origin extends Package
             } else {
                 Log::comment("> key '{$key}' not found in response from '{$endpoint}'.");
             }
+        }
+
+        // Add $storeAll to the results.
+        foreach ($content as &$item) {
+            $item = array_merge($item, $storeAll);
         }
 
         // Store the data.

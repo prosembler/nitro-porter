@@ -94,6 +94,13 @@ class Discord extends Origin
         'count' => 'int',
     ];
 
+    protected const array SCHEMA_USERREACTIONS = [
+        'message_id' => 'bigint',
+        'emoji_id' => 'bigint',
+        'user_id' => 'bigint',
+        'emoji_name' => 'varchar(100)',
+    ];
+
     protected const array SCHEMA_ROLES = [
         'id' => 'bigint',
         'name' => 'varchar(100)',
@@ -307,7 +314,7 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
-        $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS, []);
         $this->guildUsers = array_column($info['content'], 'id');
         $this->extractUserRoles($info['content']);
     }
@@ -316,7 +323,7 @@ class Discord extends Origin
     protected function roles(): void
     {
         $endpoint = "guilds/" . $this->getGuildId();
-        $this->pull($endpoint, self::SCHEMA_ROLES, 'discord_roles', 'roles');
+        $this->pull($endpoint, self::SCHEMA_ROLES, 'discord_roles', 'roles', [], [], []);
     }
 
     /**
@@ -394,7 +401,7 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
-        $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis');
+        $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis', null, [], [], []);
         $this->guildEmojis = array_column($info['content'], 'id');
     }
 
@@ -459,7 +466,7 @@ class Discord extends Origin
     protected function channels(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/channels";
-        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels');
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', null, [], [], []);
     }
 
     /**
@@ -471,13 +478,13 @@ class Discord extends Origin
     {
         // Active threads.
         $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
-        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
 
         // Archived threads.
         $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
+            $info = $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
             $this->rateLimit($info['headers']);
         }
     }
@@ -558,13 +565,13 @@ class Discord extends Origin
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map);
+            $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map, []);
 
             // Attachments.
             $this->extractAttachments($info['content']);
 
             // Reactions & non-guild emoji used in them.
-            $this->extractReactions($info['content']);
+            $this->extractReactions($info['content'], $channelId);
 
             // Non-guild authors.
             $this->extractAuthors($info['content']);
@@ -626,38 +633,72 @@ class Discord extends Origin
     }
 
     /**
-     * Reactions are stored as a LIST of emoji objects on messages.
+     * From a list of messages, extract & store all reactions & their emoji.
      *
-     * Discord doesn't provide individual reaction user_ids or timestamps, only counts.
+     * In discord_reactions, store msg_id + emoji_id + count.
+     * In discord_userreactions, store msg_id + emoji_id + user_id.
+     * In discord_emoji, store all emoji we haven't seen yet.
+     *
+     * Reactions are stored as a LIST of objects on messages, each with emoji + count.
      * @see https://docs.discord.com/developers/resources/message#reaction-object
      * @see https://discord.com/developers/docs/resources/emoji#emoji-object
      * ex: `[{"emoji":{"id":"742118343112130694","name":"gritty"},"count":1},
      *       {"emoji":{"id":"976301342576504912","name":"rockon"},"count":9},
      *       {"emoji":{"id":null,"name": "🔥"},"count":3},
      * }]`
+     *
+     * Individual users' reactions must then be requested per message, per reaction; stored as LIST of users.
+     * @see https://docs.discord.com/developers/resources/message#get-reactions
+     * ex:  `/channels/{channel.id}/messages/{message.id}/reactions/{emoji.id}`
     */
-    protected function extractReactions(array $content): void
+    protected function extractReactions(array $content, int $channelId): void
     {
-        $reactions = array_filter(array_column($content, 'reactions', 'id'), fn ($reactions) => (!empty($reactions)));
-        if (empty($reactions)) {
+        // Filter to messages with reactions and discard other message data.
+        $msgsWithReactions = array_filter(
+            array_column($content, 'reactions', 'id'),
+            fn ($reactions) => (!empty($reactions))
+        );
+        if (empty($msgsWithReactions)) {
             return;
         }
+
+        // Build lists of non-standard emoji to extract & reactions to store.
         $emojiList = [];
         $reactList = [];
-        foreach ($reactions as $msgID => $msgReactions) {
+
+        // Process all messages with reactions.
+        foreach ($msgsWithReactions as $msgId => $msgReactions) {
             foreach ($msgReactions as $reaction) {
-                if (!empty($reaction['emoji']['id'])) {
-                    $emojiList[$reaction['emoji']['id']] = $reaction['emoji']; // Only collect non-standard emoji.
+                $urlEmojiId = $emojiId = $reaction['emoji']['id'];
+
+                // Collect non-standard emoji for fetching.
+                if (!empty($emojiId)) {
+                    // Collect for fetching.
+                    $emojiList[$emojiId] = $reaction['emoji'];
+                    // Special format for GET. "To use custom emoji, you must encode it in the format name:id"
+                    $urlEmojiId = $reaction['emoji']['name'] . ':' . $emojiId;
                 }
-                // todo https://docs.discord.com/developers/resources/message#get-reactions
+
+                // Build reaction list w/ counts for storing.
                 $reactList[] = [
-                    'emoji_id' => $reaction['emoji']['id'] ?? 0, // Std unicode emoji ID = null.
+                    'emoji_id' => $emojiId ?? 0, // Std unicode emoji ID = null.
                     'emoji_name' => $reaction['emoji']['name'] ?? '',
                     'count' => $reaction['count'] ?? 0,
-                    'message_id' => $msgID,
+                    'message_id' => $msgId,
                 ];
+
+                // Pull per-user reactions.
+                $this->pull(
+                    endpoint: "/channels/$channelId/messages/$msgId/reactions/$urlEmojiId",
+                    fields: self::SCHEMA_USERREACTIONS,
+                    tableName: 'discord_userreactions',
+                    map: ['id' => 'user_id'],
+                    storeAll: ['message_id' => $msgId, 'emoji_id' => $emojiId] // Added feature for this use case.
+                );
             }
         }
+
+        // Use collected lists.
         $this->extractEmoji($emojiList);
         $this->extract('discord_reactions', self::SCHEMA_REACTIONS, $reactList);
     }

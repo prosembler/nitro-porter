@@ -332,8 +332,7 @@ class Flarum extends Target
             'Name' => 'fixDuplicateDeletedNames',
             'Email' => 'fixNullEmails',
         ];
-        $query = $this->porterQB()
-            ->from('User')
+        $query = $this->porterQB()->from('User')
             ->select()
             ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
 
@@ -361,8 +360,7 @@ class Flarum extends Target
         $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
         // Roles.
-        $query = $this->porterQB()
-            ->from('Role')
+        $query = $this->porterQB()->from('Role')
             // Flarum reserves 1-3 & uses 4 for mods by default.
             ->selectRaw("(RoleID + 4) as id")
             // Singular vs plural is an uncommon feature; don't guess at it, just duplicate the Name.
@@ -377,8 +375,7 @@ class Flarum extends Target
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $this->porterQB()
-            ->from('UserRole')
+        $query = $this->porterQB()->from('UserRole')
             ->select()
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
         $this->import('group_user', $query, self::SCHEMA_USER_ROLES, $map);
@@ -400,8 +397,7 @@ class Flarum extends Target
         $filters = [
             'CountDiscussions' => 'emptyToZero',
         ];
-        $query = $this->porterQB()
-            ->from('Category')
+        $query = $this->porterQB()->from('Category')
             ->select()
             ->selectRaw('COALESCE(Name, CONCAT("category", CategoryID)) as name') // Cannot be null.
             ->selectRaw('COALESCE(UrlCode, CategoryID) as slug') // Cannot be null.
@@ -446,8 +442,7 @@ class Flarum extends Target
         }
 
         // CountComments needs to be double-mapped so it's included as an alias also.
-        $query = $this->porterQB()
-            ->from('Discussion')
+        $query = $this->porterQB()->from('Discussion')
             ->select()
             ->selectRaw('COALESCE(CountComments, 0) as post_number_index')
             ->selectRaw('DiscussionID as slug')
@@ -463,8 +458,7 @@ class Flarum extends Target
             'DiscussionID' => 'discussion_id',
             'CategoryID' => 'tag_id',
         ];
-        $query = $this->porterQB()
-            ->from('Discussion')
+        $query = $this->porterQB()->from('Discussion')
             ->select(['DiscussionID', 'CategoryID'])
             ->union(
                 // Also tag discussion with the parent category.
@@ -494,8 +488,7 @@ class Flarum extends Target
             'UserID' => 'user_id',
             'DateLastViewed' => 'last_read_at',
         ];
-        $query = $this->porterQB()
-            ->from('UserDiscussion')
+        $query = $this->porterQB()->from('UserDiscussion')
             ->select()
             ->selectRaw("if (Bookmarked > 0, 'follow', null) as subscription")
             ->where('UserID', '>', 0); // Vanilla can have zeroes here, can't remember why.
@@ -520,8 +513,7 @@ class Flarum extends Target
         $filters = [
             'Body' => 'filterFlarumContent',
         ];
-        $query = $this->porterQB()
-            ->from('Comment')
+        $query = $this->porterQB()->from('Comment')
             // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
             ->select([
                 'DiscussionID',
@@ -756,8 +748,7 @@ class Flarum extends Target
         // Get reactions for discussions (OPs).
         if ($this->getDiscussionBodyMode()) {
             // Get highest CommentID.
-            $result = $this->porterQB()
-                ->from('Comment')
+            $result = $this->porterQB()->from('Comment')
                 ->selectRaw('max(CommentID) as LastCommentID')
                 ->first();
             $lastCommentID = $result->LastCommentID ?? 0;

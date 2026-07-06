@@ -129,6 +129,8 @@ class Discord extends Origin
         'poll_id' => 'bigint',
         'answer_id' => 'bigint',
         'count' => 'int',
+        'emoji_id' => 'bigint',
+        'text' => 'text',
     ];
 
     protected const array SCHEMA_POLL_USER_ANSWERS = [

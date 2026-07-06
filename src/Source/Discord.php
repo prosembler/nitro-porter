@@ -198,29 +198,33 @@ class Discord extends Source
     {
         $map = [
             'id' => 'PollID',
-            'name' => 'Name',
-            //'DiscussionID',
-            'message_id' => 'CommentID',
-            //'CountOptions',
-            //'CountVotes',
-            //'DateInserted',
-            //'InsertUserID',
+            'text' => 'Name',
+            'allow_multiselect' => 'AllowMultiple',
+            'expiry' => 'DateClosed',
         ];
-        $query = $this->sourceQB()->from('discord_polls')->select('discord_polls.*');
+        $query = $this->sourceQB()->from('discord_polls')
+            ->join('discord_messages', 'discord_messages.id', '=', 'discord_polls.id')
+            ->select('discord_polls.*')
+            ->selectRaw('discord_polls.id as CommentID')
+            ->selectRaw('discord_messages.authorid as InsertUserID')
+            ->selectRaw('discord_messages.timestamp as DateInserted')
+            ->selectRaw('discord_messages.edited_timestamp as DateUpdated')
+            ->selectRaw('discord_messages.channel_id as DiscussionID');
         $this->export('Poll', $query, $map);
 
         $map = [
-            'id' => 'PollOptionID',
-            //'PollID',
-            //'Body',
-            //'CountVotes',
+            'poll_id' => 'PollID',
+            'answer_id' => 'PollOptionID',
+            'text' => 'Body',
+            'count' => 'CountVotes',
+            'emoji_id' => 'EmojiID',
         ];
         $query = $this->sourceQB()->from('discord_polloptions')->select('discord_polloptions.*');
         $this->export('PollOptions', $query, $map);
 
         $map = [
-            //'UserID',
-            //'PollOptionID',
+            'user_id' => 'UserID',
+            'answer_id' => 'PollOptionID',
         ];
         $query = $this->sourceQB()->from('discord_pollvotes')->select('discord_pollvotes.*');
         $this->export('PollVote', $query, $map);

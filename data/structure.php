@@ -502,7 +502,9 @@ return array(
         'DateInserted' => 'datetime',
         'InsertUserID' => 'int',
         'DateUpdated' => 'datetime',
-        'UpdateUserID' => 'int'
+        'UpdateUserID' => 'int',
+        'AllowMultiple' => 'tinyint',  // Added 2026-07 for Discord
+        'DateClosed' => 'datetime', // Added 2026-07 for Discord
     ),
     'PollOption' => array(
         'PollOptionID' => 'int',
@@ -514,7 +516,8 @@ return array(
         'DateInserted' => 'datetime',
         'InsertUserID' => 'int',
         'DateUpdated' => 'datetime',
-        'UpdateUserID' => 'int'
+        'UpdateUserID' => 'int',
+        'EmojiID' => 'int', // Added 2026-07 for Discord
     ),
     'PollVote' => array(
         'UserID' => 'int',

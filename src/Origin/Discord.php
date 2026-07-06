@@ -94,7 +94,7 @@ class Discord extends Origin
         'count' => 'int',
     ];
 
-    protected const array SCHEMA_USERREACTIONS = [
+    protected const array SCHEMA_USER_REACTIONS = [
         'message_id' => 'bigint',
         'emoji_id' => 'bigint',
         'user_id' => 'bigint',
@@ -197,7 +197,7 @@ class Discord extends Origin
             // Covering index for resuming message pulls [select id where channel_id=x order by timestamp].
             'discord_messages_resuming_index' => [
                 'type' => 'index',
-                'columns' => ['channel_id','timestamp'], // 'id' (pk) is implicitly in index
+                'columns' => ['channel_id', 'timestamp'], // 'id' (pk) is implicitly in index
             ]
         ],
     ];
@@ -659,7 +659,7 @@ class Discord extends Origin
      * From a list of messages, extract & store all reactions & their emoji.
      *
      * In discord_reactions, store msg_id + emoji_id + count.
-     * In discord_userreactions, store msg_id + emoji_id + user_id.
+     * In discord_user_reactions, store msg_id + emoji_id + user_id.
      * In discord_emoji, store all emoji we haven't seen yet.
      *
      * Reactions are stored as a LIST of objects on messages, each with emoji + count.
@@ -673,13 +673,13 @@ class Discord extends Origin
      * Individual users' reactions must then be requested per message, per reaction; stored as LIST of users.
      * @see https://docs.discord.com/developers/resources/message#get-reactions
      * ex:  `/channels/{channel.id}/messages/{message.id}/reactions/{emoji.id}`
-    */
+     */
     protected function extractReactions(array $content, int $channelId): void
     {
         // Filter to messages with reactions and discard other message data.
         $msgsWithReactions = array_filter(
             array_column($content, 'reactions', 'id'),
-            fn ($reactions) => (!empty($reactions))
+            fn($reactions) => (!empty($reactions))
         );
         if (empty($msgsWithReactions)) {
             return;
@@ -713,8 +713,8 @@ class Discord extends Origin
                 // Pull per-user reactions.
                 $this->pull(
                     endpoint: "/channels/$channelId/messages/$msgId/reactions/$urlEmojiId",
-                    fields: self::SCHEMA_USERREACTIONS,
-                    tableName: 'discord_userreactions',
+                    fields: self::SCHEMA_USER_REACTIONS,
+                    tableName: 'discord_user_reactions',
                     map: ['id' => 'user_id'],
                     storeAll: ['message_id' => $msgId, 'emoji_id' => $emojiId] // Added feature for this use case.
                 );
@@ -738,7 +738,7 @@ class Discord extends Origin
         $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojiIDs); // Update in-memory list.
         $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
         $this->extract('discord_emojis', self::SCHEMA_EMOJIS, $emojiData); // Store new emoji.
-        Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojiIDs));
+        Log::comment("> non-guild emoji(s) added: " . implode(',', $missingEmojiIDs));
     }
 
     /**
@@ -761,7 +761,7 @@ class Discord extends Origin
         // Filter to messages with polls and discard other message data.
         $msgsWithPolls = array_filter(
             array_column($content, 'poll', 'id'),
-            fn ($poll) => (!empty($poll))
+            fn($poll) => (!empty($poll))
         );
         if (empty($msgsWithPolls)) {
             return;

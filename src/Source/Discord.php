@@ -173,25 +173,41 @@ class Discord extends Source
 
     protected function reactions(): void
     {
-        // todo non-custom emoji reactions => Tags
+        // Tag: Emoji => Reactions => Tags are all the same thing for our purposes.
         $map = [
-            'EmojiID' => 'TagID',
+            'emoji_id' => 'TagID',
+            'name' => 'Name',
         ];
-        $query = $this->sourceQB()->from('discord_emojis')->select('discord_emojis.*')
+        $query = $this->sourceQB()->from('discord_emojis')
+            ->select('discord_emojis.*')
             ->selectRaw('"reaction" as Type');
         $this->export('Tag', $query, $map);
 
-        // All tags are reactions.
-        $query = $this->porterQB()->from('Tag')->select(['Name', 'TagID']);
+        // ReactionType: All Tags we just added are Reactions.
+        $query = $this->porterQB()->from('Tag') // NOTE: PORTERQB!
+            ->select(['Name', 'TagID']);
         $this->export('ReactionType', $query);
 
+        // UserTag: Individual user reactions.
         $map = [
-            'TagID',
-            'DiscussionID',
-            'DateInserted',
+            'emoji_id' => 'TagID',
+            'message_id' => 'RecordID',
+            'user_id' => 'UserID',
         ];
-        $query = $this->sourceQB()->from('discord_reactions')->select('discord_reactions.*');
-        $this->export('TagDiscussion', $query, $map);
+        $query = $this->sourceQB()->from('discord_user_reactions')
+            ->select('discord_user_reactions.*');
+        $this->export('UserTag', $query, $map);
+
+        // UserTag: Reaction counts.
+        $map = [
+            'emoji_id' => 'TagID',
+            'message_id' => 'RecordID',
+            'count' => 'Total',
+        ];
+        $query = $this->sourceQB()->from('discord_reactions')
+            ->select('discord_reactions.*')
+            ->selectRaw('"Comment-Total" as RecordType');
+        $this->export('UserTag', $query, $map);
     }
 
     protected function polls(): void

@@ -52,7 +52,7 @@ abstract class Package
         // files
         'avatars',
         'attachments',
-        'emoji',
+        'emojis',
     ];
 
     /**

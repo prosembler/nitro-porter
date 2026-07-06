@@ -199,7 +199,7 @@ return array(
         //'UpdateIPAddress' => 'varbinary',
         'Flag' => 'tinyint',
         'Score' => 'float',
-        'Attributes' => 'text',
+        'Attributes' => 'text', // Vanilla serialized Reactions here for point-in-time reference. See: UserTag.
         'QnA' => 'varchar(255)', // 'Accepted', 'Rejected'
     ),
     'Conversation' => array(
@@ -256,7 +256,7 @@ return array(
         'DateLastComment' => 'datetime',
         'LastCommentUserID' => 'int',
         'Score' => 'float',
-        'Attributes' => 'text',
+        'Attributes' => 'text', // Vanilla serialized Reactions here for point-in-time reference. See: UserTag.
         'RegardingID' => 'int',
         'GroupID' => 'int',
         'QnA' => 'varchar(255)', // 'Accepted', 'Answered', 'Rejected', 'Unanswered',
@@ -277,6 +277,12 @@ return array(
         'DateInserted' => 'datetime',
         'DateUpdated' => 'datetime'
     ),*/
+    'Emoji' => array(
+        'EmojiID' => 'int',
+        'Name' => 'varchar(100)',
+        'InsertUserID' => 'int',
+        'Animated' => 'tinyint',
+    ),
     'Event' => array(
         'EventID' => 'int',
         'Name' => 'varchar(255)',
@@ -489,13 +495,16 @@ return array(
         'PollID' => 'int',
         'Name' => 'text',
         'DiscussionID' => 'int',
+        'CommentID' => 'int', // Added 2026-05 for Discord
         'CountOptions' => 'int',
         'CountVotes' => 'int',
         'Anonymous' => 'int',
         'DateInserted' => 'datetime',
         'InsertUserID' => 'int',
         'DateUpdated' => 'datetime',
-        'UpdateUserID' => 'int'
+        'UpdateUserID' => 'int',
+        'AllowMultiple' => 'tinyint',  // Added 2026-07 for Discord
+        'DateClosed' => 'datetime', // Added 2026-07 for Discord
     ),
     'PollOption' => array(
         'PollOptionID' => 'int',
@@ -507,7 +516,8 @@ return array(
         'DateInserted' => 'datetime',
         'InsertUserID' => 'int',
         'DateUpdated' => 'datetime',
-        'UpdateUserID' => 'int'
+        'UpdateUserID' => 'int',
+        'EmojiID' => 'int', // Added 2026-07 for Discord
     ),
     'PollVote' => array(
         'UserID' => 'int',
@@ -800,7 +810,7 @@ return array(
         'UserID' => 'int',
         'RoleID' => 'int'
     ),
-    'UserTag' => array(
+    'UserTag' => array( // Reactions
         'RecordType' => 'varchar(200)', //'Discussion', 'Discussion-Total', 'Comment', 'Comment-Total',
         //  'User', 'User-Total', 'Activity', 'Activity-Total', 'ActivityComment', 'ActivityComment-Total'
         'RecordID' => 'int',

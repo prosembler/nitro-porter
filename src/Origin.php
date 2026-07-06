@@ -12,6 +12,9 @@ abstract class Origin extends Package
     /** @var Storage\Https Where the origin data is from (read-only HTTPS). */
     protected Storage\Https $originStorage;
 
+    /** @var string Folder path to download attachment files into. */
+    protected string $attachmentFolder;
+
     /**
      * @throws \Exception
      */
@@ -45,6 +48,7 @@ abstract class Origin extends Package
      * @param string|null $key A non-null value will discard other data & use this key (only) as the data.
      * @param array $query
      * @param array $map
+     * @param array $storeAll A set of [name => value] to insert into ALL resulting records.
      * @return array $info from store()
      * @see Migration::import() for comparison.
      */
@@ -54,7 +58,8 @@ abstract class Origin extends Package
         string $tableName,
         ?string $key = null,
         array $query = [],
-        array $map = []
+        array $map = [],
+        array $storeAll = []
     ): array {
         // Start timer.
         $start = microtime(true);
@@ -76,6 +81,11 @@ abstract class Origin extends Package
             } else {
                 Log::comment("> key '{$key}' not found in response from '{$endpoint}'.");
             }
+        }
+
+        // Add $storeAll to the results.
+        foreach ($content as &$item) {
+            $item = array_merge($item, $storeAll);
         }
 
         // Store the data.
@@ -146,5 +156,32 @@ abstract class Origin extends Package
         $exists = touchFolder($folder);
         $folders[$name] = ($exists) ? $folder . '/' : '';
         return $folders[$name];
+    }
+
+    /**
+     * Retrieve the file.
+     */
+    protected function getFile(string $url, string $filename): void
+    {
+        if (!$this->attachmentFolder) {
+            return;
+        }
+        $path = $this->attachmentFolder . $filename;
+        if (!file_exists($path)) {
+            $this->originStorage->download($url, $path);
+        } else {
+            Log::comment("Notice: Attachment '{$filename}' already exists.");
+        }
+    }
+
+    /**
+     * Change a filename so that the basename is no more than $length characters.
+     *
+     * Prevents error "Failed to open stream: File name too long".
+     */
+    protected function limitFilenameLength(string $filename, int $length = 100): string
+    {
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        return substr(pathinfo($filename, PATHINFO_FILENAME), 0, $length) . '.' . $ext;
     }
 }

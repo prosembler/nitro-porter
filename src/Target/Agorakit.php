@@ -42,10 +42,7 @@ class Agorakit extends Target
         'hasDiscussionBody' => true,
     ];
 
-    /** @var int Offset for inserting OP content into the posts table. */
-    protected int $discussionPostOffset = 0;
-
-    protected const SCHEMA_USER = [
+    protected const SCHEMA_USERS = [
         'id' => 'int',
         'name' => 'varchar(100)',
         'username' => 'varchar(100)',
@@ -90,12 +87,12 @@ class Agorakit extends Target
         'is_restricted' => 'tinyint',
     ];
 
-    protected const SCHEMA_GROUPS = [
+    protected const SCHEMA_ROLES = [
         'id' => 'int',
         'name_singular' => 'varchar(100)',
     ];
 
-    protected const SCHEMA_MEMBERSHIP = [
+    protected const SCHEMA_USER_ROLES = [
         'user_id' => 'int',
         'group_id' => 'int',
     ];
@@ -122,30 +119,30 @@ class Agorakit extends Target
             'Admin' => 'admin',
         ];
         $filters = [];
-        $query = $this->porterQB()
-            ->from('User')
+        $query = $this->porterQB()->from('User')
             ->select();
-
-        $this->import('users', $query, self::SCHEMA_USER, $map, $filters);
+        $this->import('users', $query, self::SCHEMA_USERS, $map, $filters);
     }
 
+    /**
+     * 'Groups' in Agorakit.
+     */
     protected function roles(): void
     {
+        // Roles.
         $map = [];
-        $query = $this->porterQB()
-            ->from('Role')
+        $query = $this->porterQB()->from('Role')
             ->select();
-        $this->import('groups', $query, self::SCHEMA_GROUPS, $map);
+        $this->import('groups', $query, self::SCHEMA_ROLES, $map);
 
         // User Role.
         $map = [
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $this->porterQB()
-            ->from('UserRole')
+        $query = $this->porterQB()->from('UserRole')
             ->select();
-        $this->import('membership', $query, self::SCHEMA_MEMBERSHIP, $map);
+        $this->import('membership', $query, self::SCHEMA_USER_ROLES, $map);
     }
 
     protected function categories(): void
@@ -161,11 +158,9 @@ class Agorakit extends Target
         $filters = [
             'CountDiscussions' => 'emptyToZero',
         ];
-        $query = $this->porterQB()
-            ->from('Category')
+        $query = $this->porterQB()->from('Category')
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-
         $this->import('tags', $query, self::SCHEMA_CATEGORIES, $map, $filters);
     }
 
@@ -187,14 +182,15 @@ class Agorakit extends Target
             //'Announce' => 'status',
             //'Closed' => '',
         ];
-        $filters = [];
-        $query = $this->porterQB()
-            ->from('Discussion')
+        $query = $this->porterQB()->from('Discussion')
             ->select();
 
-        $this->import('discussions', $query, self::SCHEMA_DISCUSSIONS, $map, $filters);
+        $this->import('discussions', $query, self::SCHEMA_DISCUSSIONS, $map);
     }
 
+    /**
+     * 'Posts' in Agorakit,
+     */
     protected function comments(): void
     {
         $map = [
@@ -205,13 +201,26 @@ class Agorakit extends Target
             'DateUpdated' => 'updated_at',
             'Body' => 'body'
         ];
-        $filters = [];
-        $query = $this->porterQB()
-            ->from('Comment')
+        $query = $this->porterQB()->from('Comment')
             ->select();
 
         // @todo !hasDiscussionBody support
 
-        $this->import('posts', $query, self::SCHEMA_COMMENTS, $map, $filters);
+        $this->import('posts', $query, self::SCHEMA_COMMENTS, $map);
+    }
+
+    protected function filemap(): void
+    {
+        //
+    }
+
+    protected function attachments(): void
+    {
+        //
+    }
+
+    protected function avatars(): void
+    {
+        //
     }
 }

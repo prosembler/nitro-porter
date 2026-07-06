@@ -64,7 +64,7 @@ class Discord extends Origin
         15 => 'GUILD_FORUM',
     ];
 
-    protected const array DB_USERS = [
+    protected const array SCHEMA_USERS = [
         'nick' => 'varchar(100)',
         'avatar' => 'varchar(100)',
         'roles' => 'text',
@@ -87,14 +87,21 @@ class Discord extends Origin
         ],
     ];
 
-    protected const array DB_REACTIONS = [
+    protected const array SCHEMA_REACTIONS = [
         'message_id' => 'bigint',
         'emoji_id' => 'bigint',
         'emoji_name' => 'varchar(100)',
         'count' => 'int',
     ];
 
-    protected const array DB_ROLES = [
+    protected const array SCHEMA_USER_REACTIONS = [
+        'message_id' => 'bigint',
+        'emoji_id' => 'bigint',
+        'user_id' => 'bigint',
+        'emoji_name' => 'varchar(100)',
+    ];
+
+    protected const array SCHEMA_ROLES = [
         'id' => 'bigint',
         'name' => 'varchar(100)',
         'position' => 'int',
@@ -102,14 +109,37 @@ class Discord extends Origin
         'mentionable' => 'tinyint',
     ];
 
-    protected const array DB_EMOJIS = [
+    protected const array SCHEMA_EMOJIS = [
         'id' => 'bigint',
         'name' => 'varchar(100)',
         'user' => 'text', // author
         'animated' => 'tinyint',
     ];
 
-    protected const array DB_CHANNELS = [
+    protected const array SCHEMA_POLLS = [
+        'id' => 'bigint',
+        'is_final' => 'tinyint',
+        'text' => 'text',
+        'emoji' => 'bigint',
+        'expiry' => 'datetime',
+        'allow_multiselect' => 'tinyint',
+    ];
+
+    protected const array SCHEMA_POLL_ANSWERS = [
+        'poll_id' => 'bigint',
+        'answer_id' => 'bigint',
+        'count' => 'int',
+        'emoji_id' => 'bigint',
+        'text' => 'text',
+    ];
+
+    protected const array SCHEMA_POLL_USER_ANSWERS = [
+        'poll_id' => 'bigint',
+        'answer_id' => 'bigint',
+        'user_id' => 'bigint',
+    ];
+
+    protected const array SCHEMA_CHANNELS = [
         'id' => 'bigint',
         'type' => 'int', //@todo key?
         'guild_id' => 'bigint',
@@ -135,7 +165,7 @@ class Discord extends Origin
      * @var array Name => column type
      * @see \Porter\Source::renumber() for why an index is important.
      */
-    protected const array DB_MESSAGES = [
+    protected const array SCHEMA_MESSAGES = [
         'id' => 'bigint',
         'channel_id' => 'bigint',
         'content' => 'text',
@@ -167,17 +197,17 @@ class Discord extends Origin
             // Covering index for resuming message pulls [select id where channel_id=x order by timestamp].
             'discord_messages_resuming_index' => [
                 'type' => 'index',
-                'columns' => ['channel_id','timestamp'], // 'id' (pk) is implicitly in index
+                'columns' => ['channel_id', 'timestamp'], // 'id' (pk) is implicitly in index
             ]
         ],
     ];
 
-    protected const array DB_USERROLES = [
+    protected const array SCHEMA_USERROLES = [
         'user_id' => 'bigint',
         'role_id' => 'bigint',
     ];
 
-    protected const array DB_ATTACHMENTS = [
+    protected const array SCHEMA_ATTACHMENTS = [
         'id' => 'bigint',
         'message_id' => 'bigint',
         'filename' => 'text',
@@ -201,9 +231,6 @@ class Discord extends Origin
             'verified' => 'verified',
         ],
     ];
-
-    /** @var string Folder path to download attachment files into. */
-    protected string $attachmentFolder;
 
     /** @var array IDs of guild users used to find non-guild users. */
     protected array $guildUsers;
@@ -310,7 +337,7 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
-        $info = $this->pull($endpoint, self::DB_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS, []);
         $this->guildUsers = array_column($info['content'], 'id');
         $this->extractUserRoles($info['content']);
     }
@@ -319,7 +346,7 @@ class Discord extends Origin
     protected function roles(): void
     {
         $endpoint = "guilds/" . $this->getGuildId();
-        $this->pull($endpoint, self::DB_ROLES, 'discord_roles', 'roles');
+        $this->pull($endpoint, self::SCHEMA_ROLES, 'discord_roles', 'roles', [], [], []);
     }
 
     /**
@@ -334,7 +361,7 @@ class Discord extends Origin
                 $userRoles[] = ['user_id' => $id, 'role_id' => $roleID];
             }
         }
-        $this->extract('discord_user_roles', self::DB_USERROLES, $userRoles);
+        $this->extract('discord_user_roles', self::SCHEMA_USERROLES, $userRoles);
     }
 
     /**
@@ -376,7 +403,7 @@ class Discord extends Origin
             }
         }
         $errors += $this->originStorage->asyncDownload($files); // Final batch.
-        $this->extract('discord_attachments', self::DB_ATTACHMENTS, $data);
+        $this->extract('discord_attachments', self::SCHEMA_ATTACHMENTS, $data);
     }
 
     /**
@@ -397,7 +424,7 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
-        $info = $this->pull($endpoint, self::DB_EMOJIS, 'discord_emojis');
+        $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis', null, [], [], []);
         $this->guildEmojis = array_column($info['content'], 'id');
     }
 
@@ -462,7 +489,7 @@ class Discord extends Origin
     protected function channels(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/channels";
-        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels');
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', null, [], [], []);
     }
 
     /**
@@ -474,13 +501,13 @@ class Discord extends Origin
     {
         // Active threads.
         $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
-        $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
 
         // Archived threads.
         $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::DB_CHANNELS, 'discord_channels', 'threads');
+            $info = $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
             $this->rateLimit($info['headers']);
         }
     }
@@ -561,19 +588,19 @@ class Discord extends Origin
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::DB_MESSAGES, 'discord_messages', null, $query, $map);
+            $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map, []);
 
             // Attachments.
             $this->extractAttachments($info['content']);
 
             // Reactions & non-guild emoji used in them.
-            $this->extractReactions($info['content']);
+            $this->extractReactions($info['content'], $channelId);
 
             // Non-guild authors.
             $this->extractAuthors($info['content']);
 
             // Polls.
-            $this->extractPolls($info['content']);
+            $this->extractPolls($info['content'], $channelId);
 
             // Update status.
             if (0 === (int)$info['rows']) {
@@ -615,7 +642,7 @@ class Discord extends Origin
 
         // Insert missing users.
         $missingUsers = array_intersect_key($users, $missingUserIDs);
-        $info = $this->extract('discord_users', self::DB_USERS, $missingUsers);
+        $info = $this->extract('discord_users', self::SCHEMA_USERS, $missingUsers);
 
         // Log actions & mark users as "found".
         if (!empty($info['rows'])) { // Missing users were inserted.
@@ -629,40 +656,74 @@ class Discord extends Origin
     }
 
     /**
-     * Reactions are stored as a LIST of emoji objects on messages.
+     * From a list of messages, extract & store all reactions & their emoji.
      *
-     * Discord doesn't provide individual reaction user_ids or timestamps, only counts.
+     * In discord_reactions, store msg_id + emoji_id + count.
+     * In discord_user_reactions, store msg_id + emoji_id + user_id.
+     * In discord_emoji, store all emoji we haven't seen yet.
+     *
+     * Reactions are stored as a LIST of objects on messages, each with emoji + count.
      * @see https://docs.discord.com/developers/resources/message#reaction-object
      * @see https://discord.com/developers/docs/resources/emoji#emoji-object
      * ex: `[{"emoji":{"id":"742118343112130694","name":"gritty"},"count":1},
      *       {"emoji":{"id":"976301342576504912","name":"rockon"},"count":9},
      *       {"emoji":{"id":null,"name": "🔥"},"count":3},
      * }]`
-    */
-    protected function extractReactions(array $content): void
+     *
+     * Individual users' reactions must then be requested per message, per reaction; stored as LIST of users.
+     * @see https://docs.discord.com/developers/resources/message#get-reactions
+     * ex:  `/channels/{channel.id}/messages/{message.id}/reactions/{emoji.id}`
+     */
+    protected function extractReactions(array $content, int $channelId): void
     {
-        $reactions = array_filter(array_column($content, 'reactions', 'id'), fn ($reactions) => (!empty($reactions)));
-        if (empty($reactions)) {
+        // Filter to messages with reactions and discard other message data.
+        $msgsWithReactions = array_filter(
+            array_column($content, 'reactions', 'id'),
+            fn($reactions) => (!empty($reactions))
+        );
+        if (empty($msgsWithReactions)) {
             return;
         }
+
+        // Build lists of non-standard emoji to extract & reactions to store.
         $emojiList = [];
         $reactList = [];
-        foreach ($reactions as $msgID => $msgReactions) {
+
+        // Process all messages with reactions.
+        foreach ($msgsWithReactions as $msgId => $msgReactions) {
             foreach ($msgReactions as $reaction) {
-                if (!empty($reaction['emoji']['id'])) {
-                    $emojiList[$reaction['emoji']['id']] = $reaction['emoji']; // Only collect non-standard emoji.
+                $urlEmojiId = $emojiId = $reaction['emoji']['id'];
+
+                // Collect non-standard emoji for fetching.
+                if (!empty($emojiId)) {
+                    // Collect for fetching.
+                    $emojiList[$emojiId] = $reaction['emoji'];
+                    // Special format for GET. "To use custom emoji, you must encode it in the format name:id"
+                    $urlEmojiId = $reaction['emoji']['name'] . ':' . $emojiId;
                 }
-                // todo https://docs.discord.com/developers/resources/message#get-reactions
+
+                // Build reaction list w/ counts for storing.
                 $reactList[] = [
-                    'emoji_id' => $reaction['emoji']['id'] ?? 0, // Std unicode emoji ID = null.
+                    'emoji_id' => $emojiId ?? 0, // Std unicode emoji ID = null.
                     'emoji_name' => $reaction['emoji']['name'] ?? '',
                     'count' => $reaction['count'] ?? 0,
-                    'message_id' => $msgID,
+                    'message_id' => $msgId,
                 ];
+
+                // Pull per-user reactions.
+                $this->pull(
+                    endpoint: "/channels/$channelId/messages/$msgId/reactions/$urlEmojiId",
+                    fields: self::SCHEMA_USER_REACTIONS,
+                    tableName: 'discord_user_reactions',
+                    map: ['id' => 'user_id'],
+                    storeAll: ['message_id' => $msgId, 'emoji_id' => $emojiId] // Added feature for this use case.
+                );
             }
         }
+
+        // Store collected lists.
         $this->extractEmoji($emojiList);
-        $this->extract('discord_reactions', self::DB_REACTIONS, $reactList);
+        $this->extract('discord_reactions', self::SCHEMA_REACTIONS, $reactList);
     }
 
     /**
@@ -676,56 +737,82 @@ class Discord extends Origin
         }
         $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojiIDs); // Update in-memory list.
         $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
-        $this->extract('discord_emojis', self::DB_EMOJIS, $emojiData); // Store new emoji.
-        Log::comment("> non-guild emoji(s) added: " .  implode(',', $missingEmojiIDs));
+        $this->extract('discord_emojis', self::SCHEMA_EMOJIS, $emojiData); // Store new emoji.
+        Log::comment("> non-guild emoji(s) added: " . implode(',', $missingEmojiIDs));
     }
 
     /**
-     * Polls are stored as an object on messages.
+     * From a list of messages, extract & store all polls.
      *
+     * Polls are stored as an object on messages.
      * @see https://docs.discord.com/developers/resources/poll
+     *
+     * Answers are stored as a list of objects.
+     * @see https://docs.discord.com/developers/resources/poll#poll-answer-object-poll-answer-object-structure
+     *
+     * Answer voters are a LIST of user objects per answer.
+     * @see https://docs.discord.com/developers/resources/poll#get-answer-voters
+     * ex: /channels/{channel.id}/polls/{message.id}/answers/{answer_id}
+     *
+     * Ignores edge case where a custom emoji used in a poll option was never used as a reaction.
      */
-    protected function extractPolls(array $content): void
+    protected function extractPolls(array $content, int $channelId): void
     {
-        //question (obj)
-        //answers (objs) max 10
-            // answer_id
-            // poll_media
-        //expiry
-        //allow_multiselect
-        //layout_type
-        //results? (obj)
-            //is_finalized
-            //answer_counts (objs) - all answers
-                // id
-                // count
-    }
-
-    /**
-     * Retrieve the file.
-     */
-    protected function getFile(string $url, string $filename): void
-    {
-        if (!$this->attachmentFolder) {
+        // Filter to messages with polls and discard other message data.
+        $msgsWithPolls = array_filter(
+            array_column($content, 'poll', 'id'),
+            fn($poll) => (!empty($poll))
+        );
+        if (empty($msgsWithPolls)) {
             return;
         }
-        $path = $this->attachmentFolder . $filename;
-        if (!file_exists($path)) {
-            $this->originStorage->download($url, $path);
-        } else {
-            Log::comment("Notice: Attachment '{$filename}' already exists.");
-        }
-    }
 
-    /**
-     * Change a filename so that the basename is no more than $length characters.
-     *
-     * Prevents error "Failed to open stream: File name too long".
-     */
-    protected function limitFilenameLength(string $filename, int $length = 100): string
-    {
-        $ext = pathinfo($filename, PATHINFO_EXTENSION);
-        return substr(pathinfo($filename, PATHINFO_FILENAME), 0, $length) . '.' . $ext;
+        // Build lists of all polls & answers.
+        $pollData = [];
+        $answerData = [];
+
+        // Process all messages with reactions.
+        foreach ($msgsWithPolls as $msgId => $poll) {
+            // Build list of all polls in these messages.
+            $pollData = [
+                'message_id' => $msgId, // 1:1 poll:msg associations, so this is the poll_id too.
+                'text' => $poll['text'],
+                'allow_multiselect' => $poll['allow_multiselect'],
+                'expiry' => $poll['expiry'],
+                'emoji_id' => $poll['question']['emoji']['id'],
+                'is_finalized' => (!empty($poll['results'])) ? $poll['results']['is_finalized'] : 0,
+            ];
+
+            // Build list of all answers in these messages w/ counts for storage.
+            $counts = null;
+            if (!empty($poll['results'])) {
+                // Index answer counts by id so they can be referenced in the loop.
+                $counts = array_column($poll['results']['answer_counts'], 'count', 'id');
+            }
+            foreach ($poll['answers'] as $answer) {
+                $answerData = [
+                    'message_id' => $msgId, // 'poll_id' would be the same.
+                    'answer_id' => $answer['answer_id'],
+                    'text' => $answer['poll_media']['text'],
+                    'emoji_id' => $answer['poll_media']['emoji']['id'],
+                    'count' => ($counts) ? $counts[$answer['answer_id']] : 0,
+                ];
+
+                // Pull user-answers. We only need `user_id` from the API.
+                $this->pull(
+                    endpoint: "/channels/$channelId/polls/$msgId/answers/" . $answer['answer_id'],
+                    fields: self::SCHEMA_POLL_USER_ANSWERS,
+                    tableName: 'discord_poll_user_answers',
+                    key: 'users',
+                    map: ['id' => 'user_id'],
+                    storeAll: ['poll_id' => $msgId, 'answer_id' => $answer['answer_id']]
+                );
+            }
+        }
+
+        // Store collected lists.
+        $this->extract('discord_polls', self::SCHEMA_POLLS, $pollData);
+        $this->extract('discord_poll_answers', self::SCHEMA_POLL_ANSWERS, $answerData);
     }
 
     /**

@@ -173,54 +173,74 @@ class Discord extends Source
 
     protected function reactions(): void
     {
-        // todo non-custom emoji reactions => Tags
+        // Tag: Emoji => Reactions => Tags are all the same thing for our purposes.
         $map = [
-            'EmojiID' => 'TagID',
+            'emoji_id' => 'TagID',
+            'name' => 'Name',
         ];
-        $query = $this->sourceQB()->from('discord_emojis')->select('discord_emojis.*')
+        $query = $this->sourceQB()->from('discord_emojis')
+            ->select('discord_emojis.*')
             ->selectRaw('"reaction" as Type');
         $this->export('Tag', $query, $map);
 
-        // All tags are reactions.
-        $query = $this->porterQB()->from('Tag')->select(['Name', 'TagID']);
+        // ReactionType: All Tags we just added are Reactions.
+        $query = $this->porterQB()->from('Tag') // NOTE: PORTERQB!
+            ->select(['Name', 'TagID']);
         $this->export('ReactionType', $query);
 
+        // UserTag: Individual user reactions.
         $map = [
-            'TagID',
-            'DiscussionID',
-            'DateInserted',
+            'emoji_id' => 'TagID',
+            'message_id' => 'RecordID',
+            'user_id' => 'UserID',
         ];
-        $query = $this->sourceQB()->from('discord_reactions')->select('discord_reactions.*');
-        $this->export('TagDiscussion', $query, $map);
+        $query = $this->sourceQB()->from('discord_user_reactions')
+            ->select('discord_user_reactions.*');
+        $this->export('UserTag', $query, $map);
+
+        // UserTag: Reaction counts.
+        $map = [
+            'emoji_id' => 'TagID',
+            'message_id' => 'RecordID',
+            'count' => 'Total',
+        ];
+        $query = $this->sourceQB()->from('discord_reactions')
+            ->select('discord_reactions.*')
+            ->selectRaw('"Comment-Total" as RecordType');
+        $this->export('UserTag', $query, $map);
     }
 
     protected function polls(): void
     {
         $map = [
             'id' => 'PollID',
-            'name' => 'Name',
-            //'DiscussionID',
-            'message_id' => 'CommentID',
-            //'CountOptions',
-            //'CountVotes',
-            //'DateInserted',
-            //'InsertUserID',
+            'text' => 'Name',
+            'allow_multiselect' => 'AllowMultiple',
+            'expiry' => 'DateClosed',
         ];
-        $query = $this->sourceQB()->from('discord_polls')->select('discord_polls.*');
+        $query = $this->sourceQB()->from('discord_polls')
+            ->join('discord_messages', 'discord_messages.id', '=', 'discord_polls.id')
+            ->select('discord_polls.*')
+            ->selectRaw('discord_polls.id as CommentID')
+            ->selectRaw('discord_messages.authorid as InsertUserID')
+            ->selectRaw('discord_messages.timestamp as DateInserted')
+            ->selectRaw('discord_messages.edited_timestamp as DateUpdated')
+            ->selectRaw('discord_messages.channel_id as DiscussionID');
         $this->export('Poll', $query, $map);
 
         $map = [
-            'id' => 'PollOptionID',
-            //'PollID',
-            //'Body',
-            //'CountVotes',
+            'poll_id' => 'PollID',
+            'answer_id' => 'PollOptionID',
+            'text' => 'Body',
+            'count' => 'CountVotes',
+            'emoji_id' => 'EmojiID',
         ];
         $query = $this->sourceQB()->from('discord_polloptions')->select('discord_polloptions.*');
         $this->export('PollOptions', $query, $map);
 
         $map = [
-            //'UserID',
-            //'PollOptionID',
+            'user_id' => 'UserID',
+            'answer_id' => 'PollOptionID',
         ];
         $query = $this->sourceQB()->from('discord_pollvotes')->select('discord_pollvotes.*');
         $this->export('PollVote', $query, $map);

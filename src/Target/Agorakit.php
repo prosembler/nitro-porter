@@ -23,14 +23,14 @@ class Agorakit extends Target
             'Passwords' => 1,
             'Discussions' => 1,
             'Comments' => 1,
-            'Categories' => 1, // @todo TAGS
-            'Roles' => 1, // @todo GROUPS
-            'Attachments' => 1, // @todo FILES
+            'Categories' => 1,
+            'Roles' => 1,
+            'Attachments' => 1,
             'Avatars' => 1,
+            'Reactions' => 0, // Partial
             // @todo Figure out support options.
             'Tags' => 0,
             'Groups' => 0,
-            'Reactions' => 0,
             'Bookmarks' => 0,
             'Polls' => 0,
             'Badges' => 0,
@@ -143,7 +143,6 @@ class Agorakit extends Target
             'Email' => 'email',
             'Password' => 'password',
             'Confirmed' => 'verified',
-            //'Photo' => 'avatar_url',
             'DateInserted' => 'created_at',
             'Admin' => 'admin',
         ];
@@ -203,17 +202,11 @@ class Agorakit extends Target
             'Body' => 'body',
             'DateInserted' => 'created_at',
             'DateUpdated' => 'updated_at',
-            //'FirstCommentID' => 'first_post_id',
-            //'LastCommentID' => 'last_post_id',
-            //'DateLastComment' => 'last_posted_at',
-            //'LastCommentUserID' => 'last_posted_user_id',
             'CountComments' => 'total_comments',
-            //'Announce' => 'status',
-            //'Closed' => '',
+            //'Announce'/'Closed' => 'status',
         ];
         $query = $this->porterQB()->from('Discussion')
             ->select();
-
         $this->import('discussions', $query, self::SCHEMA_DISCUSSIONS, $map);
     }
 
@@ -232,9 +225,6 @@ class Agorakit extends Target
         ];
         $query = $this->porterQB()->from('Comment')
             ->select();
-
-        // @todo !hasDiscussionBody support
-
         $this->import('posts', $query, self::SCHEMA_COMMENTS, $map);
     }
 
@@ -246,7 +236,6 @@ class Agorakit extends Target
     protected function reactions(): void
     {
         $map = [
-            //'id',
             'UserID' => 'user_id',
             'RecordID' => 'reactable_id',
             'RecordType' => 'reactable_type',
@@ -257,7 +246,6 @@ class Agorakit extends Target
             ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
             ->select()
             ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
-
         $this->import('reactions', $query, self::SCHEMA_REACTIONS, $map);
     }
 

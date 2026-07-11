@@ -23,8 +23,7 @@ Alternatively, connect a desktop app to MariaDB on `localhost:3308` with name & 
 
 ### Manual Localhost (alternate)
 
-!!! info "Non-Docker Only"
-You don't need to complete this section if you're using Docker Desktop. Skip to "Basic Usage" below.
+!!! info "Non-Docker Only" — If using Docker (above), skip to "Basic Usage" (below)
 
 If you're doing many migrations or have huge datasets, you may which to avoid Docker. In this case, you need:
 

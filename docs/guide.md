@@ -28,20 +28,20 @@ You don't need to complete this section if you're using Docker Desktop. Skip to 
 
 If you're doing many migrations or have huge datasets, you may which to avoid Docker. In this case, you need:
 
-* PHP 8.4+ (CLI-only is fine)
-* MariaDB & its PDO driver for PHP (or whichever databases your platforms require)
-* 256MB `memory_limit` for PHP (Nitro Porter will attempt to do this automatically)
+* PHP 8.4+ (CLI-only is fine) with a 256MB+ `memory_limit` (Nitro Porter will attempt to set this automatically)
+* MariaDB & its PDO driver for PHP
+* Any database connections your platforms require
 
 You can optionally follow my [PHP localhost guide for Mac](https://lincolnwebs.com/php-localhost/).
 
 With a configured localhost, then:
 
-1. [Get Composer](https://getcomposer.org/doc/00-intro.md#installation-linux-unix-macos).
-1. Make sure Composer is [in your PATH](https://www.uptimia.com/questions/how-to-add-composervendorbin-to-your-path).
-1. `composer global require "prosembler/nitro-porter"`.
-1. Go to `prosembler/nitro-porter` within your Composer directory.
-   1. To do this on MacOS: `cd ~/.composer/vendor/prosembler/nitro-porter`
-1. Copy `config-sample.php` as `config.php`. 
+1. [Get Composer](https://getcomposer.org/doc/00-intro.md#installation-linux-unix-macos) and confirm it is [in your PATH](https://www.uptimia.com/questions/how-to-add-composervendorbin-to-your-path).
+1. Add Nitro Porter as a global requirement: `composer global require "prosembler/nitro-porter"`.
+1. Go to the `prosembler/nitro-porter` directory Composer just created.
+    1. On MacOS: `cd ~/.composer/vendor/prosembler/nitro-porter`
+1. Copy `config-sample.php` as `config.php`.
+    1. On MacOS or Linux: `cp config-sample.php config.php`
 
 ## Basic Usage
 

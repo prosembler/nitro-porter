@@ -16,8 +16,8 @@ class Agorakit extends Target
     public const array SUPPORTED = [
         'name' => 'Agorakit',
         'defaultTablePrefix' => '',
-        //'avatarPath' => '',
-        //'attachmentPath' => '',
+        'avatarPath' => 'storage/app/users',
+        'attachmentPath' => 'storage/app/import',
         'features' => [
             'Users' => 1,
             'Passwords' => 1,
@@ -89,12 +89,31 @@ class Agorakit extends Target
 
     protected const SCHEMA_ROLES = [
         'id' => 'int',
-        'name_singular' => 'varchar(100)',
+        'name' => 'varchar(100)',
+        'body' => 'text',
     ];
 
     protected const SCHEMA_USER_ROLES = [
         'user_id' => 'int',
         'group_id' => 'int',
+    ];
+
+    protected const SCHEMA_ATTACHMENTS = [
+        'id' => 'int',
+        'parent_id' => 'int',
+        'group_id' => 'int',
+        'user_id' => 'int',
+        'item_type' => 'int',
+        'filesize' => 'int',
+        'status' => 'int',
+        'name' => 'varchar(100)',
+        'mime' => 'varchar(100)',
+        'path' => 'text',
+        'original_filename' => 'text',
+        'original_extension' => 'text',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     /**
@@ -209,18 +228,88 @@ class Agorakit extends Target
         $this->import('posts', $query, self::SCHEMA_COMMENTS, $map);
     }
 
-    protected function filemap(): void
-    {
-        //
-    }
 
+
+    /**
+     * 'Files' in Agorakit.
+     */
     protected function attachments(): void
     {
-        //
+        $map = [
+            'MediaID' => 'id',
+            'ForeignID' => 'parent_id', // @todo !hasDiscussionBody support (ForeignTable)
+            'InsertUserID' => 'user_id',
+            'item_type',
+            'Size' => 'filesize',
+            //'Active' => 'status', // filter required?
+            'Name' =>  'name',
+            'Type' => 'mime',
+            'Path' => 'path',
+            'DateInserted' => 'created_at',
+            //'original_extension'
+            //'original_filename'
+            //'group_id',
+        ];
+        $query = $this->porterQB()->from('Media')->select();
+        $this->import('files', $query, self::SCHEMA_ATTACHMENTS, $map);
     }
 
+    /**
+     * Avatars are auto-detected by filename in Agorakit.
+     */
     protected function avatars(): void
     {
-        //
+        // noop
+    }
+
+    /**
+     * Assign a new location for message file attachments.
+     *
+     * Format: {approot}/storage/app/groups/{group_id}/files/{file_id}/{datestamp}-{originalname}
+     * Use a generic 'imports' folder instead of attempting to divvy by group.
+     * @see self::filemap()
+     * @see self::SUPPORTED [attachmentPath]
+     */
+    protected function mapAttachments(string $fileTarget): int
+    {
+        $rows = 0;
+        $attachments = $this->porterQB()->from('Media')
+            ->select(['MediaID'])
+            ->selectRaw("concat('{$fileTarget}/', Path) as TargetFullPath")
+            ->whereNotNull("Path")
+            ->get();
+        foreach ($attachments as $attachment) {
+            $rows += $this->dbOutput()->affectingStatement("update `PORT_Media`
+                set TargetFullPath = " . $this->dbOutput()->escape($attachment->TargetFullPath) . "
+                where MediaID = {$attachment->MediaID}");
+        }
+
+        return $rows;
+    }
+
+    /**
+     * Assign a new location for user photos / avatars.
+     *
+     * Format: {approot}/storage/app/users/{user_id}/cover.jpg
+     * We cannot convert to .jpg, so reuse existing file extension.
+     * @see self::filemap()
+     * @see self::SUPPORTED [avatarPath]
+     */
+    protected function mapAvatars(string $fileTarget): int
+    {
+        $rows = 0;
+        $avatars = $this->porterQB()->from('User')
+            ->select(['UserID'])
+            ->selectRaw("concat('{$fileTarget}', UserID, '/cover.', SUBSTRING_INDEX(Photo,'.',-1)) 
+                as TargetAvatarFullPath")
+            ->whereNotNull("SourceAvatarFullPath")
+            ->get();
+        foreach ($avatars as $avatar) {
+            $rows += $this->dbOutput()->affectingStatement("update `PORT_User`
+                set TargetAvatarFullPath = " . $this->dbOutput()->escape($avatar->TargetAvatarFullPath) . "
+                where UserID = {$avatar->UserID}");
+        }
+
+        return $rows;
     }
 }

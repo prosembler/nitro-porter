@@ -60,7 +60,7 @@ function createDiscussionSlugs(mixed $value, string $column, array $row): string
 /**
  * Disallow zero-equivalent dates.
  */
-function forceDate(string $value): string
+function forceDate(?string $value): string
 {
     if (!$value || str_contains($value, '0000-00-00')) {
         return gmdate('Y-m-d H:i:s');
@@ -72,7 +72,7 @@ function forceDate(string $value): string
 /**
  * Return a valid IPv4 addresses or null.
  */
-function forceIP4(string $ip): ?string
+function forceIP4(?string $ip): ?string
 {
     $ip = '';
     if (preg_match('`(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`', $ip, $m)) {
@@ -89,7 +89,7 @@ function forceIP4(string $ip): ?string
  * @param string $str A string to be formatted.
  * @return string
  */
-function formatUrl(string $str): string
+function formatUrl(?string $str): string
 {
     $urlTranslations = array(
         '–' => '-',
@@ -370,9 +370,17 @@ function formatUrl(string $str): string
 }
 
 /**
+ * Alias urldecode() to sidestep native function overloading.
+ */
+function urlDecoder(?string $value): string
+{
+    return urldecode($value);
+}
+
+/**
  * Decode the HTML out of a value.
  */
-function HTMLDecoder(string $value): string
+function HTMLDecoder(?string $value): string
 {
     // Uses default flags as of PHP 8.1.
     $encoding = defined('PORTER_INPUT_ENCODING') ? PORTER_INPUT_ENCODING : 'UTF-8';
@@ -448,7 +456,7 @@ function guessFormat(mixed $value): string
 /**
  * Derive mimetype from file extension.
  */
-function mimeTypeFromExtension(string $value): string
+function mimeTypeFromExtension(?string $value): string
 {
     $value = pathinfo($value, PATHINFO_EXTENSION);
     return match ($value) {
@@ -475,7 +483,7 @@ function cleanBodyBrackets(mixed $value): mixed
 /**
  * Filter for bb_Code_Trick_Reverse.
  */
-function bbPressTrim(string $text): string
+function bbPressTrim(?string $text): string
 {
     return rtrim(bb_Code_Trick_Reverse($text));
 }
@@ -484,7 +492,7 @@ function bbPressTrim(string $text): string
  * Fixes bbPress text formatting issues.
  * @see bbPressTrim()
  */
-function bb_Code_Trick_Reverse(string $text): string
+function bb_Code_Trick_Reverse(?string $text): string
 {
     $text = preg_replace_callback("!(<pre><code>|<code>)(.*?)(</code></pre>|</code>)!s", 'bb_decodeit', $text);
     $text = str_replace(array('<p>', '<br />'), '', $text);
@@ -534,7 +542,7 @@ function bb_Decodeit(array $matches): string
  * @param string $path
  * @return string
  */
-function vanillaPhoto(string $path): string
+function vanillaPhoto(?string $path): string
 {
     // Skip processing for blank entries.
     if (empty($path)) {

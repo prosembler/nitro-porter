@@ -221,11 +221,11 @@ class Kunena extends Source
             'mesid' => 'ForeignID',
             'userid' => 'InsertUserID',
             'size' => 'Size',
-            'path2' => array('Column' => 'Path', 'Filter' => 'urlDecode'),
+            'path2' => array('Column' => 'Path', 'Filter' => 'urlDecoder'),
             'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
             'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
             'filetype' => 'Type',
-            'filename' => array('Column' => 'Name', 'Filter' => 'urlDecode'),
+            'filename' => array('Column' => 'Name', 'Filter' => 'urlDecoder'),
             'time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
         );
         $this->export(

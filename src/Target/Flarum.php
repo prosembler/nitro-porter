@@ -860,40 +860,11 @@ class Flarum extends Target
     }
 
     /**
-     * Setup the destination values for FileTransfer.
-     *
-     * Set PORT_Media.TargetFullPath and PORT_User.TargetAvatarFullPath
-     *
-     */
-    public function filemap(): void
-    {
-        // Abort if we lack support.
-        if (!$this->getFileTransferSupport()) {
-            return;
-        }
-
-        // Map attachments.
-        if ($fileTarget = $this->getPath('attachment', 'full')) {
-            $this->mapAttachments($fileTarget);
-        }
-
-        // Map avatars.
-        if ($fileTarget = $this->getPath('avatar', 'full')) {
-            $this->mapAvatars($fileTarget);
-        }
-    }
-
-    /**
      * Use Media.Path to set Media.TargetFullPath.
      */
-    protected function mapAttachments(string $fileTarget): void
+    protected function mapAttachments(string $fileTarget): int
     {
-        // Start timer.
-        $start = microtime(true);
         $rows = 0;
-        Log::comment("Mapping attachments...");
-
-        // Query & update.
         $attachments = $this->porterQB()->from('Media')
             ->select(['MediaID'])
             // Reuse the filename in `Path` (not `Name`) in case it's been made guaranteed-unique.
@@ -901,54 +872,33 @@ class Flarum extends Target
             // Assume we want the final Path if we got this far, so fix it.
             ->whereNotNull("Path")
             ->get();
-        $memory = memory_get_usage();
         foreach ($attachments as $attachment) {
             $rows += $this->dbOutput()->affectingStatement("update `PORT_Media`
                 set TargetFullPath = " . $this->dbOutput()->escape($attachment->TargetFullPath) . "
                 where MediaID = {$attachment->MediaID}");  // @todo index needed?
         }
 
-        // Report.
-        Log::storage(
-            'map',
-            'Media.TargetFullPath',
-            microtime(true) - $start,
-            $rows,
-            $memory
-        );
+        return $rows;
     }
 
     /**
      * Use User.Photo to set Media.TargetAvatarFullPath.
      */
-    protected function mapAvatars(string $fileTarget): void
+    protected function mapAvatars(string $fileTarget): int
     {
-        // Start timer.
-        $start = microtime(true);
         $rows = 0;
-        Log::comment("Mapping avatars...");
-
-        // Query & update.
         $avatars = $this->porterQB()->from('User')
             ->select(['UserID'])
             ->selectRaw("concat('{$fileTarget}', Photo) as TargetAvatarFullPath")
             // Local-file Photo should begin with a slash.
             ->whereNotNull("SourceAvatarFullPath") // 'Photo' could be a URL otherwise.
             ->get();
-        $memory = memory_get_usage();
         foreach ($avatars as $avatar) {
             $rows += $this->dbOutput()->affectingStatement("update `PORT_User`
                     set TargetAvatarFullPath = " . $this->dbOutput()->escape($avatar->TargetAvatarFullPath) . "
                     where UserID = {$avatar->UserID}"); // @todo index needed?
         }
 
-        // Report.
-        Log::storage(
-            'map',
-            'User.TargetAvatarFullPath',
-            microtime(true) - $start,
-            $rows,
-            $memory
-        );
+        return $rows;
     }
 }

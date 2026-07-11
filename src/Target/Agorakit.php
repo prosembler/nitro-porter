@@ -116,6 +116,16 @@ class Agorakit extends Target
         'deleted_at' => 'datetime',
     ];
 
+    protected const SCHEMA_REACTIONS = [
+        'id' => 'int',
+        'user_id' => 'int',
+        'reactable_id' => 'int',
+        'reactable_type' => 'varchar(100)',
+        'type' => 'varchar(100)',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
     /**
      * Check for issues that will break the import.
      */
@@ -228,7 +238,28 @@ class Agorakit extends Target
         $this->import('posts', $query, self::SCHEMA_COMMENTS, $map);
     }
 
+    /**
+     * 2026-07
+     * Agorakit only supports a subset of named emoji reactions hard-coded to /images/reactions/{type}.png
+     * so you'd need to pass those files along as well.
+     */
+    protected function reactions(): void
+    {
+        $map = [
+            //'id',
+            'UserID' => 'user_id',
+            'RecordID' => 'reactable_id',
+            'RecordType' => 'reactable_type',
+            'Name' => 'type', // Expects /images/reactions/{filename}.png.
+            'DateInserted' => 'created_at',
+        ];
+        $query = $this->porterQB()->from('UserTag ut')
+            ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
+            ->select()
+            ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
 
+        $this->import('reactions', $query, self::SCHEMA_REACTIONS, $map);
+    }
 
     /**
      * 'Files' in Agorakit.
@@ -237,9 +268,9 @@ class Agorakit extends Target
     {
         $map = [
             'MediaID' => 'id',
-            'ForeignID' => 'parent_id', // @todo !hasDiscussionBody support (ForeignTable)
+            'ForeignID' => 'parent_id',
             'InsertUserID' => 'user_id',
-            'item_type',
+            'ForeignTable' => 'item_type',
             'Size' => 'filesize',
             //'Active' => 'status', // filter required?
             'Name' =>  'name',

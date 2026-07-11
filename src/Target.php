@@ -204,4 +204,42 @@ abstract class Target extends Package
         // Report.
         Log::storage('import', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
     }
+
+    /**
+     * Setup the destination values for FileTransfer.
+     * Requires package implements mapAttachments() and/or mapAvatars().
+     */
+    protected function filemap(): void
+    {
+        // Abort if we lack support.
+        if (!$this->getFileTransferSupport()) {
+            return;
+        }
+
+        // Map attachments if self::SUPPORTED[attachmentPath] exists.
+        if (method_exists($this, 'mapAttachments') && $fileTarget = $this->getPath('attachment', 'full')) {
+            // Start timer.
+            $start = microtime(true);
+            Log::comment("Mapping attachments...");
+
+            // Query & update.
+            $rows = $this->mapAttachments($fileTarget);
+
+            // Report.
+            Log::storage('map', 'Media.TargetFullPath', microtime(true) - $start, $rows, memory_get_usage());
+        }
+
+        // Map avatars if self::SUPPORTED[avatarPath] exists.
+        if (method_exists($this, 'mapAvatars') && $fileTarget = $this->getPath('avatar', 'full')) {
+            // Start timer.
+            $start = microtime(true);
+            Log::comment("Mapping avatars...");
+
+            // Query & update.
+            $rows = $this->mapAvatars($fileTarget);
+
+            // Report.
+            Log::storage('map', 'User.TargetAvatarFullPath', microtime(true) - $start, $rows, memory_get_usage());
+        }
+    }
 }

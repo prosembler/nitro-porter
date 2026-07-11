@@ -50,11 +50,50 @@ class Flarum extends Target
         'fileTransferSupport' => true,
     ];
 
+    protected const SCHEMA_USERS = [
+        'id' => 'int',
+        'username' => 'varchar(100)',
+        'email' => 'varchar(100)',
+        'is_email_confirmed' => 'tinyint',
+        'password' => 'varchar(100)',
+        'avatar_url' => 'varchar(100)',
+        'joined_at' => 'datetime',
+        'last_seen_at' => 'datetime',
+        'discussion_count' => 'int',
+        'comment_count' => 'int',
+    ];
+
+    protected const SCHEMA_ROLES = [
+        'id' => 'int',
+        'name_singular' => 'varchar(100)',
+        'name_plural' => 'varchar(100)',
+        'color' => 'varchar(20)',
+        'icon' => 'varchar(100)',
+        'is_hidden' => 'tinyint',
+    ];
+
+    protected const SCHEMA_USER_ROLES = [
+        'user_id' => 'int',
+        'group_id' => 'int',
+    ];
+
+    protected const SCHEMA_CATEGORIES = [
+        'id' => 'int',
+        'name' => 'varchar(100)',
+        'slug' => 'varchar(100)',
+        'description' => 'text',
+        'parent_id' => 'int',
+        'position' => 'int',
+        'discussion_count' => 'int',
+        'is_hidden' => 'tinyint',
+        'is_restricted' => 'tinyint',
+    ];
+
     /**
      * @var array Table structure for `posts`.
      * @see \Porter\Postscript\Flarum::numberPosts() for 'keys' requirement.
      */
-    protected const DB_STRUCTURE_POSTS = [
+    protected const SCHEMA_POSTS = [
         'id' => 'int',
         'discussion_id' => 'int',
         'user_id' => 'int',
@@ -80,7 +119,7 @@ class Flarum extends Target
      * @var array Table structure for 'discussions`.
      * @see \Porter\Postscript\Flarum::numberPosts() for 'keys' requirement.
      */
-    protected const DB_STRUCTURE_DISCUSSIONS = [
+    protected const SCHEMA_DISCUSSIONS = [
         'id' => 'int',
         'user_id' => 'int',
         'title' => 'varchar(200)',
@@ -106,6 +145,105 @@ class Flarum extends Target
         ],
     ];
 
+    protected const SCHEMA_DISCUSSION_TAGS = [
+        'discussion_id' => 'int',
+        'tag_id' => 'int',
+    ];
+
+    protected const SCHEMA_BOOKMARKS = [
+        'discussion_id' => 'int',
+        'user_id' => 'int',
+        'last_read_at' => 'datetime',
+        'subscription' => [null, 'follow', 'ignore'],
+        'last_read_post_number' => 'int',
+        'keys' => [
+            'FLA_discussion_user_discussion_id_foreign' => [
+                'type' => 'index',
+                'columns' => ['discussion_id'],
+            ],
+        ],
+    ];
+
+    protected const SCHEMA_ATTACHMENTS = [
+        'id' => 'int',
+        'actor_id' => 'int',
+        'discussion_id' => 'int',
+        'post_id' => 'int',
+        'base_name' => 'varchar(255)', // "download as"
+        'path' => 'varchar(255)', // from /forumroot/assets/files
+        'url' => 'varchar(255)',
+        'type' => 'varchar(255)', // MIME
+        'size'  => 'int', // bytes
+        'created_at' => 'datetime',
+        'upload_method' => 'varchar(255)', // Probably just 'local'
+        'tag' => 'varchar(255)', // Required; generates preview in Profile -> "My Media"
+    ];
+
+    protected const SCHEMA_BADGES = [
+        'id' => 'int',
+        'name' => 'varchar(200)',
+        'image' => 'text',
+        'description' => 'text',
+        'badge_category_id' => 'int',
+        'points' => 'int',
+        'created_at' => 'datetime',
+        'is_visible' => 'tinyint',
+    ];
+
+    protected const SCHEMA_USER_BADGES = [
+        'badge_id' => 'int',
+        'user_id' => 'int',
+        'assigned_at' => 'datetime',
+        'description' => 'text',
+    ];
+
+    protected const SCHEMA_REACTIONS = [
+        'id' => 'int',
+        'identifier' => 'varchar(200)',
+        'type' => 'varchar(200)',
+        'enabled' => 'tinyint',
+        'display' => 'varchar(200)',
+    ];
+
+    protected const SCHEMA_POST_REACTIONS = [
+        'id' => 'int',
+        'post_id' => 'int',
+        'user_id' => 'int',
+        'reaction_id' => 'int',
+        'created_at' => 'timestamp',
+        'updated_at' => 'timestamp',
+    ];
+
+    protected const SCHEMA_POLLS = [
+        'id' => 'int',
+        'question' => 'varchar(200)',
+        'discussion_id' => 'int',
+        'user_id' => 'int',
+        'public_poll' => 'tinyint', // Map to "Anonymous" somehow?
+        'end_date' => 'datetime', // Using date created here will close all polls, but work fine.
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'vote_count' => 'int',
+    ];
+
+    protected const SCHEMA_POLL_OPTIONS = [
+        'id' => 'int',
+        'answer' => 'varchar(200)',
+        'poll_id' => 'int',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+        'vote_count' => 'int',
+    ];
+
+    protected const SCHEMA_POLL_VOTES = [
+            //id
+            'poll_id' => 'int',
+            'option_id' => 'int',
+            'user_id' => 'int',
+            'created_at' => 'timestamp',
+            'updated_at' => 'timestamp',
+        ];
+
     /** @var int Offset for inserting OP content into the posts table. */
     protected int $discussionPostOffset = 0;
 
@@ -120,38 +258,9 @@ class Flarum extends Target
      */
     public function validate(): void
     {
-        $this->uniqueUserNames();
-        $this->uniqueUserEmails();
-    }
-
-    /**
-     * @return array
-     */
-    protected function getStructureDiscussions()
-    {
-        $structure = self::DB_STRUCTURE_DISCUSSIONS;
-        // fof/gamification — no data, just prevent failure (no default values are set)
-        if ($this->hasOutputSchema('discussions', ['votes'])) {
-            $structure['votes'] = 'int';
-            $structure['hotness'] = 'double';
-        }
-        if ($this->hasOutputSchema('discussions', ['view_count'])) {
-            $structure['view_count'] = 'int'; // flarumite/simple-discussion-views
-        }
-        return $structure;
-    }
-
-    /**
-     * Flarum must have unique usernames. Report users skipped (because of `insert ignore`).
-     *
-     * Unsure this could get automated fix. You'd have to determine which has/have data attached and possibly merge.
-     * You'd also need more data from findDuplicates, especially the IDs.
-     * Folks are just gonna need to manually edit their existing forum data for now to rectify dupe issues.
-     *
-     * @throws \Exception
-     */
-    public function uniqueUserNames(): void
-    {
+        // Flarum must have unique usernames. Report users skipped (because of `insert ignore`).
+        // Unsure fix could be automated. Manually edit existing forum data for now to rectify dupe issues.
+        // Would need to find data attached & possibly merge. Would need IDs etc from findDuplicates().
         $allowlist = [
             '[Deleted User]',
             '[DeletedUser]',
@@ -163,70 +272,51 @@ class Flarum extends Target
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
-    }
 
-    /**
-     * Flarum must have unique emails. Report users skipped (because of `insert ignore`).
-     *
-     * @throws \Exception
-     * @see uniqueUserNames
-     *
-     */
-    public function uniqueUserEmails(): void
-    {
+        // Flarum must have unique emails. Report users skipped (because of `insert ignore`).
         $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
     }
 
-    /**
-     * Main import process.
-     */
-    public function run(): void
+    protected function setup(): void
     {
         // Ignore constraints on tables that block import.
         $this->ignoreOutputDuplicates('users');
+    }
 
-        // Map a file transfer.
-        $this->mapFileTransfer();
+    protected function precontent(): void
+    {
+        // Singleton factory; depends on Users being done.
+        Formatter::instance()->buildUserMap($this);
+    }
 
-        $this->users();
-        $this->roles(); // 'Groups' in Flarum
-        $this->categories(); // 'Tags' in Flarum
+    /**
+     * Duplicated logic between discussions() and privateMessages() for Flarum plugin reasons.
+     */
+    protected function getDiscussionSchema(): array
+    {
+        $structure = self::SCHEMA_DISCUSSIONS;
 
-        // Singleton factory; big timing issue; depends on Users being done.
-        Formatter::instance()->buildUserMap($this); // @todo Hook for pre-UGC import?
+        // fof/gamification — no data, just prevent failure (no default values are set)
+        if ($this->hasOutputSchema('discussions', ['votes'])) {
+            $structure['votes'] = 'int';
+            $structure['hotness'] = 'double';
+        }
 
-        $this->discussions();
-        $this->bookmarks(); // Requires addon `flarum/subscriptions`
-        $this->comments(); // 'Posts' in Flarum
+        // flarumite/simple-discussion-views
+        if ($this->hasOutputSchema('discussions', ['view_count'])) {
+            $structure['view_count'] = 'int';
+        }
 
-        $this->badges(); // Requires addon `17development/flarum-user-badges`
-        $this->polls(); // Requires addon `fof/pollsx`
-        $this->reactions(); // Requires addon `fof/reactions`
-
-        $this->privateMessages(); // Requires addon `fof/byobu`
-
-        $this->attachments(); // Requires discussions, comments, and PMs have imported.
+        return $structure;
     }
 
     /**
      */
     protected function users(): void
     {
-        $structure = [
-            'id' => 'int',
-            'username' => 'varchar(100)',
-            'email' => 'varchar(100)',
-            'is_email_confirmed' => 'tinyint',
-            'password' => 'varchar(100)',
-            'avatar_url' => 'varchar(100)',
-            'joined_at' => 'datetime',
-            'last_seen_at' => 'datetime',
-            'discussion_count' => 'int',
-            'comment_count' => 'int',
-        ];
         $map = [
             'UserID' => 'id',
             'Name' => 'username',
@@ -242,16 +332,15 @@ class Flarum extends Target
             'Name' => 'fixDuplicateDeletedNames',
             'Email' => 'fixNullEmails',
         ];
-        $query = $this->porterQB()
-            ->from('User')
+        $query = $this->porterQB()->from('User')
             ->select()
             ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
 
-        $this->import('users', $query, $structure, $map, $filters);
+        $this->import('users', $query, self::SCHEMA_USERS, $map, $filters);
     }
 
     /**
-     * Flarum handles role assignment in a magic way.
+     * 'Groups' in Flarum. Flarum handles role assignment in a magic way.
      *
      * This compensates by shifting all RoleIDs +4, rendering any old 'Member' or 'Guest' role useless & deprecated.
      * @see https://docs.flarum.org/extend/permissions/
@@ -259,29 +348,19 @@ class Flarum extends Target
      */
     protected function roles(): void
     {
-        $structure = [
-            'id' => 'int',
-            'name_singular' => 'varchar(100)',
-            'name_plural' => 'varchar(100)',
-            'color' => 'varchar(20)',
-            'icon' => 'varchar(100)',
-            'is_hidden' => 'tinyint',
-        ];
-        $map = [];
-
         // Verify support.
         if (!$this->hasPortSchema('UserRole')) {
             Log::comment('Skipping import: Roles (Source lacks support)');
-            $this->importEmpty('groups', $structure);
-            $this->importEmpty('group_user', $structure);
+            $this->importEmpty('groups', self::SCHEMA_ROLES);
+            $this->importEmpty('group_user', self::SCHEMA_ROLES);
             return;
         }
 
         // Delete orphaned user role associations (deleted users).
         $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
-        $query = $this->porterQB()
-            ->from('Role')
+        // Roles.
+        $query = $this->porterQB()->from('Role')
             // Flarum reserves 1-3 & uses 4 for mods by default.
             ->selectRaw("(RoleID + 4) as id")
             // Singular vs plural is an uncommon feature; don't guess at it, just duplicate the Name.
@@ -289,41 +368,24 @@ class Flarum extends Target
             ->selectRaw('COALESCE(Name, CONCAT("role", RoleID)) as name_plural') // Cannot be null.
             // Hiding roles is an uncommon feature; hide none.
             ->selectRaw('0 as is_hidden');
+        $this->import('groups', $query, self::SCHEMA_ROLES);
 
-        $this->import('groups', $query, $structure, $map);
-
-        // User Role.
-        $structure = [
-            'user_id' => 'int',
-            'group_id' => 'int',
-        ];
+        // User Roles.
         $map = [
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $this->porterQB()
-            ->from('UserRole')
+        $query = $this->porterQB()->from('UserRole')
             ->select()
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
-
-        $this->import('group_user', $query, $structure, $map);
+        $this->import('group_user', $query, self::SCHEMA_USER_ROLES, $map);
     }
 
     /**
+     * 'Tags' in Flarum.
      */
     protected function categories(): void
     {
-        $structure = [
-            'id' => 'int',
-            'name' => 'varchar(100)',
-            'slug' => 'varchar(100)',
-            'description' => 'text',
-            'parent_id' => 'int',
-            'position' => 'int',
-            'discussion_count' => 'int',
-            'is_hidden' => 'tinyint',
-            'is_restricted' => 'tinyint',
-        ];
         $map = [
             'CategoryID' => 'id',
             'Name' => 'name',
@@ -335,8 +397,7 @@ class Flarum extends Target
         $filters = [
             'CountDiscussions' => 'emptyToZero',
         ];
-        $query = $this->porterQB()
-            ->from('Category')
+        $query = $this->porterQB()->from('Category')
             ->select()
             ->selectRaw('COALESCE(Name, CONCAT("category", CategoryID)) as name') // Cannot be null.
             ->selectRaw('COALESCE(UrlCode, CategoryID) as slug') // Cannot be null.
@@ -345,14 +406,15 @@ class Flarum extends Target
             ->selectRaw("0 as is_restricted")
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
 
-        $this->import('tags', $query, $structure, $map, $filters);
+        $this->import('tags', $query, self::SCHEMA_CATEGORIES, $map, $filters);
     }
 
     /**
+     * Schema is variable depending on plugins.
      */
     protected function discussions(): void
     {
-        $structure = $this->getStructureDiscussions();
+        $structure = $this->getDiscussionSchema(); // @see self::privateMessages()
         $map = [
             'DiscussionID' => 'id',
             'InsertUserID' => 'user_id',
@@ -380,8 +442,7 @@ class Flarum extends Target
         }
 
         // CountComments needs to be double-mapped so it's included as an alias also.
-        $query = $this->porterQB()
-            ->from('Discussion')
+        $query = $this->porterQB()->from('Discussion')
             ->select()
             ->selectRaw('COALESCE(CountComments, 0) as post_number_index')
             ->selectRaw('DiscussionID as slug')
@@ -392,17 +453,12 @@ class Flarum extends Target
 
         $this->import('discussions', $query, $structure, $map, $filters);
 
-        // Flarum has a separate pivot table for discussion tags.
-        $structure = [
-            'discussion_id' => 'int',
-            'tag_id' => 'int',
-        ];
+        // Discussion Tags pivot table.
         $map = [
             'DiscussionID' => 'discussion_id',
             'CategoryID' => 'tag_id',
         ];
-        $query = $this->porterQB()
-            ->from('Discussion')
+        $query = $this->porterQB()->from('Discussion')
             ->select(['DiscussionID', 'CategoryID'])
             ->union(
                 // Also tag discussion with the parent category.
@@ -413,11 +469,11 @@ class Flarum extends Target
                     ->leftJoin('Category', 'Discussion.CategoryID', '=', 'Category.CategoryID')
                     ->whereNotNull('ParentCategoryID')
             );
-
-        $this->import('discussion_tag', $query, $structure, $map, $filters);
+        $this->import('discussion_tag', $query, self::SCHEMA_DISCUSSION_TAGS, $map, $filters);
     }
 
     /**
+     * Requires addon `flarum/subscriptions`
      */
     protected function bookmarks(): void
     {
@@ -427,34 +483,21 @@ class Flarum extends Target
             return;
         }
 
-        $structure = [
-            'discussion_id' => 'int',
-            'user_id' => 'int',
-            'last_read_at' => 'datetime',
-            'subscription' => [null, 'follow', 'ignore'],
-            'last_read_post_number' => 'int',
-            'keys' => [
-                'FLA_discussion_user_discussion_id_foreign' => [
-                    'type' => 'index',
-                    'columns' => ['discussion_id'],
-                ],
-            ],
-        ];
         $map = [
             'DiscussionID' => 'discussion_id',
             'UserID' => 'user_id',
             'DateLastViewed' => 'last_read_at',
         ];
-        $query = $this->porterQB()
-            ->from('UserDiscussion')
+        $query = $this->porterQB()->from('UserDiscussion')
             ->select()
             ->selectRaw("if (Bookmarked > 0, 'follow', null) as subscription")
             ->where('UserID', '>', 0); // Vanilla can have zeroes here, can't remember why.
 
-        $this->import('discussion_user', $query, $structure, $map);
+        $this->import('discussion_user', $query, self::SCHEMA_BOOKMARKS, $map);
     }
 
     /**
+     * 'Posts' in Flarum.
      */
     protected function comments(): void
     {
@@ -470,8 +513,7 @@ class Flarum extends Target
         $filters = [
             'Body' => 'filterFlarumContent',
         ];
-        $query = $this->porterQB()
-            ->from('Comment')
+        $query = $this->porterQB()->from('Comment')
             // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
             ->select([
                 'DiscussionID',
@@ -514,14 +556,14 @@ class Flarum extends Target
             $query->union($discussions);
         }
 
-        $this->import('posts', $query, self::DB_STRUCTURE_POSTS, $map, $filters);
+        $this->import('posts', $query, self::SCHEMA_POSTS, $map, $filters);
     }
 
     /**
      * Currently discards thumbnails because Flarum's extension doesn't have any.
      *
+     * Requires discussions, comments, and PMs have imported.
      * @todo Support for `fof_upload_files.discussion_id` field, likely in Postscript (it's derived data).
-     *
      */
     protected function attachments(): void
     {
@@ -531,20 +573,6 @@ class Flarum extends Target
             return;
         }
 
-        $structure = [
-            'id' => 'int',
-            'actor_id' => 'int',
-            'discussion_id' => 'int',
-            'post_id' => 'int',
-            'base_name' => 'varchar(255)', // "download as"
-            'path' => 'varchar(255)', // from /forumroot/assets/files
-            'url' => 'varchar(255)',
-            'type' => 'varchar(255)', // MIME
-            'size'  => 'int', // bytes
-            'created_at' => 'datetime',
-            'upload_method' => 'varchar(255)', // Probably just 'local'
-            'tag' => 'varchar(255)', // Required; generates preview in Profile -> "My Media"
-        ];
         $map = [
             'MediaID' => 'id',
             'Name' => 'base_name',
@@ -578,10 +606,11 @@ class Flarum extends Target
                 else 'file'
                 end as tag");
 
-        $this->import('fof_upload_files', $query, $structure, $map);
+        $this->import('fof_upload_files', $query, self::SCHEMA_ATTACHMENTS, $map);
     }
 
     /**
+     * Requires addon `17development/flarum-user-badges`.
      */
     protected function badges(): void
     {
@@ -595,16 +624,6 @@ class Flarum extends Target
         // One category is added in postscript.
 
         // Badges
-        $structure = [
-            'id' => 'int',
-            'name' => 'varchar(200)',
-            'image' => 'text',
-            'description' => 'text',
-            'badge_category_id' => 'int',
-            'points' => 'int',
-            'created_at' => 'datetime',
-            'is_visible' => 'tinyint',
-        ];
         $map = [
             'Name' => 'name',
             'BadgeID' => 'id',
@@ -620,15 +639,9 @@ class Flarum extends Target
             ->select()
             ->selectRaw('1 as badge_category_id');
 
-        $this->import('badges', $query, $structure, $map);
+        $this->import('badges', $query, self::SCHEMA_BADGES, $map);
 
         // User Badges
-        $structure = [
-            'badge_id' => 'int',
-            'user_id' => 'int',
-            'assigned_at' => 'datetime',
-            'description' => 'text',
-        ];
         $map = [
             'BadgeID' => 'badge_id',
             'UserID' => 'user_id',
@@ -637,10 +650,11 @@ class Flarum extends Target
         ];
         $query = $this->porterQB()->from('UserBadge')->select('*');
 
-        $this->import('badge_user', $query, $structure, $map);
+        $this->import('badge_user', $query, self::SCHEMA_USER_BADGES, $map);
     }
 
     /**
+     * Requires addon `fof/pollsx`.
      */
     protected function polls(): void
     {
@@ -651,17 +665,6 @@ class Flarum extends Target
         }
 
         // Polls
-        $structure = [
-            'id' => 'int',
-            'question' => 'varchar(200)',
-            'discussion_id' => 'int',
-            'user_id' => 'int',
-            'public_poll' => 'tinyint', // Map to "Anonymous" somehow?
-            'end_date' => 'datetime', // Using date created here will close all polls, but work fine.
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
-            'vote_count' => 'int',
-        ];
         $map = [
             'PollID' => 'id',
             'Name' => 'question',
@@ -676,18 +679,9 @@ class Flarum extends Target
             ->select('DateInserted as end_date')
                 // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');
-
-        $this->import('polls', $query, $structure, $map);
+        $this->import('polls', $query, self::SCHEMA_POLLS, $map);
 
         // Poll Options
-        $structure = [
-            'id' => 'int',
-            'answer' => 'varchar(200)',
-            'poll_id' => 'int',
-            'created_at' => 'datetime',
-            'updated_at' => 'datetime',
-            'vote_count' => 'int',
-        ];
         $map = [
             'PollOptionID' => 'id',
             'PollID' => 'poll_id',
@@ -697,18 +691,9 @@ class Flarum extends Target
             'CountVotes' => 'vote_count',
         ];
         $query = $this->porterQB()->from('PollOption')->select('*');
-
-        $this->import('poll_options', $query, $structure, $map);
+        $this->import('poll_options', $query, self::SCHEMA_POLL_OPTIONS, $map);
 
         // Poll Votes
-        $structure = [
-            //id
-            'poll_id' => 'int',
-            'option_id' => 'int',
-            'user_id' => 'int',
-            'created_at' => 'timestamp',
-            'updated_at' => 'timestamp',
-        ];
         $map = [
             'PollOptionID' => 'option_id',
             'UserID' => 'user_id',
@@ -719,11 +704,11 @@ class Flarum extends Target
                 'PollOption.PollID as poll_id',
                 'PollOption.DateInserted as created_at', // Total hack for approximate vote dates.
                 'PollOption.DateUpdated as updated_at']);
-
-        $this->import('poll_votes', $query, $structure, $map);
+        $this->import('poll_votes', $query, self::SCHEMA_POLL_VOTES, $map);
     }
 
     /**
+     * Requires addon `fof/reactions`.
      */
     public function reactions(): void
     {
@@ -734,13 +719,6 @@ class Flarum extends Target
         }
 
         // Reaction Types
-        $structure = [
-            'id' => 'int',
-            'identifier' => 'varchar(200)',
-            'type' => 'varchar(200)',
-            'enabled' => 'tinyint',
-            'display' => 'varchar(200)',
-        ];
         $map = [
             'TagID' => 'id',
             'Name' => 'identifier',
@@ -750,18 +728,9 @@ class Flarum extends Target
             // @todo Setting type='emoji' is a kludge since it won't render Vanilla defaults that way.
             ->select('*')
             ->selectRaw('"emoji" as type');
-
-        $this->import('reactions', $query, $structure, $map);
+        $this->import('reactions', $query, self::SCHEMA_REACTIONS, $map);
 
         // Post Reactions
-        $structure = [
-            'id' => 'int',
-            'post_id' => 'int',
-            'user_id' => 'int',
-            'reaction_id' => 'int',
-            'created_at' => 'timestamp',
-            'updated_at' => 'timestamp',
-        ];
         $map = [
             'RecordID' => 'post_id',
             'UserID' => 'user_id',
@@ -779,8 +748,7 @@ class Flarum extends Target
         // Get reactions for discussions (OPs).
         if ($this->getDiscussionBodyMode()) {
             // Get highest CommentID.
-            $result = $this->porterQB()
-                ->from('Comment')
+            $result = $this->porterQB()->from('Comment')
                 ->selectRaw('max(CommentID) as LastCommentID')
                 ->first();
             $lastCommentID = $result->LastCommentID ?? 0;
@@ -797,12 +765,12 @@ class Flarum extends Target
             $query->union($discussionReactions);
         }
 
-        $this->import('post_reactions', $query, $structure, $map);
+        $this->import('post_reactions', $query, self::SCHEMA_POST_REACTIONS, $map);
     }
 
     /**
+     * Requires addon `fof/byobu`.
      * Export PMs to fof/byobu format, which uses the `posts` & `discussions` tables.
-     *
      */
     protected function privateMessages(): void
     {
@@ -821,7 +789,7 @@ class Flarum extends Target
         // Messages — Discussions
         $MaxDiscussionID = $this->messageDiscussionOffset = $this->getMaxValue('id', 'discussions');
         Log::comment('Discussions offset for PMs is ' . $MaxDiscussionID);
-        $structure = $this->getStructureDiscussions();
+        $structure = $this->getDiscussionSchema();
         $map = [
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
@@ -868,7 +836,7 @@ class Flarum extends Target
             ->selectRaw('1 as is_private')
             ->selectRaw('"comment" as type');
 
-        $this->import('posts', $query, self::DB_STRUCTURE_POSTS, $map, $filters);
+        $this->import('posts', $query, self::SCHEMA_POSTS, $map, $filters);
 
         // Recipients
         $structure = [
@@ -892,75 +860,45 @@ class Flarum extends Target
     }
 
     /**
-     * Setup the destination values for FileTransfer.
-     *
-     * Set PORT_Media.TargetFullPath and PORT_User.TargetAvatarFullPath
-     *
+     * Use Media.Path to set Media.TargetFullPath.
      */
-    public function mapFileTransfer(): void
+    protected function mapAttachments(string $fileTarget): int
     {
-        // Abort if we lack support.
-        if (!$this->getFileTransferSupport()) {
-            return;
+        $rows = 0;
+        $attachments = $this->porterQB()->from('Media')
+            ->select(['MediaID'])
+            // Reuse the filename in `Path` (not `Name`) in case it's been made guaranteed-unique.
+            ->selectRaw("concat('{$fileTarget}/', Path) as TargetFullPath")
+            // Assume we want the final Path if we got this far, so fix it.
+            ->whereNotNull("Path")
+            ->get();
+        foreach ($attachments as $attachment) {
+            $rows += $this->dbOutput()->affectingStatement("update `PORT_Media`
+                set TargetFullPath = " . $this->dbOutput()->escape($attachment->TargetFullPath) . "
+                where MediaID = {$attachment->MediaID}");  // @todo index needed?
         }
 
-        // Start timer.
-        $start = microtime(true);
+        return $rows;
+    }
+
+    /**
+     * Use User.Photo to set Media.TargetAvatarFullPath.
+     */
+    protected function mapAvatars(string $fileTarget): int
+    {
         $rows = 0;
-        Log::comment("Mapping attachments...");
-
-        // Media.Path
-        if ($fileTarget = $this->getPath('attachment', 'full')) {
-            $attachments = $this->porterQB()->from('Media')
-                ->select(['MediaID'])
-                // Reuse the filename in `Path` (not `Name`) in case it's been made guaranteed-unique.
-                ->selectRaw("concat('{$fileTarget}/', Path) as TargetFullPath")
-                // Assume we want the final Path if we got this far, so fix it.
-                ->whereNotNull("Path")
-                ->get();
-            $memory = memory_get_usage();
-            foreach ($attachments as $attachment) {
-                $rows += $this->dbOutput()->affectingStatement("update `PORT_Media`
-                    set TargetFullPath = " . $this->dbOutput()->escape($attachment->TargetFullPath) . "
-                    where MediaID = {$attachment->MediaID}");  // @todo index needed?
-            }
-            // Report.
-            Log::storage(
-                'map',
-                'Media.TargetFullPath',
-                microtime(true) - $start,
-                $rows,
-                $memory
-            );
-        }
-
-        // Start timer.
-        $start = microtime(true);
-        $rows = 0;
-        Log::comment("Mapping avatars...");
-
-        // User.Photo
-        if ($fileTarget = $this->getPath('avatar', 'full')) {
-            $avatars = $this->porterQB()->from('User')
-                ->select(['UserID'])
-                ->selectRaw("concat('{$fileTarget}', Photo) as TargetAvatarFullPath")
-                    // Local-file Photo should begin with a slash.
-                ->whereNotNull("SourceAvatarFullPath") // 'Photo' could be a URL otherwise.
-                ->get();
-            $memory = memory_get_usage();
-            foreach ($avatars as $avatar) {
-                $rows += $this->dbOutput()->affectingStatement("update `PORT_User`
+        $avatars = $this->porterQB()->from('User')
+            ->select(['UserID'])
+            ->selectRaw("concat('{$fileTarget}', Photo) as TargetAvatarFullPath")
+            // Local-file Photo should begin with a slash.
+            ->whereNotNull("SourceAvatarFullPath") // 'Photo' could be a URL otherwise.
+            ->get();
+        foreach ($avatars as $avatar) {
+            $rows += $this->dbOutput()->affectingStatement("update `PORT_User`
                     set TargetAvatarFullPath = " . $this->dbOutput()->escape($avatar->TargetAvatarFullPath) . "
                     where UserID = {$avatar->UserID}"); // @todo index needed?
-            }
-            // Report.
-            Log::storage(
-                'map',
-                'User.TargetAvatarFullPath',
-                microtime(true) - $start,
-                $rows,
-                $memory
-            );
         }
+
+        return $rows;
     }
 }

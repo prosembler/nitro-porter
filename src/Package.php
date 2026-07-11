@@ -31,6 +31,9 @@ abstract class Package
 
     /** @var array|string[] Auto-run() this list of methods unless overwritten per-package. */
     protected const array MANIFEST = [
+        // prepare
+        'setup', // HOOK
+        'filemap', // Map a file transfer.
         // users
         'users', // inc. usermeta, signatures
         'roles',
@@ -39,6 +42,7 @@ abstract class Package
         'categories',
         'groups',
         // content
+        'precontent', // HOOK
         'discussions',
         'comments',
         'conversations',
@@ -53,6 +57,8 @@ abstract class Package
         'avatars',
         'attachments',
         'emojis',
+        // finalize
+        'cleanup', // HOOK
     ];
 
     /**

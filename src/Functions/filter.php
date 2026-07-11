@@ -370,6 +370,14 @@ function formatUrl(?string $str): string
 }
 
 /**
+ * Alias urldecode() to sidestep native function overloading.
+ */
+function urlDecoder(?string $value): string
+{
+    return urldecode($value);
+}
+
+/**
  * Decode the HTML out of a value.
  */
 function HTMLDecoder(?string $value): string

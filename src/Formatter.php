@@ -70,23 +70,23 @@ class Formatter
         if ($text === null) {
             return '';
         }
-        switch ($format) {
-            case 'Html':
-            case 'Wysiwyg':
-            case 'Raw': // Unfiltered — these could break.
+        switch (strtolower($format)) {
+            case 'html':
+            case 'wysiwyg':
+            case 'raw': // Unfiltered — these could break.
                 // Custom bundle to enable more HTML elements than Markdown.
                 $text = self::closeTags($text);
                 $text = self::fixIllegalTags($text);
                 return $this->fixRawMentions(Vanilla::parse($text));
-            case 'Markdown':
+            case 'markdown':
                 // Markdown bundle allows some (filtered) HTML.
                 return $this->fixRawMentions(Markdown::parse($text));
-            case 'BBCode':
+            case 'bbcode':
                 return $this->fixRawMentions(BBCode::parse($text));
-            case 'Rich': // Quill
+            case 'rich': // Quill
                 return self::wrap('r', self::dequill($text));
-            case 'Text':
-            case 'TextEx':
+            case 'text':
+            case 'textex':
             default:
                 // Use of nl2br() here is needed for Vanilla PMs (which have no `Format`).
                 // May require more refined detection for other cases but too many breaks is safer than too few.

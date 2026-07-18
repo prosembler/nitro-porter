@@ -27,6 +27,16 @@ return [
     'input_alias' => 'input',
     'output_alias' => 'output',
 
+    // To merge datasets, set these to the current highest ID for each data type (or higher).
+    'offsets' => [
+        'users' => 0,
+        'roles' => 0,
+        'categories' => 0,
+        'discussions' => 0,
+        'comments' => 0,
+        'attachments' => 0,
+    ],
+
     // Data connections.
     'connections' => [
         [

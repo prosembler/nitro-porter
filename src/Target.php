@@ -55,6 +55,20 @@ abstract class Target extends Package
     }
 
     /**
+     * Get the configured offset value.
+     */
+    protected function getOffset(string $name): int
+    {
+        $valid = ['users', 'roles', 'categories', 'discussions', 'comments', 'attachments'];
+        if (!in_array($name, $valid)) {
+            Log::comment('Invalid offset name: ' . $name);
+            return 0;
+        }
+        $offsets = Config::getInstance()->getOffsets();
+        return (!empty($offsets[$name]) && is_numeric($offsets[$name])) ? (int) $offsets[$name] : 0;
+    }
+
+    /**
      * Find duplicate records on the given table + column.
      */
     protected function findDuplicates(string $table, string $column): array

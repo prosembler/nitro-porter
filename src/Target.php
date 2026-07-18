@@ -7,7 +7,8 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Target extends Package
 {
-    public const MERGE_KEYS = [
+    /** Map standard Porter schema keys to the config offsets they should use.  */
+    public const array MERGE_KEYS = [
         // Users
         'InsertUserID' => 'users',
         'UpdateUserID' => 'users',
@@ -42,20 +43,6 @@ abstract class Target extends Package
         'PollOptionID' => 'polloptions',
         'TagID' => 'tags',
         'BadgeID' => 'badges',
-        //'GroupID' => 'groups',
-
-        // PMs
-        //'ConversationID' => 'int',
-        //'ForeignID' => 'varchar(40)',
-        //'FirstMessageID' => 'int',
-        //'LastMessageID' => 'int',
-        //'RegardingID' => 'int'
-        //'MessageID' => 'int',
-        //'ConversationID' => 'int',
-
-        // Needs context.
-        //'RecordID' => 'int',
-        //"parentRecordID" => "int",
     ];
 
     /** @var ConnectionManager  */

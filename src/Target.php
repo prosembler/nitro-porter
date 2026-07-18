@@ -132,10 +132,12 @@ abstract class Target extends Package
                 // Translate the mapped key to the offset key.
                 $offset = $this->getOffset(self::MERGE_KEYS[$key]);
                 // Create a single-use filter with exactly the correct offset addition.
-                $filters[$key] = function ($value) use ($offset) {
-                    return $value + $offset;
-                };
-                Log::comment(sprintf('Offset %s is set to: %s', $key, $offset));
+                if ($offset) { // Don't set a filter if the offset=0.
+                    $filters[$key] = function ($value) use ($offset) {
+                        return $value + $offset;
+                    };
+                    Log::comment(sprintf('Offset %s is set to: %s', $key, $offset));
+                }
             }
         }
         return $filters;
@@ -282,9 +284,8 @@ abstract class Target extends Package
         // Start timer.
         $start = microtime(true);
 
-        // Auto-detect merge offsets.
-        $addFilters = $this->setOffsets($map); // Keys must be in the $map or auto-offset will fail.
-        $filters = array_merge($filters, $addFilters);
+        // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)
+        $filters = array_merge($filters, $this->setOffsets($map));
 
         // Prepare the storage medium for the incoming structure.
         $this->outputStorage->prepare($tableName, $struct);

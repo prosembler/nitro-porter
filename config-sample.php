@@ -35,6 +35,10 @@ return [
         'discussions' => 0,
         'comments' => 0,
         'attachments' => 0,
+        'polls' => 0,
+        'polloptions' => 0,
+        'tags' => 0, // reactions
+        'badges' => 0,
     ],
 
     // Data connections.

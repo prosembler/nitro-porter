@@ -45,22 +45,22 @@ return [
             'password' => 'porter',
             'charset' => 'utf8mb4',
             'options' => [
-                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false, // Critical for large datasets.
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false, // Critical for large datasets. Remove for non-MySQL.
             ],
         ],
         [
             'alias' => 'output',
             'type' => 'database',
             // @see https://laravel.com/docs/12.x/database#read-and-write-connections
-            'driver' => 'mysql',
+            'driver' => 'mysql', // 'postgresql' for Discourse
             'host' => 'localhost',
-            'port' => '3306',
+            'port' => '3306', // '5432' for PostgresQL (usually)
             'database' => 'porter',
             'username' => 'porter',
             'password' => 'porter',
             'charset' => 'utf8mb4',
             'options' => [
-                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false, // Critical for large datasets.
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false, // Critical for large datasets. REMOVE for non-MySQL.
             ],
         ],
         [

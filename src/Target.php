@@ -125,6 +125,8 @@ abstract class Target extends Package
                     };
                     Log::comment(sprintf('Offset %s is set to: %s', $key, $offset));
                 }
+            } elseif ('RecordID' === $key) {
+                $filters[$key] = 'offsetRecord';
             }
         }
         return $filters;

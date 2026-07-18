@@ -28,6 +28,16 @@ return [
     'output_alias' => 'output', // For a document Target (e.g. NodeBB on `mongodb`), set this to the document store.
     'porter_alias' => 'output', // MUST be MySQL/MariaDB connection. Defaults to `output_alias` if empty.
 
+    // To merge datasets, set these to the current highest ID for each data type (or higher).
+    'offsets' => [
+        'users' => 0,
+        'roles' => 0,
+        'categories' => 0,
+        'discussions' => 0,
+        'comments' => 0,
+        'attachments' => 0,
+    ],
+
     // Data connections.
     // @see https://laravel.com/docs/12.x/database#read-and-write-connections
     // @see https://github.com/symfony/symfony/blob/8.0/src/Symfony/Contracts/HttpClient/HttpClientInterface.php

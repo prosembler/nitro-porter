@@ -43,6 +43,7 @@ abstract class Source extends Package
         'First',
         'Last',
         'parent',
+        'Parent',
     ];
 
     /**

@@ -9,9 +9,6 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Source extends Package
 {
-    /** @var string Name prefix for tables used in renumbering. */
-    public const string RENUMBER_PX = 'PORT_ZNUM_';
-
     /** @var array|string[] List of PORT_ tables with primary keys. */
     public const array FK_TABLES = [
         'Activity',
@@ -175,66 +172,6 @@ abstract class Source extends Package
     }
 
     /**
-     * Create & join index renumbering maps (from '1' or using the offsets provided).
-     */
-    public function renumber(string $tableName, Builder $query, array $map, array $filters, array $offsets): array
-    {
-        // PRIMARY KEYS
-        $portKey = $this->getPK($tableName);
-        if ($sourceKey = array_search($portKey, $map, true)) {
-            $start = microtime(true);
-
-            // Create PORT_ZNUM_{table} with `id` (indexed for joining) & `tableID` (auto-increment).
-            $keys = ['znum_index_' . $tableName . '_' . $sourceKey => [
-                'type' => 'index',
-                'columns' => [$sourceKey],
-            ]];
-            $structure = [$sourceKey => 'varchar(200)', $portKey => 'increments', 'keys' => $keys];
-            $this->porterStorage->prepare('ZNUM_' . $tableName, $structure);
-
-            // @todo Resepct the offsets
-
-            // Fill the translation table
-            $qb = $this->sourceQB()->from($query->from)->select($sourceKey)->orderBy($sourceKey);
-            $info = $this->porterStorage->store($tableName, [], $structure, $qb, []);
-            Log::storage('renumber', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
-
-            // Join src ON srcID = portID to overwrite the primary key / map on the fly
-            // If your ORIGIN lacks an index on its primary key, it will be painfully long to execute.
-            $table1 = self::RENUMBER_PX . $tableName . '.' . $sourceKey;
-            $table2 = $query->from . '.' . $sourceKey;
-            $query->leftJoin(self::RENUMBER_PX . $tableName, $table1, '=', $table2)
-                ->addSelect($portKey);
-                //->selectRaw('PORT_ZNUM_' . $tableName . '.id' . ' as ' . $portKey);
-
-            // Drop the renumbered key from the map (or the addSelect is overwritten)
-            unset($map[$sourceKey]);
-        }
-
-        // FOREIGN KEYS
-        // 1. Join consistent FKs.
-        foreach ($map as $sourceName => $portName) {
-            if ($portName === $portKey) {
-                continue; // It's a primary key not a foreign one.
-            }
-            if ($baseTable = $this->mapFK($portName)) {
-                //Log::comment("Found fk table '$baseTable' from '$portName'");
-                $table1 = self::RENUMBER_PX . $baseTable . '.id';
-                $table2 = $query->from . '.' . $sourceName;
-                $query->leftJoin(self::RENUMBER_PX . $baseTable, $table1, '=', $table2)
-                    ->selectRaw(self::RENUMBER_PX . $baseTable . '.' . $baseTable . 'ID as ' . $portName);
-                // Drop the renumbered key from the map (or the addSelect is overwritten)
-                unset($map[$sourceName]);
-            }
-        }
-
-        // 2. Join self::VARIABLE_KEYS by determining which PK we want
-        // @todo dynamically build IFs in SQL or add $filters.
-
-        return [$query, $map];
-    }
-
-    /**
      * Export a collection of data, usually a table.
      *
      * @param string $tableName Name of table to export. This must correspond to one of the accepted map tables.
@@ -279,10 +216,6 @@ abstract class Source extends Package
             if (Config::getInstance()->mergeEnabled()) {
                 Log::comment("Notice: Cannot prepare merge for $tableName.");
             }
-        } elseif ($this->getFlag('renumberIndices') === true || Config::getInstance()->mergeEnabled()) {
-            // Non-legacy Sources can get renumbered automatically if enabled.
-            $offsets = Config::getInstance()->getOffsets();
-            list($query, $map) = $this->renumber($tableName, $query, $map, $filters, $offsets);
         }
 
         // Reconcile data structure to be written to storage.

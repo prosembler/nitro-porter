@@ -65,6 +65,7 @@ class Discord extends Origin
     ];
 
     protected const array SCHEMA_USERS = [
+        'new_id' => 'increments',
         'nick' => 'varchar(100)',
         'avatar' => 'varchar(100)',
         'roles' => 'text',
@@ -102,6 +103,7 @@ class Discord extends Origin
     ];
 
     protected const array SCHEMA_ROLES = [
+        'new_id' => 'increments',
         'id' => 'bigint',
         'name' => 'varchar(100)',
         'position' => 'int',
@@ -110,6 +112,7 @@ class Discord extends Origin
     ];
 
     protected const array SCHEMA_EMOJIS = [
+        'new_id' => 'increments',
         'id' => 'bigint',
         'name' => 'varchar(100)',
         'user' => 'text', // author
@@ -117,6 +120,7 @@ class Discord extends Origin
     ];
 
     protected const array SCHEMA_POLLS = [
+        'new_id' => 'increments',
         'id' => 'bigint',
         'is_final' => 'tinyint',
         'text' => 'text',
@@ -126,6 +130,7 @@ class Discord extends Origin
     ];
 
     protected const array SCHEMA_POLL_ANSWERS = [
+        'new_id' => 'increments',
         'poll_id' => 'bigint',
         'answer_id' => 'bigint',
         'count' => 'int',
@@ -140,6 +145,7 @@ class Discord extends Origin
     ];
 
     protected const array SCHEMA_CHANNELS = [
+        'new_id' => 'increments',
         'id' => 'bigint',
         'type' => 'int', //@todo key?
         'guild_id' => 'bigint',
@@ -163,9 +169,9 @@ class Discord extends Origin
 
     /**
      * @var array Name => column type
-     * @see \Porter\Source::renumber() for why an index is important.
      */
     protected const array SCHEMA_MESSAGES = [
+        'new_id' => 'increments',
         'id' => 'bigint',
         'channel_id' => 'bigint',
         'content' => 'text',
@@ -208,6 +214,7 @@ class Discord extends Origin
     ];
 
     protected const array SCHEMA_ATTACHMENTS = [
+        'new_id' => 'increments',
         'id' => 'bigint',
         'message_id' => 'bigint',
         'filename' => 'text',

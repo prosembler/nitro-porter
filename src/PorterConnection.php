@@ -156,6 +156,7 @@ class PorterConnection
     {
         // Always disable data integrity checks.
         $connection->unprepared("SET foreign_key_checks = 0");
+        $connection->unprepared("SET unique_checks = 0");
 
         // Set the timezone to UTC. Avoid named timezones because they may not be loaded.
         $connection->unprepared("SET time_zone = '+00:00'");

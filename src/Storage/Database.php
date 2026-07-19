@@ -211,9 +211,7 @@ class Database extends Storage
         $schema = $dbm->getSchemaBuilder();
         if ($this->exists($name)) {
             // Empty the table if it already exists & is not protected.
-            // Foreign key check must be disabled or MySQL throws error.
             if (!$this->isProtectedTable($name)) {
-                $dbm->unprepared("SET foreign_key_checks = 0");
                 $dbm->query()->from($name)->truncate();
             }
 
@@ -312,29 +310,19 @@ class Database extends Storage
     }
 
     /**
-     * Disable foreign key & secondary unique checking temporarily for import.
-     *
-     * Does not disable primary unique key enforcement (which is not possible).
      * Required by interface.
      */
     public function begin(): void
     {
-        $dbm = $this->porterConnection->capsule->getConnection($this->porterConnection->getAlias());
-        $dbm->unprepared("SET foreign_key_checks = 0");
-        $dbm->unprepared("SET unique_checks = 0");
+        // noop
     }
 
     /**
-     * Re-enable foreign key & secondary unique checking.
-     *
-     * Does not enforce constraints on existing data.
      * Required by interface.
      */
     public function end(): void
     {
-        $dbm = $this->porterConnection->capsule->getConnection($this->porterConnection->getAlias());
-        $dbm->unprepared("SET foreign_key_checks = 1");
-        $dbm->unprepared("SET unique_checks = 1");
+        // noop
     }
 
     /**

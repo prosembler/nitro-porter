@@ -118,6 +118,31 @@ To use it, set the following fields in your `config.php`:
 If `source_root` & `target_root` are set, Nitro Porter will evaluate whether the source & target support file transfer.
 As of 4.0, only Xenforo -> Flarum is supported as a proof of concept.
 
+### Document targets (NodeBB)
+
+NodeBB runs on MongoDB rather than a SQL database, so Nitro Porter writes the migrated data straight into the Mongo database a NodeBB install is already using.
+
+This target needs the `mongodb` PHP extension, which the Docker image installs for you. On a manual
+setup, add it alongside the other required extensions before running `composer install`.
+
+**Install NodeBB first.** Unlike a SQL target, there are no tables to fill: NodeBB keeps its content *and* its configuration, system groups, category permissions and admin account together in one `objects` collection. Nitro Porter adds to that, renumbering every migrated ID to start above whatever the installer already assigned. Migrating into an empty database gives you a forum with no configuration and no way to log in.
+
+The `compose.yml` provides `mongo` (the target store) and `nodebb` (a v4 install for testing). To run a migration:
+
+1. Start NodeBB and complete its setup, so the database has an admin and its default configuration.
+1. In `config.php`, set `output_alias` to the `nodebb` (Mongo) connection.
+1. Keep `porter_alias` on a MariaDB connection. The `PORT_` intermediary is always relational, even when the final target is MongoDB.
+1. Run the migration, for example from Vanilla:
+```
+porter run -s Vanilla -i input -t NodeBb -o nodebb
+```
+1. Restart NodeBB.
+
+!!! warning "After a NodeBB migration"
+    - **Reset permissions.** Nitro Porter never migrates permissions; reassign them in the NodeBB admin panel. Migrated users are added to `registered-users`, so they inherit whatever that group can do.
+    - **Passwords.** NodeBB uses bcrypt. Hashes only carry over if the source used a compatible algorithm; otherwise affected users must reset their password.
+    - **Re-running.** Each run appends. Restore the database from before the last run rather than migrating twice.
+
 ## Troubleshooting
 
 ### Command 'porter' not found

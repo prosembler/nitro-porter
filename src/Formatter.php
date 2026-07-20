@@ -59,6 +59,37 @@ class Formatter
     }
 
     /**
+     * Render content to HTML, for targets that store rendered markup rather than TextFormatter XML.
+     *
+     * @param ?string $format
+     * @param ?string $text
+     * @return string
+     */
+    public function toHtml(?string $format, ?string $text): string
+    {
+        if ($text === null) {
+            return '';
+        }
+        switch (strtolower((string)$format)) {
+            case 'html':
+            case 'wysiwyg':
+            case 'raw': // Unfiltered, so these could break.
+                return (string)self::fixIllegalTags(self::closeTags($text));
+            case 'markdown':
+                return Markdown::render(Markdown::parse($text));
+            case 'bbcode':
+                return BBCode::render(BBCode::parse($text));
+            case 'rich': // Quill
+                return self::dequill($text);
+            case 'text':
+            case 'textex':
+            default:
+                // Escape first: the value is literal text, so any markup in it is not markup.
+                return nl2br(htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+        }
+    }
+
+    /**
      * Put content in TextFormatter-compatible format.
      *
      * @param ?string $format

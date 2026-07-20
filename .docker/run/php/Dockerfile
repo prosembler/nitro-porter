@@ -3,7 +3,7 @@ FROM dunglas/frankenphp:php8.4 AS frankenphp
 # Configure PHP
 RUN cp $PHP_INI_DIR/php.ini-development $PHP_INI_DIR/php.ini
 
-RUN install-php-extensions pdo_mysql zip exif pcntl intl gd opcache bcmath xsl
+RUN install-php-extensions pdo_mysql zip exif pcntl intl gd opcache bcmath xsl mongodb
 
 # Copy Composer binary from latest Docker image.
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer

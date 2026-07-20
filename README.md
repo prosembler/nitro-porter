@@ -39,9 +39,10 @@ Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freel
 
 ## What's Supported?
 
-### 📥 Targets ([3](https://nitroporter.org/targets))
+### 📥 Targets ([4](https://nitroporter.org/targets))
 
 ![Flarum](docs/assets/logos/flarum-300x100.png)
+![NodeBB](docs/assets/logos/nodebb-300x100.png)
 ![Vanilla](docs/assets/logos/vanilla-300x100.png)
 ![Waterhole](docs/assets/logos/waterhole-300x100.png)
 

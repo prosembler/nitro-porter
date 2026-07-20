@@ -61,6 +61,25 @@
         <td><span class="No">✗</span></td>
         <td><span class="No">✗</span></td>
     </tr>
+    <tr><td class="Platform"><span>NodeBB</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="Yes">✓</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="No">✗</span></td>
+        <td><span class="No">✗</span></td>
+    </tr>
     <tr><td class="Platform"><span>Waterhole</span></td>
         <td><span class="Yes">✓</span></td>
         <td><span class="Yes">✓</span></td>

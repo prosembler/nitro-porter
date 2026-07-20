@@ -3,5 +3,6 @@
 return [
     'Agorakit',
     'Flarum',
+    'NodeBb',
     'Waterhole',
 ];

@@ -26,6 +26,10 @@ return [
     'origin_alias' => 'discord',
     'input_alias' => 'input',
     'output_alias' => 'output',
+    // The `PORT_` intermediary is always relational; keep this on a MySQL/MariaDB connection.
+    // For a document target (e.g. NodeBB on `mongodb`), set `output_alias` to the document store
+    // and point `porter_alias` at a MySQL/MariaDB connection. Defaults to `output_alias`.
+    'porter_alias' => 'output',
 
     // Data connections.
     'connections' => [
@@ -70,6 +74,16 @@ return [
                 'guild_id' => '123', // Server ID
                 //'channels' => ['123', '456'], // Optionally limit to certain Channel IDs
             ],
+        ],
+        [
+            // Document store for a NodeBB target. Use as `output_alias` & keep `porter_alias` on MariaDB.
+            'alias' => 'nodebb',
+            'type' => 'mongodb',
+            'host' => 'porter-mongo',
+            'port' => '27017',
+            'database' => 'nodebb',
+            'username' => '',
+            'password' => '',
         ],
     ],
 

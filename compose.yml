@@ -41,6 +41,43 @@ services:
       timeout: 3s
       retries: 3
 
+  mongo: # Target store for NodeBB migrations.
+    image: mongo:7
+    container_name: porter-mongo
+    environment:
+      MONGO_INITDB_DATABASE: nodebb
+    ports:
+      - "27018:27017"
+    networks:
+      - porter
+    healthcheck: # Verifies Mongo is available to avoid silent failures.
+      test: [ "CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')" ]
+      start_period: 5s
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  nodebb: # NodeBB v4 install for verifying a completed migration. Point it at the migrated `mongo` db.
+    image: ghcr.io/nodebb/nodebb:latest
+    container_name: porter-nodebb
+    ports:
+      - "4567:4567"
+    environment:
+      NODEBB_DB: mongo
+      NODEBB_DB_HOST: porter-mongo
+      NODEBB_DB_PORT: 27017
+      NODEBB_DB_NAME: nodebb
+      NODEBB_URL: http://localhost:4567
+      # Admin for the verification install. Setup runs non-interactively when these are present.
+      NODEBB_ADMIN_USERNAME: admin
+      NODEBB_ADMIN_PASSWORD: Password123!
+      NODEBB_ADMIN_EMAIL: admin@example.com
+    networks:
+      - porter
+    depends_on:
+      mongo:
+        condition: service_healthy
+
   phpmyadmin:
     image: phpmyadmin
     container_name: porter-pma

@@ -25,6 +25,7 @@ class Request
     private ?string $targetName;
     private ?string $inputConnection;
     private ?string $outputConnection;
+    private ?string $porterConnection;
     private string $inputTablePrefix = '';
     private string $outputTablePrefix = '';
     private ?string $cdnPrefix;
@@ -61,6 +62,8 @@ class Request
 
         $this->inputConnection = $inputConnection ?? Config::getInstance()->get('input_alias');
         $this->outputConnection = $outputConnection ?? Config::getInstance()->get('output_alias');
+        // The `PORT_` intermediary is always relational; falls back to the output connection.
+        $this->porterConnection = Config::getInstance()->get('porter_alias') ?: $this->outputConnection;
 
         // Table prefixes: CLI > Config > Package defaults
         if (!empty($this->sourceName)) {
@@ -107,6 +110,11 @@ class Request
     public function getOutput(): ?string
     {
         return $this->outputConnection;
+    }
+
+    public function getPorter(): ?string
+    {
+        return $this->porterConnection;
     }
 
     public function getInputTablePrefix(): ?string

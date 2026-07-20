@@ -4,6 +4,8 @@ namespace Porter;
 
 use Illuminate\Database\Capsule\Manager as DatabaseManager;
 use Illuminate\Database\Connection;
+use MongoDB\Client;
+use MongoDB\Database;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -13,7 +15,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 class ConnectionManager
 {
     /** @var array Valid values for $type. */
-    public const ALLOWED_TYPES = ['database', 'files', 'api'];
+    public const ALLOWED_TYPES = ['database', 'files', 'api', 'mongodb'];
 
     protected string $type = 'database';
 
@@ -21,8 +23,8 @@ class ConnectionManager
 
     protected array $info = [];
 
-    /** @var Connection|HttpClientInterface Data connection. */
-    protected Connection|HttpClientInterface $connection;
+    /** @var Connection|HttpClientInterface|Database Data connection. */
+    protected Connection|HttpClientInterface|Database $connection;
 
     public DatabaseManager $dbm;
 
@@ -51,6 +53,8 @@ class ConnectionManager
             $this->setupDatabase($info, $prefix);
         } elseif ($info['type'] === 'api') {
             $this->setupHttp($info);
+        } elseif ($info['type'] === 'mongodb') {
+            $this->setupMongo($info);
         }
     }
 
@@ -88,11 +92,19 @@ class ConnectionManager
     }
 
     /**
+     * @return string
+     */
+    public function getType(): string
+    {
+        return $this->type;
+    }
+
+    /**
      * Get the current DBM connection.
      *
-     * @return Connection|HttpClientInterface
+     * @return Connection|HttpClientInterface|Database
      */
-    public function connection(): Connection|HttpClientInterface
+    public function connection(): Connection|HttpClientInterface|Database
     {
         return $this->connection;
     }
@@ -180,5 +192,21 @@ class ConnectionManager
         // Allowlist http-clients config options.
         $info = array_intersect_key($info, array_flip(['base_uri', 'extra']));
         $this->connection = HttpClient::create()->withOptions($info);
+    }
+
+    /**
+     * Setup MongoDB client and select the target database.
+     *
+     * @param array $info
+     */
+    protected function setupMongo(array $info): void
+    {
+        // Build a connection string, including credentials only when provided.
+        $auth = '';
+        if (!empty($info['username'])) {
+            $auth = rawurlencode($info['username']) . ':' . rawurlencode($info['password'] ?? '') . '@';
+        }
+        $uri = 'mongodb://' . $auth . $info['host'] . ':' . ($info['port'] ?? '27017');
+        $this->connection = new Client($uri)->getDatabase($info['database']);
     }
 }

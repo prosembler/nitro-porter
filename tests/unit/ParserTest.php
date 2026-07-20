@@ -94,4 +94,49 @@ final class ParserTest extends TestCase
         $expected = '<div class="post-text-align-center"><br><br>&nbsp;Administrateur<br>version </div>';
         $this->assertEquals($expected, $result);
     }
+
+    /**
+     * @dataProvider getToHtmlTests()
+     * @covers \Porter\Formatter::toHtml
+     */
+    public function testToHtml(?string $format, ?string $text, string $expected): void
+    {
+        $this->assertEquals($expected, Formatter::instance()->toHtml($format, $text));
+    }
+
+    public function getToHtmlTests(): array
+    {
+        return [
+            [   // BBCode is rendered, not left as markup.
+                'BBCode',
+                'Hello [b]world[/b]',
+                'Hello <b>world</b>',
+            ],
+            [   // Format matching is case-insensitive.
+                'bbcode',
+                'Hello [b]world[/b]',
+                'Hello <b>world</b>',
+            ],
+            [   // Markdown is rendered to HTML.
+                'Markdown',
+                'Hello **world**',
+                '<p>Hello <strong>world</strong></p>',
+            ],
+            [   // Plain text is literal, so its markup gets escaped.
+                'Text',
+                "<b>not bold</b>\nsecond line",
+                "&lt;b&gt;not bold&lt;/b&gt;<br />\nsecond line",
+            ],
+            [   // An unknown format falls through to text.
+                null,
+                'Hello',
+                'Hello',
+            ],
+            [   // Null content is allowed.
+                'Html',
+                null,
+                '',
+            ],
+        ];
+    }
 }

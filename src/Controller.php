@@ -107,6 +107,7 @@ class Controller
         $targetName = $request->getTarget();
         $inputName = $request->getInput();
         $outputName = $request->getOutput();
+        $porterName = $request->getPorter();
         $sourcePrefix = $request->getInputTablePrefix();
         $targetPrefix = $request->getOutputTablePrefix();
         $dataTypes = $request->getDatatypes();
@@ -115,19 +116,19 @@ class Controller
         Log::comment("NITRO PORTER RUNNING...");
         Log::comment("Porting " . $sourceName . " to " . $targetName);
         Log::comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
-        Log::comment("Porter: " . $outputName . ' (PORT_)');
+        Log::comment("Porter: " . $porterName . ' (PORT_)');
         Log::comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
         Log::comment("\n" . sprintf('[ STARTED at %s ]', date('H:i:s e')) . "\n");
 
         // Factory for migration artifacts.
         $inputStorage = Factory::storage($inputName, $sourcePrefix);
-        $porterStorage = Factory::storage($outputName, 'PORT_');
+        $porterStorage = Factory::storage($porterName, 'PORT_');
         $outputStorage = Factory::storage($outputName, $targetPrefix);
         $postscriptStorage = Factory::storage($outputName, $targetPrefix); // Postscript names must match target names.
         $source = Factory::source($sourceName, $inputStorage, $porterStorage);
         $target = Factory::target($targetName, $porterStorage, $outputStorage);
         $postscript = Factory::postscript($targetName, $outputStorage, $postscriptStorage);
-        $fileTransfer = Factory::fileTransfer($source, $target, $outputName);
+        $fileTransfer = Factory::fileTransfer($source, $target, $porterName);
 
         // Set constraints.
         $source->limitTables($dataTypes);

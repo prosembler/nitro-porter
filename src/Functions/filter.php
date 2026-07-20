@@ -539,10 +539,10 @@ function bb_Decodeit(array $matches): string
  * Removes everything from `$path` after final '/', then re-appends the filename
  * with 'p' now prepended (if it didn't already start with 'p' to prevent compounding it).
  *
- * @param string $path
- * @return string
+ * @param ?string $path
+ * @return ?string
  */
-function vanillaPhoto(?string $path): string
+function vanillaPhoto(?string $path): ?string
 {
     // Skip processing for blank entries.
     if (empty($path)) {

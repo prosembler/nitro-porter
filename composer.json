@@ -41,6 +41,7 @@
     "require": {
         "php": ">=8.4",
         "ext-gd": "*",
+        "ext-mongodb": "*",
         "ext-pdo": "*",
         "ext-zlib": "*",
         "ramsey/collection": "^2",
@@ -50,7 +51,8 @@
         "monolog/monolog": "^3",
         "adhocore/cli": "^1",
         "s9e/text-formatter": "2.15.*",
-        "nadar/quill-delta-parser": "^3"
+        "nadar/quill-delta-parser": "^3",
+        "mongodb/mongodb": "^2"
     },
     "require-dev": {
         "phing/phing": "^2",

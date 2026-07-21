@@ -71,7 +71,12 @@ abstract class Origin extends Package
 
         // Retrieve data from the origin.
         $split_send = microtime(true);
-        list($content, $headers, $code) = $this->originStorage->get($endpoint, $query);
+        $result = $this->originStorage->get($endpoint, $query);
+        if (empty($result)) {
+            Log::comment("PULL FAILED");
+            return [];
+        }
+        list($content, $headers, $code) = $result;
         $split_reply = microtime(true);
 
         // Discard the rest of the content if we only want a key's contents.
@@ -91,7 +96,7 @@ abstract class Origin extends Package
         // Store the data.
         $info = $this->outputStorage->store($tableName, $map, $fields, $content, []);
 
-        // Add metadata for downstream logic.
+        // Add metadata for downstream logic. @todo Make an object
         $info['content'] = $content;
         $info['last'] = end($content);
         $info['first'] = reset($content);

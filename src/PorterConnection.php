@@ -2,7 +2,7 @@
 
 namespace Porter;
 
-use Illuminate\Database\Capsule\Manager as DatabaseManager;
+use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Connection;
 use MongoDB\Client;
 use MongoDB\Database;
@@ -12,7 +12,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * Manages a single connection to a data source or target, like a database or API.
  */
-class ConnectionManager
+class PorterConnection
 {
     /** @var array Valid values for $type. */
     public const ALLOWED_TYPES = ['database', 'files', 'api', 'mongodb'];
@@ -26,7 +26,7 @@ class ConnectionManager
     /** @var Connection|HttpClientInterface|Database Data connection. */
     protected Connection|HttpClientInterface|Database $connection;
 
-    public DatabaseManager $dbm;
+    public Capsule $capsule;
 
     /**
      * If no connect alias is give, initiate a test connection.
@@ -116,7 +116,10 @@ class ConnectionManager
      */
     protected function newDatabaseConnection(): Connection
     {
-        $connection = $this->dbm->getConnection($this->alias);
+        $connection = $this->capsule->getConnection($this->alias);
+
+       //if ($this->alias === 'discourse') {
+        //echo "\n\nyes hello\n\n"; var_dump($connection); echo "\n\nyes goodbye\n\n";  }
 
         if ($connection->getDriverName() === 'mysql') {
             $this->optimizeMySQL($connection);
@@ -134,10 +137,10 @@ class ConnectionManager
     protected function translateDatabaseConfig(array $config): array
     {
         // Valid keys: driver, host, database, username, password, charset, collation, prefix
-        $config['driver'] = $config['adapter'];
-        $config['database'] = $config['name'];
-        $config['username'] = $config['user'];
-        $config['password'] = $config['pass'];
+        $config['driver'] = $config['driver'] ?? $config['adapter'];
+        $config['database'] = $config['database'] ?? $config['name'];
+        $config['username'] = $config['username'] ?? $config['user'];
+        $config['password'] = $config['password'] ?? $config['pass'];
         //$config['strict'] = false;
 
         return $config;
@@ -174,9 +177,9 @@ class ConnectionManager
      */
     protected function setupDatabase(array $info, string $prefix): void
     {
-        $capsule = new DatabaseManager();
+        $capsule = new Capsule();
         $capsule->addConnection($this->translateDatabaseConfig($info), $info['alias']);
-        $this->dbm = $capsule;
+        $this->capsule = $capsule;
         $this->connection = $this->newDatabaseConnection();
         // Set prefix after connection is generated.
         $this->connection()->setTablePrefix($prefix);

@@ -2,7 +2,7 @@
 
 namespace Porter\Storage;
 
-use Porter\ConnectionManager;
+use Porter\PorterConnection;
 use Porter\Log;
 use Porter\Storage;
 use Symfony\Component\HttpClient\RetryableHttpClient;
@@ -27,8 +27,8 @@ class Https extends Storage
     /** @var int Number of tries to retry a request on non-4xx/5xx errors. */
     public const int MAX_RETRIES = 3;
 
-    /** @var ConnectionManager */
-    protected ConnectionManager $connectionManager;
+    /** @var PorterConnection */
+    protected PorterConnection $connectionManager;
 
     /** @var array Name => Value */
     protected array $headers = [];
@@ -36,8 +36,8 @@ class Https extends Storage
     /** @var array Use 'code', 'message', 'headers', 'exception' */
     protected array $errors = [];
 
-    /** @param ConnectionManager $c */
-    public function __construct(ConnectionManager $c)
+    /** @param PorterConnection $c */
+    public function __construct(PorterConnection $c)
     {
         $this->connectionManager = $c;
         $this->setHeader('Content-Type', 'application/json');
@@ -47,7 +47,7 @@ class Https extends Storage
     /** Allow an Origin to reset the connection. */
     public function resetConnection(string $originName): void
     {
-        $this->connectionManager = new ConnectionManager($originName);
+        $this->connectionManager = new PorterConnection($originName);
     }
 
     /**

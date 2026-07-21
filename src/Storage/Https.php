@@ -20,10 +20,10 @@ class Https extends Storage
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
 
     /** @var int Conservative limit on non-429 4xx/5xx errors to prevent bans. */
-    public const int MAX_ERRORS = 5;
+    public const int MAX_ERRORS = 20;
 
     /** @var int Number of tries to retry a request on non-4xx/5xx errors. */
-    public const int MAX_RETRIES = 20;
+    public const int MAX_RETRIES = 4;
 
     /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
@@ -85,13 +85,6 @@ class Https extends Storage
         if (!empty($errorInfo['headers'])) {
             Log::comment('HEADERS: ' . json_encode($errorInfo['headers']));
         }
-
-        // Cooldown.
-        if (count($this->getErrors()) >= self::MAX_ERRORS) {
-            $this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
-        } else {
-            sleep(5); // Pause a beat for safety.
-        }
     }
 
     /**
@@ -152,7 +145,7 @@ class Https extends Storage
         while (empty($parsed)) {
             // Detect excessive retries.
             if ($retries > self::MAX_RETRIES) {
-                $this->abort("MAX_RETRIES (" . self::MAX_RETRIES . ") reached");
+                return [];
             }
             $retries++;
 
@@ -166,6 +159,11 @@ class Https extends Storage
 
             // Parse request.
             $parsed = $this->parseResponse($response);
+
+            // Detect excessive errors.
+            if (count($this->getErrors()) >= self::MAX_ERRORS) {
+                $this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
+            }
         }
 
         return $parsed;
@@ -256,6 +254,7 @@ class Https extends Storage
             }
             // Collect & log (non-429) error before trying again.
             $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
+            sleep(5); // Pause a beat for safety.
             return []; // RETRY.
         } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
             // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.

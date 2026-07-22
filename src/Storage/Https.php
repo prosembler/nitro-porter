@@ -19,11 +19,11 @@ class Https extends Storage
 {
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
 
-    /** @var int Conservative limit on non-429 4xx/5xx errors to prevent bans. */
-    public const int MAX_ERRORS = 20;
+    /** @var int Conservative limit on non-429 4xx/5xx errors PER MINUTE to prevent bans. */
+    public const int MAX_ERRORS = 7;
 
     /** @var int Number of tries to retry a request on non-4xx/5xx errors. */
-    public const int MAX_RETRIES = 4;
+    public const int MAX_RETRIES = 3;
 
     /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
@@ -73,7 +73,8 @@ class Https extends Storage
     public function addError(array $errorInfo): void
     {
         // Store the error.
-        $this->errors[] = $errorInfo;
+        $stamp = date('dHi');
+        $this->errors[$stamp] = $errorInfo;
 
         // HTTP code & message log.
         $endpoint = (!empty($errorInfo['endpoint'])) ? $errorInfo['endpoint'] . ' ' : '';
@@ -89,10 +90,20 @@ class Https extends Storage
 
     /**
      * 4xx/5xx error info.
+     *
+     * Stamp creates per-minute buckets using index date('dHi') or DDHHMM, e.g.'012345' (first day of month, 11:45pm)
+     * Defaults to current minute. Stamp=0 returns all errors.
+     *
+     * @see self::addError()
+     * @return array of error info ['endpoint', 'headers', 'message', 'exception', 'code']
      */
-    public function getErrors(): array
+    public function getErrors(?int $stamp = null): array
     {
-        return $this->errors;
+        if (null === $stamp) {
+            $stamp = date('dHi'); // Now.
+        }
+
+        return (!empty($stamp) && empty($this->errors[$stamp])) ? $this->errors[$stamp] : $this->errors;
     }
 
     /**
@@ -160,7 +171,7 @@ class Https extends Storage
             // Parse request.
             $parsed = $this->parseResponse($response);
 
-            // Detect excessive errors.
+            // Detect excessive recent errors.
             if (count($this->getErrors()) >= self::MAX_ERRORS) {
                 $this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
             }

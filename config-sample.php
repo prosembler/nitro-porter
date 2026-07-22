@@ -31,6 +31,20 @@ return [
     // and point `porter_alias` at a MySQL/MariaDB connection. Defaults to `output_alias`.
     'porter_alias' => 'output',
 
+    // To merge datasets, set these to the current highest ID for each data type (or higher).
+    'offsets' => [
+        'users' => 0,
+        'roles' => 0,
+        'categories' => 0,
+        'discussions' => 0,
+        'comments' => 0,
+        'attachments' => 0,
+        'polls' => 0,
+        'polloptions' => 0,
+        'tags' => 0, // reactions
+        'badges' => 0,
+    ],
+
     // Data connections.
     'connections' => [
         [

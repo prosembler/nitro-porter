@@ -22,6 +22,8 @@ class Https extends Storage
     /** @var int Conservative limit on non-429 4xx/5xx errors PER MINUTE to prevent bans. */
     public const int MAX_ERRORS = 7;
 
+    public const int MAX_ERRORS_PAUSE_MINUTES = 2;
+
     /** @var int Number of tries to retry a request on non-4xx/5xx errors. */
     public const int MAX_RETRIES = 3;
 
@@ -173,7 +175,9 @@ class Https extends Storage
 
             // Detect excessive recent errors.
             if (count($this->getErrors()) >= self::MAX_ERRORS) {
-                $this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
+                Log::comment("ERRORS DETECTED: Pausing for " . self::MAX_ERRORS_PAUSE_MINUTES . " minutes.");
+                sleep(self::MAX_ERRORS_PAUSE_MINUTES * 60); // TAKE A NAP BUT THEN FIRE ZE RETRY.
+                //$this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
             }
         }
 

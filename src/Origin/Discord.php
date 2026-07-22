@@ -630,6 +630,7 @@ class Discord extends Origin
     {
         $hasMessagesTable = $this->outputStorage->exists('discord_messages');
         $userReactionsQueue = [];
+        $finished = [];
         foreach ($channels as $channelId => $status) {
             // Check status.
             if (true === $status) {
@@ -670,12 +671,14 @@ class Discord extends Origin
             // Polls.
             $this->extractPolls($info['content'], $channelId);
 
-            // Update status.
+            // Note completed channels.
             if (0 === (int)$info['rows']) {
                 // Change status to 'done' if no more rows found.
-                $channels[$channelId] = true;
+                $finished[$channelId] = true;
                 //Log::comment("> channel $channelId has no messages past {$channels[$channelId]}, skipping.");
-            } elseif (isset($info['last']['id'])) {
+            }
+
+            if (isset($info['last']['id'])) {
                 // Update offset & report where we are.
                 $id = $channels[$channelId] = $info['last']['id']; // Should be oldest message.
                 $time = $info['last']['timestamp'] ?? '';
@@ -688,7 +691,9 @@ class Discord extends Origin
 
         $this->processUserReactions(array_filter($userReactionsQueue));
 
-        return $channels;
+        // Do not record 'finished' until AFTER all reactions are processed.
+        // Sooner likely to cause data loss. It's safe to redo; NOT safe to lose queue.
+        return array_merge($channels, $finished);
     }
 
     /**

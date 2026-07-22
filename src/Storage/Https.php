@@ -105,7 +105,7 @@ class Https extends Storage
             $stamp = date('dHi'); // Now.
         }
 
-        return (!empty($stamp) && empty($this->errors[$stamp])) ? $this->errors[$stamp] : $this->errors;
+        return (!empty($stamp) && empty($this->errors[$stamp])) ? ($this->errors[$stamp] ?? []) : $this->errors;
     }
 
     /**

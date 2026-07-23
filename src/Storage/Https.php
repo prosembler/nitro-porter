@@ -71,18 +71,16 @@ class Https extends Storage
     {
         // Store the error.
         $stamp = date('dHi');
-        $this->errors[$stamp] = $errorInfo;
+        $this->errors[$stamp][] = $errorInfo;
 
-        // HTTP code & message log.
+        // Log the error.
         $endpoint = (!empty($errorInfo['endpoint'])) ? $errorInfo['endpoint'] . ' ' : '';
         $msg = (!empty($errorInfo['message'])) ? $errorInfo['message'] . ' ' : '';
         $exception = (!empty($errorInfo['exception'])) ? $errorInfo['exception']->getMessage() : '';
-        Log::comment("HTTP {$errorInfo['code']} " . $endpoint . $msg . "| " . $exception);
-
-        // Header log.
-        if (!empty($errorInfo['headers'])) {
+        Log::comment("\nHTTP {$errorInfo['code']} " . $endpoint . $msg . "| " . $exception);
+        /**if (!empty($errorInfo['headers'])) {
             Log::comment('HEADERS: ' . json_encode($errorInfo['headers']));
-        }
+        }*/
     }
 
     /**

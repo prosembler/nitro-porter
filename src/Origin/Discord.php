@@ -335,35 +335,43 @@ class Discord extends Origin
         return $this->config['extra']['guild_id'];
     }
 
-    /** @see Https::get() for handling of 429s via `retry-after` header. */
-    private function rateLimit(array $headers, float $replySeconds = 0): void
+    /**
+     * Discord uses custom rate limit headers.
+     *
+     * Min pause to not reach CloudFlare limit = MIN_MICROSECONDS
+     * @see Origin::respect429s() for handling of 429s via `retry-after` header.
+     *
+     * x-ratelimit-limit - total number that can be made
+     * x-ratelimit-remaining - remaining number that can be made
+     * x-ratelimit-reset - epoch time when limit resets
+     * x-ratelimit-reset-after - seconds til reset
+     * x-ratelimit-bucket - what limit bucket this limit is in
+     * x-ratelimit-scope - user, shared, or global
+     */
+    protected function rateLimit(array $headers, float $elapsed = 0): int
     {
         // Get header info.
-        $limit = $headers['x-ratelimit-limit'][0] ?? null; // total number that can be made
-        $remaining = $headers['x-ratelimit-remaining'][0] ?? null; // remaining number that can be made
-        $reset = $headers['x-ratelimit-reset'][0] ?? null; // epoch time
-        $after = $headers['x-ratelimit-reset-after'][0] ?? null; // seconds
-        $bucket = $headers['x-ratelimit-bucket'][0] ?? null; //someID
-        //$scope = $headers['x-ratelimit-scope'][0] ?? null; // user, shared, global
+        $limit = $headers['x-ratelimit-limit'][0] ?? null;
+        $remaining = $headers['x-ratelimit-remaining'][0] ?? null;
+        $after = $headers['x-ratelimit-reset-after'][0] ?? null;
 
-        // Log headers.
-        //Log::comment("lim=$limit, rem=$remaining, res=$reset, aft=$after, bkt=$bucket");
+        // Calculate min pause for syncronous requests by subtracting cycle time from minimum.
+        $wait = self::MIN_MICROSECONDS - (int)($elapsed * self::MICROSECONDS_PER_SEC);
+        $wait = max(min($wait, self::MIN_MICROSECONDS), 0); // 0 <= $wait <= self::MIN_MICROSECONDS
 
-        // Enforce rate limit with sleep.
-        // Min pause to not reach CloudFlare limit = MIN_MICROSECONDS; synchronous reqs = subtract cycle time.
-        $wait = self::MIN_MICROSECONDS - (int)($replySeconds * self::MICROSECONDS_PER_SEC);
-        // Wait must be betwen zero & self::MIN_MICROSECONDS.
-        $wait = max(min($wait, self::MIN_MICROSECONDS), 0);
-        if (!is_null($remaining) && empty($remaining)) { // Zero, not null
+        // Extend the wait if headers dictate.
+        if (!is_null($remaining) && empty($remaining)) { // Zero (not null)
+            $msg = "> Header rate limit ($limit) exhausted: ";
             if (!empty($after) && is_numeric($after)) {
                 $wait = ceil($after) * self::MICROSECONDS_PER_SEC;
-                Log::comment("> Rate limited, pausing " . round($after, 1) . "s (per `reset-after`)");
+                Log::comment($msg . "pausing " . round($after, 1) . "s (per `reset-after`)");
             } else {
                 $wait = 60 * self::MICROSECONDS_PER_SEC; // 1 minute fallback.
-                Log::comment("INFO: Failed to find rate limit info, but limit ($limit) exhausted; pausing 1 minute.");
+                Log::comment($msg . "pausing 1m (no `reset-after` found)");
             }
         }
-        usleep($wait);
+
+        return $wait;
     }
 
     /**
@@ -826,7 +834,7 @@ class Discord extends Origin
             foreach ($queue as $channelId => $reactions) {
                 // Process next reaction in the queue.
                 $reaction = array_pop($reactions);
-                $this->pull(
+                $info = $this->pull(
                     endpoint: "/channels/$channelId/messages/{$reaction['msg']}/reactions/{$reaction['url']}",
                     fields: self::SCHEMA_USER_REACTIONS,
                     tableName: 'discord_user_reactions',
@@ -844,6 +852,8 @@ class Discord extends Origin
                     $queue[$channelId] = $reactions; // -1 item.
                     $remaining += count($reactions);
                 }
+                // Rate limit.
+                $this->rateLimit($info['headers'], $info['pull_time']);
             }
             $channels = count($queue);
             Log::comment("> $remaining reactions remaining in queue across $channels channels after pass $pass");

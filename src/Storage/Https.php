@@ -19,11 +19,6 @@ class Https extends Storage
 {
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
 
-    /** @var int Conservative limit on non-429 4xx/5xx errors PER MINUTE to prevent bans. */
-    public const int MAX_ERRORS = 7;
-
-    public const int MAX_ERRORS_PAUSE_MINUTES = 2;
-
     /** @var int Number of tries to retry a request on non-4xx/5xx errors. */
     public const int MAX_RETRIES = 3;
 
@@ -109,37 +104,6 @@ class Https extends Storage
     }
 
     /**
-     * Whether to attempt another get().
-     * Based on HTTP 429 response and retry-after header.
-     * @param int $code HTTP code
-     * @param array $headers
-     * @return bool|int Seconds to wait (or false to stop).
-     */
-    protected function retry(int $code, array $headers): bool|int
-    {
-        if (429 === $code && !empty($headers['retry-after'][0])) {
-            $seconds = (int)$headers['retry-after'][0]; // Standard HTTP header.
-            if ($seconds > 0 && $seconds < 300) { // Valid amount of time under 5 min.
-                Log::comment("RATE LIMITED: Pausing for $seconds seconds");
-                sleep($seconds); // TAKE A NAP BUT THEN FIRE ZE RETRY.
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Terminate Nitro Porter process.
-     *
-     * @param string $message
-     */
-    protected function abort(string $message): void
-    {
-        Log::comment("\nNITRO PORTER ABORTED at " . date('H:i:s e') . " — $message" . "\n");
-        exit();
-    }
-
-    /**
      * Send the request & retrieve the response content.
      * @param string $endpoint URI to fetch.
      * @param array $query paramName => value.
@@ -165,20 +129,12 @@ class Https extends Storage
             // Send request.
             try {
                 $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
-            } catch (TransportExceptionInterface $e) { // Bad option passed.
-                $this->abort("GET ($endpoint) " . $e->getMessage());
-                exit(); // Stan is throwing a tantrum.
+            } catch (TransportExceptionInterface $e) { // Bad option passed; most likely a bug in Porter.
+                Log::comment("\nABORTED " . date('H:i:s e') . " — GET ($endpoint) " . $e->getMessage() . "\n");
+                exit();
             }
 
-            // Parse request.
             $parsed = $this->parseResponse($response);
-
-            // Detect excessive recent errors.
-            if (count($this->getErrors()) >= self::MAX_ERRORS) {
-                Log::comment("ERRORS DETECTED: Pausing for " . self::MAX_ERRORS_PAUSE_MINUTES . " minutes.");
-                sleep(self::MAX_ERRORS_PAUSE_MINUTES * 60); // TAKE A NAP BUT THEN FIRE ZE RETRY.
-                //$this->abort("MAX_ERRORS (" . self::MAX_ERRORS . ") reached");
-            }
         }
 
         return $parsed;
@@ -263,13 +219,9 @@ class Https extends Storage
             $code = $response->getStatusCode();
             $content = $response->toArray();
         } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
-            // Handle 429 (rate limit) errors & retries.
-            if ($this->retry($code, $headers)) {
-                return []; // RETRY.
+            if (429 !== $code) { // Track this class of errors.
+                $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
             }
-            // Collect & log (non-429) error before trying again.
-            $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
-            sleep(5); // Pause a beat for safety.
             return []; // RETRY.
         } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
             // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.

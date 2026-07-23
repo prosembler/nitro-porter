@@ -6,6 +6,11 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Origin extends Package
 {
+    /** @var int Conservative limit on non-429 4xx/5xx errors PER MINUTE to prevent bans. */
+    public const int MAX_ERRORS = 7;
+
+    public const int MAX_ERRORS_PAUSE_MINUTES = 2;
+
     /** @var array */
     protected array $config = [];
 
@@ -108,6 +113,17 @@ abstract class Origin extends Package
         $info['pull_time'] = microtime(true) - $start;
         Log::pull($tableName, $info);
 
+        // Pause if needed.
+        if (429 === $code) {
+            $this->respect429s($headers);
+        } elseif (count($this->originStorage->getErrors()) >= self::MAX_ERRORS) {
+            // Detect excessive recent errors.
+            Log::comment("ERRORS: Pausing " . self::MAX_ERRORS_PAUSE_MINUTES . "m (exceeded " . self::MAX_ERRORS . ")");
+            sleep(self::MAX_ERRORS_PAUSE_MINUTES * 60); // TAKE A NAP BUT THEN FIRE ZE RETRY.
+        } else {
+            usleep($this->rateLimit($headers, $info['pull_time']));
+        }
+
         return $info;
     }
 
@@ -135,6 +151,35 @@ abstract class Origin extends Package
         Log::storage('> extract', $tableName, microtime(true) - $start, count($data), $info['memory']);
 
         return $info;
+    }
+
+    /**
+     * Whether to attempt another get().
+     * Based on HTTP 429 response and retry-after header.
+     * @param array $headers
+     */
+    protected function respect429s(array $headers): void
+    {
+        $seconds = (int)($headers['retry-after'][0] ?? 0); // Standard HTTP header.
+        if ($seconds > 0 && $seconds < 300) { // Valid amount of time under 5 min.
+            Log::comment("429 'Too Many Requests': Pausing {$seconds}s (per `retry-after`)");
+            sleep($seconds); // TAKE A NAP BUT THEN FIRE ZE RETRY.
+        } else {
+            Log::comment("429 'Too Many Requests': Pausing 5s (no `retry-after` found)");
+            sleep(5); // Pause a beat for safety.
+        }
+    }
+
+    /**
+     * Override this method to implement non-429 custom rate limiting detection per Origin.
+     *
+     * @param array $headers from Https::parseResponse()
+     * @param float $elapsed from microtime(true) output in self::pull()
+     * @return int Number of microseconts to wait.
+     */
+    protected function rateLimit(array $headers, float $elapsed = 0): int
+    {
+        return 0;
     }
 
     /**

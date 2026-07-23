@@ -112,7 +112,7 @@ class Log
         $h = floor($elapsed / 3600);
         $m = floor(($elapsed - $h * 3600) / 60);
         $s = $elapsed - $m * 60;
-        return ($m) ? sprintf('%d:%d:%05.2f', $h, $m, $s) : sprintf('%05.2fs', $s);
+        return ($m) ? sprintf('%d:%d:%05.2f', $h, $m, $s) : sprintf('%4.2fs', $s);
     }
 
     /**

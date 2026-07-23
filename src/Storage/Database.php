@@ -4,7 +4,7 @@ namespace Porter\Storage;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
-use Porter\ConnectionManager;
+use Porter\PorterConnection;
 use Porter\Log;
 use Porter\Storage;
 
@@ -31,13 +31,13 @@ class Database extends Storage
     /** @var array List of tables to ignore errors on insert. */
     protected array $ignoreErrorsTables = [];
 
-    /** @var ConnectionManager */
-    protected ConnectionManager $connectionManager;
+    /** @var PorterConnection */
+    protected PorterConnection $porterConnection;
 
-    /** @param ConnectionManager $c */
-    public function __construct(ConnectionManager $c)
+    /** @param PorterConnection $c */
+    public function __construct(PorterConnection $c)
     {
-        $this->connectionManager = $c;
+        $this->porterConnection = $c;
     }
 
     /**
@@ -46,7 +46,7 @@ class Database extends Storage
      */
     public function getHandle(): Connection
     {
-        return $this->connectionManager->connection();
+        return $this->porterConnection->connection();
     }
 
     /**
@@ -127,7 +127,7 @@ class Database extends Storage
         $tableName = $this->getBatchTable();
         $action = (in_array($tableName, $this->ignoreErrorsTables)) ? 'insertOrIgnore' : 'insert';
         try {
-            $this->connectionManager->connection()->table($tableName)->$action($batch);
+            $this->porterConnection->connection()->table($tableName)->$action($batch);
         } catch (\Illuminate\Database\QueryException $e) {
             echo "\n\nBatch insert error: " . substr($e->getMessage(), 0, 500);
             echo "\n[...]\n" . substr($e->getMessage(), -300) . "\n";
@@ -207,13 +207,11 @@ class Database extends Storage
      */
     public function createOrUpdateTable(string $name, array $structure): void
     {
-        $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
+        $dbm = $this->porterConnection->capsule->getConnection($this->porterConnection->getAlias());
         $schema = $dbm->getSchemaBuilder();
         if ($this->exists($name)) {
             // Empty the table if it already exists & is not protected.
-            // Foreign key check must be disabled or MySQL throws error.
             if (!$this->isProtectedTable($name)) {
-                $dbm->unprepared("SET foreign_key_checks = 0");
                 $dbm->query()->from($name)->truncate();
             }
 
@@ -242,7 +240,7 @@ class Database extends Storage
      */
     public function exists(string $resourceName = '', array $structure = []): bool
     {
-        $schema = $this->connectionManager->connection()->getSchemaBuilder();
+        $schema = $this->porterConnection->connection()->getSchemaBuilder();
         if (empty($structure)) {
             // No columns requested.
             return $schema->hasTable($resourceName);
@@ -312,29 +310,19 @@ class Database extends Storage
     }
 
     /**
-     * Disable foreign key & secondary unique checking temporarily for import.
-     *
-     * Does not disable primary unique key enforcement (which is not possible).
      * Required by interface.
      */
     public function begin(): void
     {
-        $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
-        $dbm->unprepared("SET foreign_key_checks = 0");
-        $dbm->unprepared("SET unique_checks = 0");
+        // noop
     }
 
     /**
-     * Re-enable foreign key & secondary unique checking.
-     *
-     * Does not enforce constraints on existing data.
      * Required by interface.
      */
     public function end(): void
     {
-        $dbm = $this->connectionManager->dbm->getConnection($this->connectionManager->getAlias());
-        $dbm->unprepared("SET foreign_key_checks = 1");
-        $dbm->unprepared("SET unique_checks = 1");
+        // noop
     }
 
     /**

@@ -701,7 +701,11 @@ class Discord extends Origin
 
         // Do not record 'finished' until AFTER all reactions are processed.
         // Sooner likely to cause data loss. It's safe to redo; NOT safe to lose queue.
-        return array_merge($channels, $finished);
+        foreach ($finished as $channelId => $status) {
+            $channels[$channelId] = $status; // array_merge() would renumber keys.
+        }
+
+        return $channels;
     }
 
     /**

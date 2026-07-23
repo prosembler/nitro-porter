@@ -78,7 +78,6 @@ abstract class Origin extends Package
         $split_send = microtime(true);
         $result = $this->originStorage->get($endpoint, $query);
         if (empty($result)) {
-            Log::comment("PULL FAILED");
             return [];
         }
         list($content, $headers, $code) = $result;

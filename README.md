@@ -10,7 +10,7 @@ Nitro Porter's goal is 1-hour no-code data migrations for any community with acc
 
 ### 🔍 Why do this?
 
-Community history is vitally important. Platform lock-in stifles competition in the software ecosystem.
+Community history is vitally important. Platform lock-in stifles competition and all proprietary software has a finite lifespan.
 When everyone owns their own data and can freely choose their platform, everyone wins.
 
 ### 🤔 How is this possible?

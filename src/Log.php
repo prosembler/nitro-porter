@@ -75,12 +75,13 @@ class Log
     {
         // Format output.
         $report = sprintf(
-            'pull: %s — %d rows — GET (%s)%s [%s], %s (%s)',
+            'pull: %s (%d) — GET (%s)%s [%s] %s (%s, %s)',
             $table,
             count($info['content']),
             $info['endpoint'],
             (!empty($info['query'])) ? json_encode($info['query']) : '',
             $info['http_code'],
+            Log::formatElapsed($info['api_time']),
             Log::formatElapsed($info['pull_time']),
             Log::formatBytes($info['memory'])
         );

@@ -109,9 +109,10 @@ class Log
      */
     public static function formatElapsed(float $elapsed): string
     {
-        $m = floor($elapsed / 60);
+        $h = floor($elapsed / 3600);
+        $m = floor(($elapsed - $h * 3600) / 60);
         $s = $elapsed - $m * 60;
-        return ($m) ? sprintf('%d:%05.2f', $m, $s) : sprintf('%05.2fs', $s);
+        return ($m) ? sprintf('%d:%d:%05.2f', $h, $m, $s) : sprintf('%05.2fs', $s);
     }
 
     /**

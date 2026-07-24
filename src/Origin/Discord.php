@@ -27,6 +27,7 @@ namespace Porter\Origin;
 
 use Porter\Log;
 use Porter\Origin;
+use Porter\Package;
 
 /**
  * A Discord server is referred to as a 'guild' in the API docs.
@@ -513,7 +514,7 @@ class Discord extends Origin
     {
         if ($folder = $this->getDownloadFolder('emojis')) {
             $emojis = $this->outputQB()->from('discord_emojis')->get(['id', 'name', 'animated'])->toArray();
-            $downloadCount = 0;
+            $found = $downloadCount = 0;
             Log::comment("Found " . count($emojis) . " emojis.");
             foreach ($emojis as $emoji) {
                 $url = self::CDN_BASE_URI . 'emojis/' . $emoji->id . '.';
@@ -526,10 +527,12 @@ class Discord extends Origin
                         $this->originStorage->download($url . $type, $path);
                         $downloadCount++;
                         echo "."; // Dotted line to show progress.
+                    } elseif (file_exists($path)) {
+                        $found++;
                     }
                 }
             }
-            Log::comment("Downloaded $downloadCount emoji variants.");
+            Log::comment("Downloaded $downloadCount emoji variants ($found previously downloaded).");
         }
     }
 
@@ -538,7 +541,7 @@ class Discord extends Origin
     {
         if ($folder = $this->getDownloadFolder('avatars')) {
             $users = $this->outputQB()->from('discord_users')->get(['id', 'avatar', 'global_avatar'])->toArray();
-            $downloadCount = 0;
+            $found = $downloadCount = 0;
             Log::comment("Finding avatars for " . count($users) . " users.");
             foreach ($users as $user) {
                 $url = $this->getAvatarUrl($user);
@@ -547,9 +550,11 @@ class Discord extends Origin
                     $this->originStorage->download($url, $path);
                     $downloadCount++;
                     echo "."; // Dotted line to show progress.
+                } elseif (file_exists($path)) {
+                    $found++;
                 }
             }
-            Log::comment("Downloaded $downloadCount avatars.");
+            Log::comment("Downloaded $downloadCount avatars ($found previously downloaded).");
         }
     }
 

@@ -411,7 +411,6 @@ class Discord extends Origin
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
         $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS, []);
-        $this->guildUsers = array_column($info['content'], 'id');
         $this->extractUserRoles($info['content']);
     }
 
@@ -425,9 +424,10 @@ class Discord extends Origin
     /**
      * Generate intermediary table to unpack user role associations before 'normal' export.
      */
-    protected function extractUserRoles(array $users): void
+    protected function extractUserRoles(array $content): void
     {
-        $users = array_column($users, 'roles', 'id');
+        $this->guildUsers = array_column($content, 'user');
+        $users = array_column($this->guildUsers, 'roles', 'id');
         $userRoles = [];
         foreach ($users as $id => $roles) {
             foreach ($roles as $roleID) {

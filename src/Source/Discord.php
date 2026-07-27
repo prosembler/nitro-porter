@@ -282,7 +282,7 @@ class Discord extends Source
      * @param mixed $value A Discord SnowflakeID
      * @return int|null Unix timestamp
      */
-    protected function timestampFromSnowflake(mixed $value): ?int
+    protected static function timestampFromSnowflake(mixed $value): ?int
     {
         if (empty($value)) {
             return null;

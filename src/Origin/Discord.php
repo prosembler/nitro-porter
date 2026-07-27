@@ -25,6 +25,7 @@
 
 namespace Porter\Origin;
 
+use IntlChar;
 use Porter\Log;
 use Porter\Origin;
 use Porter\Package;
@@ -787,30 +788,28 @@ class Discord extends Origin
             foreach ($msgReactions as $reaction) {
                 $emojiId = $reaction['emoji']['id'];
 
-                // Collect non-standard emoji for fetching.
+                // Collect emoji list / canonical reactions list for storage.
                 if (!empty($emojiId)) {
-                    // Collect for fetching.
+                    // Key by Discord id.
                     $emojiList[$emojiId] = $reaction['emoji'];
                     // Special format for GET. "To use custom emoji, you must encode it in the format name:id"
                     $urlEmojiId = $reaction['emoji']['name'] . ':' . $emojiId;
                 } else {
+                    // Key by Unicode code point.
+                    $emojiList[IntlChar::ord($reaction['emoji']['name'])] = $reaction['emoji'];
                     // Standard emoji just go by their unicode.
                     $urlEmojiId = $reaction['emoji']['name'];
                 }
 
-                // Edge case: HttpClient produces '#' (not '%23') for emoji "hash key" (\u{0023}\u{20E3}).
-                $urlEmojiId = rawurlencode($urlEmojiId);
-                //$urlEmojiId = str_replace("\u{0023}\u{20E3}", '%23%EF%B8%8F%E2%83%A3', $urlEmojiId);
-
-                // Build reaction list w/ counts for storing.
+                // Collect reaction list (per message) w/ counts for storing.
                 $reactList[] = [
-                    'emoji_id' => $emojiId ?? 0, // Std unicode emoji ID = null.
+                    'emoji_id' => $emojiId ?? IntlChar::ord($reaction['emoji']['name']), // Std unicode emoji ID = null.
                     'emoji_name' => $reaction['emoji']['name'] ?? '',
                     'count' => $reaction['count'] ?? 0,
                     'message_id' => $msgId,
                 ];
 
-                // Avoid an associative array to conserve memory, but enforce position.
+                // Collect user reactions to fetch.
                 $userReactionQueue[] = [
                     'msg' => $msgId,
                     'url' => $urlEmojiId,
@@ -843,8 +842,9 @@ class Discord extends Origin
             foreach ($queue as $channelId => $reactions) {
                 // Process next reaction in the queue.
                 $reaction = array_pop($reactions);
+                $urlEmojiId = rawurlencode($reaction['url']);
                 $info = $this->pull(
-                    endpoint: "/channels/$channelId/messages/{$reaction['msg']}/reactions/{$reaction['url']}",
+                    endpoint: "/channels/$channelId/messages/{$reaction['msg']}/reactions/$urlEmojiId",
                     fields: self::SCHEMA_USER_REACTIONS,
                     tableName: 'discord_user_reactions',
                     map: ['id' => 'user_id'],
@@ -880,7 +880,7 @@ class Discord extends Origin
         if (empty($missingEmojiIDs)) {
             return; // No missing emojis found.
         }
-        $this->guildEmojis = array_merge($this->guildEmojis, $missingEmojiIDs); // Update in-memory list.
+        $this->guildEmojis = $this->guildEmojis + $missingEmojiIDs; // Update in-memory list.
         $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
         $this->extract('discord_emojis', self::SCHEMA_EMOJIS, $emojiData); // Store new emoji.
         Log::comment("> non-guild emoji(s) added: " . implode(',', $missingEmojiIDs));

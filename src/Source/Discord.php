@@ -27,8 +27,8 @@ class Discord extends Source
             'Avatars' => 1,
             'Attachments' => 1,
             'Emoji' => 1,
-            'Reactions' => 0, // No Origin support yet — requires separate calls
-            'Polls' => 0, // No Origin support yet — requires inline unpacking
+            'Reactions' => 1,
+            'Polls' => 1,
         ]
     ];
 
@@ -51,7 +51,7 @@ class Discord extends Source
     protected function users(): void
     {
         $map = [
-            'id' => 'UserID',
+            'new_id' => 'UserID',
             'derived_name' => 'Name', // prefer 1) nick 2) global_name 3) username
             'derived_avatar' => 'Photo', // prefer guild-specific 'avatar' to 'global_avatar'
             'joined_at' => 'DateInserted', // Guild-specific date
@@ -65,7 +65,7 @@ class Discord extends Source
     protected function roles(): void
     {
         $map = [
-            'id' => 'RoleID',
+            'new_id' => 'RoleID',
             'name' => 'Name',
             //position, managed, mentionable
         ];
@@ -74,17 +74,21 @@ class Discord extends Source
 
         // UserRoles
         $map = [
-            'user_id' => 'UserID',
-            'role_id' => 'RoleID',
+            'new_user_id' => 'UserID',
+            'new_role_id' => 'RoleID',
         ];
-        $query = $this->sourceQB()->from('discord_user_roles')->select('discord_user_roles.*');
+        $query = $this->sourceQB()->from('discord_user_roles')
+            ->join('discord_roles', 'discord_roles.id = discord_user_roles.role_id')
+            ->join('discord_users', 'discord_users.id = discord_roles.user_id')
+            ->selectRaw('discord_users.new_id as new_user_id')
+            ->selectRaw('discord_roles.new_id as new_role_id');
         $this->export('UserRole', $query, $map);
     }
 
     protected function categories(): void
     {
         $map = [
-            'id' => 'CategoryID',
+            'new_id' => 'CategoryID',
             'name' => 'Name',
             'parent_id' => 'ParentCategoryID',
             'position' => 'Sort',
@@ -103,12 +107,12 @@ class Discord extends Source
     protected function discussions(): void
     {
         $map = [
-            'id' => 'DiscussionID',
+            'new_id' => 'DiscussionID',
             'name' => 'Name',
             'parent_id' => 'CategoryID',
-            'owner_id' => 'InsertUserID',
-            'last_message_id' => 'LastCommentID',
-            'message_count' => 'LastCommentID',
+            'new_owner_id' => 'InsertUserID',
+            'last_message_id' => 'LastCommentID', // Cannot be updated.
+            //'message_count' => 'LastCommentID',
             'derived_timestamp' => 'DateInserted',
         ];
         $filters = [
@@ -116,7 +120,10 @@ class Discord extends Source
                 => (Discord::CHANNEL_TYPE['GUILD_TEXT'] === $row['type']) ? $row['id'] : $row['parent_id'],
             'derived_timestamp' => __NAMESPACE__ . '\Discord::timestampFromSnowflake',
         ];
-        $query = $this->sourceQB()->from('discord_channels')->select('discord_channels.*')
+        $query = $this->sourceQB()->from('discord_channels')
+            ->join('discord_users', 'discord_users.id = discord_messages.owner_id')
+            ->select('discord_channels.*')
+            ->select('discord_users.new_id as new_owner_id')
             ->selectRaw('id as derived_timestamp')
             ->whereIn('type', [
                 self::CHANNEL_TYPE['PUBLIC_THREAD'],
@@ -129,15 +136,20 @@ class Discord extends Source
     protected function comments(): void
     {
         $map = [
-            'id' => 'CommentID',
+            'new_id' => 'CommentID',
             'content' => 'Body',
-            'channel_id' => 'DiscussionID',
-            'authorid' => 'InsertUserID',
+            'new_channel_id' => 'DiscussionID',
+            'new_authorid' => 'InsertUserID',
             'pinned' => 'Announce',
             //'embeds' => '',
                 // [{"type":"link","url":"http:\/\/www.example.com","description":"Your source for video game news..."}]
         ];
-        $query = $this->sourceQB()->from('discord_messages')->select('discord_messages.*')
+        $query = $this->sourceQB()->from('discord_messages')
+            ->join('discord_channels', 'discord_channels.id = discord_messages.channel_id')
+            ->join('discord_users', 'discord_users.id = discord_messages.authorid')
+            ->select('discord_channels.new_id as new_channel_id')
+            ->select('discord_users.new_id as new_authorid')
+            ->select('discord_messages.*')
             ->selectRaw('timestamp(timestamp) as DateInserted')
             ->selectRaw('timestamp(edited_timestamp) as DateUpdated');
         $this->export('Comment', $query, $map);
@@ -146,8 +158,8 @@ class Discord extends Source
     protected function attachments(): void
     {
         $map = [
-            'id' => 'MediaID',
-            'message_id' => 'ForeignID',
+            'new_id' => 'MediaID',
+            'new_message_id' => 'ForeignID', // Always a message_id
             'filename' => 'Name',
             'width' => 'ImageWidth',
             'height' => 'ImageHeight',
@@ -155,14 +167,17 @@ class Discord extends Source
             'content_type' => 'Type',
             'download_path' => 'SourceFullPath',
         ];
-        $query = $this->sourceQB()->from('discord_attachments')->select('discord_attachments.*');
+        $query = $this->sourceQB()->from('discord_attachments')
+            ->join('discord_messages', 'discord_messages.id = discord_attachments.message_id')
+            ->select('discord_messages.new_id as new_message_id')
+            ->select('discord_attachments.*');
         $this->export('Media', $query, $map);
     }
 
     protected function emojis(): void
     {
         $map = [
-            'id' => 'EmojiID',
+            'new_id' => 'EmojiID',
             'name' => 'Name',
             'animated' => 'Animated',
             'user.id' => 'InsertUserID',
@@ -173,9 +188,10 @@ class Discord extends Source
 
     protected function reactions(): void
     {
+        // Custom emoji reactions.
         // Tag: Emoji => Reactions => Tags are all the same thing for our purposes.
         $map = [
-            'emoji_id' => 'TagID',
+            'new_id' => 'TagID',
             'name' => 'Name',
         ];
         $query = $this->sourceQB()->from('discord_emojis')
@@ -190,22 +206,31 @@ class Discord extends Source
 
         // UserTag: Individual user reactions.
         $map = [
-            'emoji_id' => 'TagID',
-            'message_id' => 'RecordID',
-            'user_id' => 'UserID',
+            'new_user_id' => 'UserID',
+            'new_message_id' => 'RecordID',
+            'new_emoji_id' => 'TagID',
         ];
         $query = $this->sourceQB()->from('discord_user_reactions')
-            ->select('discord_user_reactions.*');
+            ->join('discord_users', 'discord_users.id = discord_user_reactions.user_id')
+            ->join('discord_messages', 'discord_messages.id = discord_user_reactions.message_id')
+            ->join('discord_emojis', 'discord_emojis.id = discord_user_reactions.emoji_id')
+            ->selectRaw('discord_users.new_id as new_user_id')
+            ->selectRaw('discord_messages.new_id as new_message_id')
+            ->selectRaw('discord_emojis.new_id as new_emoji_id');
         $this->export('UserTag', $query, $map);
 
         // UserTag: Reaction counts.
         $map = [
-            'emoji_id' => 'TagID',
-            'message_id' => 'RecordID',
+            'new_user_id' => 'TagID',
+            'new_message_id' => 'RecordID',
             'count' => 'Total',
         ];
         $query = $this->sourceQB()->from('discord_reactions')
+            ->join('discord_users', 'discord_users.id = discord_user_reactions.user_id')
+            ->join('discord_messages', 'discord_messages.id = discord_user_reactions.message_id')
             ->select('discord_reactions.*')
+            ->selectRaw('discord_users.new_id as new_user_id')
+            ->selectRaw('discord_messages.new_id as new_message_id')
             ->selectRaw('"Comment-Total" as RecordType');
         $this->export('UserTag', $query, $map);
     }
@@ -213,7 +238,7 @@ class Discord extends Source
     protected function polls(): void
     {
         $map = [
-            'id' => 'PollID',
+            'new_id' => 'PollID',
             'text' => 'Name',
             'allow_multiselect' => 'AllowMultiple',
             'expiry' => 'DateClosed',
@@ -229,13 +254,18 @@ class Discord extends Source
         $this->export('Poll', $query, $map);
 
         $map = [
-            'poll_id' => 'PollID',
-            'answer_id' => 'PollOptionID',
+            'new_poll_id' => 'PollID',
+            'new_id' => 'PollOptionID',
             'text' => 'Body',
             'count' => 'CountVotes',
-            'emoji_id' => 'EmojiID',
+            'new_emoji_id' => 'EmojiID',
         ];
-        $query = $this->sourceQB()->from('discord_polloptions')->select('discord_polloptions.*');
+        $query = $this->sourceQB()->from('discord_polloptions')
+            ->join('discord_polls', 'discord_polls.id', '=', 'discord_polloptions.poll_id')
+            ->join('discord_emojis', 'discord_emojis.id = discord_polloptions.emoji_id')
+            ->selectRaw('discord_polls.new_id as new_poll_id')
+            ->selectRaw('discord_emojis.new_id as new_emoji_id')
+            ->select('discord_polloptions.*');
         $this->export('PollOptions', $query, $map);
 
         $map = [

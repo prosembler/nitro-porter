@@ -795,15 +795,17 @@ class Discord extends Origin
                     // Special format for GET. "To use custom emoji, you must encode it in the format name:id"
                     $urlEmojiId = $reaction['emoji']['name'] . ':' . $emojiId;
                 } else {
+                    $emojiId  = mb_ord($reaction['emoji']['name']); // Std unicode emoji ID = null.
                     // Key by Unicode code point.
-                    $emojiList[IntlChar::ord($reaction['emoji']['name'])] = $reaction['emoji'];
+                    $reaction['emoji']['id'] = $emojiId;
+                    $emojiList[$emojiId] = $reaction['emoji'];
                     // Standard emoji just go by their unicode.
                     $urlEmojiId = $reaction['emoji']['name'];
                 }
 
                 // Collect reaction list (per message) w/ counts for storing.
                 $reactList[] = [
-                    'emoji_id' => $emojiId ?? IntlChar::ord($reaction['emoji']['name']), // Std unicode emoji ID = null.
+                    'emoji_id' => $emojiId,
                     'emoji_name' => $reaction['emoji']['name'] ?? '',
                     'count' => $reaction['count'] ?? 0,
                     'message_id' => $msgId,

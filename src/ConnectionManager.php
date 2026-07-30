@@ -15,7 +15,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 class ConnectionManager
 {
     /** @var array Valid values for $type. */
-    public const ALLOWED_TYPES = ['database', 'files', 'api', 'mongodb'];
+    public const ALLOWED_TYPES = ['database', 'file', 'https', 'mongo'];
 
     protected string $type = 'database';
 
@@ -37,6 +37,7 @@ class ConnectionManager
      */
     public function __construct(string $alias = '', string $prefix = '')
     {
+        // Get connection configuration info.
         if (!empty($alias)) {
             $info = Config::getInstance()->getConnectionAlias($alias);
             $this->alias = $alias; // Provided alias.
@@ -44,18 +45,13 @@ class ConnectionManager
             $info = Config::getInstance()->getTestConnection();
             $this->alias = $info['alias']; // Test alias from config.
         }
-
+        $info['prefix'] = $prefix;
         $this->setInfo($info);
         $this->setType($info['type']);
 
         // Setup the connection.
-        if ($info['type'] === 'database') {
-            $this->setupDatabase($info, $prefix);
-        } elseif ($info['type'] === 'api') {
-            $this->setupHttp($info);
-        } elseif ($info['type'] === 'mongodb') {
-            $this->setupMongo($info);
-        }
+        $methodName = 'setup' . ucfirst($this->getType());
+        $this->$methodName($info);
     }
 
     public function setType(string $type): void
@@ -170,16 +166,15 @@ class ConnectionManager
      * Setup Illuminate Database instance.
      *
      * @param array $info
-     * @param string $prefix
      */
-    protected function setupDatabase(array $info, string $prefix): void
+    protected function setupDatabase(array $info): void
     {
         $capsule = new DatabaseManager();
         $capsule->addConnection($this->translateDatabaseConfig($info), $info['alias']);
         $this->dbm = $capsule;
         $this->connection = $this->newDatabaseConnection();
         // Set prefix after connection is generated.
-        $this->connection()->setTablePrefix($prefix);
+        $this->connection()->setTablePrefix($info['prefix']);
     }
 
     /**
@@ -187,7 +182,7 @@ class ConnectionManager
      *
      * @param array $info
      */
-    protected function setupHttp(array $info): void
+    protected function setupHttps(array $info): void
     {
         // Allowlist http-clients config options.
         $info = array_intersect_key($info, array_flip(['base_uri', 'extra']));

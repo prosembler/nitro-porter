@@ -49,6 +49,7 @@
         "illuminate/database": "^11",
         "staudenmeir/laravel-cte": "^1",
         "symfony/http-client": "^8",
+        "symfony/rate-limiter": "^8",
         "monolog/monolog": "^3",
         "adhocore/cli": "^1",
         "s9e/text-formatter": "2.15.*",

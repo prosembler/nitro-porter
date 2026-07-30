@@ -54,16 +54,16 @@ class Log
     /**
      * Add log with results of a table storage action.
      */
-    public static function storage(string $action, string $table, float $timeElapsed, int $rowCount, int $memPeak): void
+    public static function storage(string $action, StorageInfo $info): void
     {
         // Format output.
         $report = sprintf(
             '%s: %s — %d rows, %s (%s)',
             $action,
-            $table,
-            $rowCount,
-            Log::formatElapsed($timeElapsed),
-            Log::formatBytes($memPeak)
+            $info->name,
+            $info->rows,
+            Log::formatElapsed($info->getElapsed()),
+            Log::formatBytes($info->memory)
         );
         Log::comment($report);
     }
@@ -71,19 +71,19 @@ class Log
     /**
      * Add log with results of a 'pull' action.
      */
-    public static function pull(string $table, array $info): void
+    public static function pull(StorageInfo $info): void
     {
         // Format output.
         $report = sprintf(
             'pull: %s (%d) — GET (%s)%s [%s] %s (%s, %s)',
-            $table,
-            count($info['content']),
-            $info['endpoint'],
-            (!empty($info['query'])) ? json_encode($info['query']) : '',
-            $info['http_code'],
-            Log::formatElapsed($info['api_time']),
-            Log::formatElapsed($info['pull_time']),
-            Log::formatBytes($info['memory'])
+            $info->name,
+            count($info->content),
+            $info->endpoint,
+            (!empty($info->query)) ? json_encode($info->query) : '',
+            $info->http_code,
+            Log::formatElapsed($info->requestTime),
+            Log::formatElapsed($info->getElapsed()),
+            Log::formatBytes($info->memory)
         );
         Log::comment($report);
     }

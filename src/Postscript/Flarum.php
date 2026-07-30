@@ -6,6 +6,7 @@ use Porter\ConnectionManager;
 use Porter\Log;
 use Porter\Parser\Flarum\QuoteEmbed;
 use Porter\Postscript;
+use Porter\StorageInfo;
 
 class Flarum extends Postscript
 {
@@ -44,9 +45,8 @@ class Flarum extends Postscript
      */
     protected function buildUserMentions(): void
     {
-        // Start timer.
+        $tableName = 'post_mentions_user';
         $start = microtime(true);
-        $info['rows'] = 0;
 
         // Prepare mentions table.
         $this->outputStorage()->prepare('post_mentions_user', self::DB_STRUCTURE_POST_MENTIONS_USER);
@@ -56,7 +56,12 @@ class Flarum extends Postscript
         $posts = $this->postQB()
             ->from('posts')
             ->select(['id', 'discussion_id', 'content']);
-        $memory = memory_get_usage();
+
+        $info = new StorageInfo(
+            name: $tableName,
+            memory: memory_get_usage(), // Posts all in memory.
+            startTime: $start,
+        );
 
         // Find & record mentions in batches.
         foreach ($posts->cursor() as $post) {
@@ -77,10 +82,10 @@ class Flarum extends Postscript
         }
 
         // Insert remaining mentions.
-        $this->outputStorage()->stream([], [], [], true);
+        $info = $this->outputStorage()->stream([], [], $info, true);
 
         // Report.
-        Log::storage('build', 'mentions_user', microtime(true) - $start, $info['rows'], $memory);
+        Log::storage('build', $info);
     }
 
     /**
@@ -122,7 +127,13 @@ class Flarum extends Postscript
         }
 
         // Report.
-        Log::storage('build', 'discussions.post_number_index', microtime(true) - $start, $rows, $memory);
+        $info = new StorageInfo(
+            name: 'discussions.post_number_index',
+            memory: $memory,
+            rows: $rows,
+            startTime: $start,
+        );
+        Log::storage('build', $info);
     }
 
     /**
@@ -134,8 +145,8 @@ class Flarum extends Postscript
     {
         // Start timer.
         $start = microtime(true);
-        $info['rows'] = 0;
         $failures = 0;
+        $info = new StorageInfo();
 
         // Prepare mentions table.
         $this->outputStorage()->prepare('post_mentions_post', self::DB_STRUCTURE_POST_MENTIONS_POST);
@@ -196,7 +207,7 @@ class Flarum extends Postscript
         }
 
         // Insert remaining mentions.
-        $this->outputStorage()->stream([], [], [], true);
+        $info = $this->outputStorage()->stream([], [], $info, true);
 
         // Log failures.
         if ($failures) {
@@ -204,7 +215,13 @@ class Flarum extends Postscript
         }
 
         // Report.
-        Log::storage('build', 'mentions_post', microtime(true) - $start, $info['rows'], $memory);
+        $info = new StorageInfo(
+            name: 'mentions_post',
+            memory: $memory,
+            rows: $info->rows,
+            startTime: $start,
+        );
+        Log::storage('build', $info);
     }
 
     /**
@@ -305,13 +322,13 @@ class Flarum extends Postscript
         }
 
         // Report.
-        Log::storage(
-            'build',
-            'discussion_user.last_read_post_number',
-            microtime(true) - $start,
-            $rows,
-            $memory
+        $info = new StorageInfo(
+            name: 'discussion_user.last_read_post_number',
+            memory: $memory,
+            rows: $rows,
+            startTime: $start,
         );
+        Log::storage('build', $info);
     }
 
     /**

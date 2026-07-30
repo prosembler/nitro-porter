@@ -229,7 +229,7 @@ abstract class Source extends Package
         $info = $this->porterStorage->store($tableName, $map, $structure, $data ?? $query, $filters);
 
         // Report.
-        Log::storage('export', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
+        Log::storage('export', $info);
     }
 
     /**

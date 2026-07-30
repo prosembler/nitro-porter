@@ -248,11 +248,6 @@ class Https extends Storage
      * Gotta go fast? It'll cost you feedback on whether it worked...
      * This is one of the most memory-intense pieces of Porter.
      * Be extraordinarily careful with memory management when modifying.
-     *
-     * Apr 2026: Suspect memory leak in HttpClient.
-     *   - On HTTP error, memory footprint still grows despite response::cancel(), fclose(), gc_collect_cycles().
-     *   - Hack/sidestep would be destroy/recreate HttpClient per batch, but it'd add significant complexity.
-     *
      * @see https://symfony.com/doc/current/http_client.html#multiplexing-responses
      * @see \Symfony\Component\HttpClient\Retry\GenericRetryStrategy to modify retry defaults.
      * @see https://www.php.net/manual/en/resource.php for what counts as a 'stream' resource in PHP.

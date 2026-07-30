@@ -75,7 +75,7 @@ class Factory
             return new Storage\File();
         }
         $connection = new ConnectionManager($name, $prefix);
-        if ($connection->getType() === 'mongodb') {
+        if ($connection->getType() === 'mongo') {
             return new Storage\Mongo($connection);
         }
         return new Storage\Database($connection);

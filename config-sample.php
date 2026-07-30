@@ -65,7 +65,7 @@ return [
         ],
         [
             'alias' => 'discord',
-            'type' => 'api',
+            'type' => 'https',
             // @see https://github.com/symfony/symfony/blob/8.0/src/Symfony/Contracts/HttpClient/HttpClientInterface.php
             // https://symfony.com/doc/current/reference/configuration/framework.html#reference-http-client-base-uri
             'base_uri' => 'https://discord.com/api/v10/', // Trailing slash required.
@@ -78,7 +78,7 @@ return [
         [
             // Document store for a NodeBB target. Use as `output_alias` & keep `porter_alias` on MariaDB.
             'alias' => 'nodebb',
-            'type' => 'mongodb',
+            'type' => 'mongo',
             'host' => 'porter-mongo',
             'port' => '27017',
             'database' => 'nodebb',

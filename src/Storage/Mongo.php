@@ -173,42 +173,8 @@ class Mongo extends Storage
         return $this->getHandle()->getCollection($name);
     }
 
-    /**
-     * No schema to prepare; collections are created on first write.
-     *
-     * @param string $resourceName
-     * @param array $structure The final, combined structure to be written.
-     */
-    public function prepare(string $resourceName, array $structure): void
-    {
-        //
-    }
-
-    public function begin(): void
-    {
-        //
-    }
-
     public function end(): void
     {
         $this->flush();
-    }
-
-    /**
-     * @param string $resourceName
-     * @param array $structure
-     * @return bool
-     */
-    public function exists(string $resourceName = '', array $structure = []): bool
-    {
-        return false;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
-    {
-        return new StorageInfo();
     }
 }

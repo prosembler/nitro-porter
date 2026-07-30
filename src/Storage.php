@@ -5,7 +5,7 @@ namespace Porter;
 use Illuminate\Database\Query\Builder;
 use Porter\Database\ResultSet;
 
-abstract class Storage
+class Storage
 {
     /**
      * Software-specific import process.
@@ -58,27 +58,44 @@ abstract class Storage
      * @param string $resourceName
      * @param array $structure The final, combined structure to be written.
      */
-    abstract public function prepare(string $resourceName, array $structure): void;
+    public function prepare(string $resourceName, array $structure): void
+    {
+        // noop
+    }
 
     /** Once before Storage is first used. */
-    abstract public function begin(): void;
+    public function begin(): void
+    {
+        // noop
+    }
 
     /** Once after Storage is done being used. */
-    abstract public function end(): void;
+    public function end(): void
+    {
+        // noop
+    }
 
     /** Whether $resourceName exists, and optionally contains $structure. */
-    abstract public function exists(string $resourceName = '', array $structure = []): bool;
+    public function exists(string $resourceName = '', array $structure = []): bool
+    {
+        return false;
+    }
 
     /** Send one record for storage at a time. */
-    abstract public function stream(
+    public function stream(
         array $row,
         array $structure,
         ?StorageInfo $info = null,
         bool $final = false
-    ): StorageInfo;
+    ): StorageInfo {
+        throw new \LogicException('Not implemented');
+    }
 
     /** Retrieve a reference to the underlying storage method library. */
-    abstract public function getHandle(): mixed;
+    public function getHandle(): mixed
+    {
+        throw new \LogicException('Not implemented');
+    }
 
     /**
      * Prepare a row of data for storage.

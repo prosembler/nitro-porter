@@ -173,43 +173,6 @@ class Https extends Storage
     }
 
     /**
-     * @param string $resourceName
-     * @param array $structure The final, combined structure to be written.
-     */
-    public function prepare(string $resourceName, array $structure): void
-    {
-        //
-    }
-
-    public function begin(): void
-    {
-        //
-    }
-
-    public function end(): void
-    {
-        //
-    }
-
-    /**
-     * @param string $resourceName
-     * @param array $structure
-     * @return bool
-     */
-    public function exists(string $resourceName = '', array $structure = []): bool
-    {
-        return false;
-    }
-
-    /**
-     * @inheritDoc
-     */
-    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
-    {
-        return new StorageInfo();
-    }
-
-    /**
      * Download a file & log issues.
      * @return bool Whether the download was successful.
      */

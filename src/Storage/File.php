@@ -3,6 +3,7 @@
 namespace Porter\Storage;
 
 use Porter\Storage;
+use Porter\StorageInfo;
 
 class File extends Storage
 {
@@ -133,10 +134,10 @@ class File extends Storage
      * @param resource $fp
      * @param array $row
      * @param array $structure
-     * @param array $info
-     * @return array
+     * @param StorageInfo|null $info
+     * @return StorageInfo
      */
-    public function writeRow($fp, array $row, array $structure, array $info = []): array
+    public function writeRow($fp, array $row, array $structure, ?StorageInfo $info = null): StorageInfo
     {
         // Loop through the columns in the export structure and grab their values from the row.
         $exRow = array();
@@ -152,9 +153,10 @@ class File extends Storage
         fwrite($fp, implode(self::DELIM, $exRow));
         // End the record.
         fwrite($fp, self::NEWLINE);
-        $info['rows']++;
 
-        return $info;
+        return new StorageInfo(
+            rows: $info->rows + 1
+        );
     }
 
     /**
@@ -162,17 +164,19 @@ class File extends Storage
      *
      * @param array $row
      * @param array $structure
-     * @param array $info
+     * @param ?StorageInfo $info
      * @param bool $final Whether this is the last row.
-     * @return array
+     * @return StorageInfo
      */
-    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
+    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
         $info = $this->writeRow($this->getHandle(), $row, $structure, $info);
         if ($final) {
             $this->writeEndTable($this->getHandle());
         }
-        return $info;
+        return new StorageInfo(
+            rows: $info->rows
+        );
     }
 
     /**

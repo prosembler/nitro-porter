@@ -202,7 +202,7 @@ abstract class Target extends Package
         $info = $this->outputStorage->store($tableName, $map, $struct, $exp, $filters);
 
         // Report.
-        Log::storage('import', $tableName, microtime(true) - $start, $info['rows'], $info['memory']);
+        Log::storage('import', $info);
     }
 
     /**
@@ -226,7 +226,13 @@ abstract class Target extends Package
             $rows = $this->mapAttachments($fileTarget);
 
             // Report.
-            Log::storage('map', 'Media.TargetFullPath', microtime(true) - $start, $rows, memory_get_usage());
+            $info = new StorageInfo(
+                name: 'Media.TargetFullPath',
+                memory: memory_get_usage(),
+                rows: $rows,
+                startTime: $start,
+            );
+            Log::storage('map', $info);
         }
 
         // Map avatars if self::SUPPORTED[avatarPath] exists.
@@ -239,7 +245,13 @@ abstract class Target extends Package
             $rows = $this->mapAvatars($fileTarget);
 
             // Report.
-            Log::storage('map', 'User.TargetAvatarFullPath', microtime(true) - $start, $rows, memory_get_usage());
+            $info = new StorageInfo(
+                name: 'User.TargetAvatarFullPath',
+                memory: memory_get_usage(),
+                rows: $rows,
+                startTime: $start,
+            );
+            Log::storage('map', $info);
         }
     }
 }

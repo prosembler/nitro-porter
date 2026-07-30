@@ -7,6 +7,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Porter\ConnectionManager;
 use Porter\Log;
 use Porter\Storage;
+use Porter\StorageInfo;
 
 class Database extends Storage
 {
@@ -69,30 +70,31 @@ class Database extends Storage
      * Created for Postscripts to have finer control over record inserts.
      * @param array $row
      * @param array $structure
-     * @param array $info
+     * @param ?StorageInfo $info
      * @param bool $final Must be `true` on final call or records will be lost.
-     * @return array
+     * @return StorageInfo
      */
-    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
+    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
         $info = $this->batchInsert($row, $info, $final);
-        if (!isset($info['rows'])) {
-            $info['rows'] = 0;
-        }
-        $info['rows']++;
-        return $info;
+        return new StorageInfo(
+            name: $info->name,
+            memory: $info->memory,
+            rows: $info->rows + 1,
+            startTime: $info->startTime
+        );
     }
 
     /**
      * Accept rows one at a time and batch them together for more efficient inserts.
      *
      * @param array $row Row of data to insert.
-     * @param array $info
+     * @param ?StorageInfo $info
      * @param bool $final Force an insert with existing batch.
-     * @return array Meta info.
+     * @return StorageInfo Meta info.
      *   - memory = Bytes currently being used by the app.
      */
-    private function batchInsert(array $row, array $info, bool $final = false): array
+    private function batchInsert(array $row, ?StorageInfo $info, bool $final = false): StorageInfo
     {
         static $batch = [];
         if (!empty($row)) {
@@ -100,7 +102,7 @@ class Database extends Storage
         }
 
         // Measure highest memory usage before potential send.
-        $info['memory'] = max(memory_get_usage(), $info['memory'] ?? 0);
+        $memory = max(memory_get_usage(), $info->memory);
 
         if (self::INSERT_BATCH === count($batch) || $final) {
             $this->sendBatch($batch);
@@ -108,11 +110,16 @@ class Database extends Storage
         }
 
         // Log count.
-        if (isset($info['name'])) {
-            $this->logBatchProgress($info['name'], $info['rows']);
+        if (isset($info->name)) {
+            $this->logBatchProgress($info->name, $info->rows);
         }
 
-        return $info;
+        return new StorageInfo(
+            name: $info->name,
+            memory: $memory,
+            rows: $info->rows,
+            startTime: $info->startTime
+        );
     }
 
     /**

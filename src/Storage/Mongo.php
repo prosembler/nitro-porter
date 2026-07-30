@@ -6,6 +6,7 @@ use MongoDB\Collection;
 use MongoDB\Database;
 use Porter\ConnectionManager;
 use Porter\Storage;
+use Porter\StorageInfo;
 
 /**
  * Document storage for targets that run on MongoDB.
@@ -206,8 +207,8 @@ class Mongo extends Storage
     /**
      * @inheritDoc
      */
-    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
+    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
-        return [];
+        return new StorageInfo();
     }
 }

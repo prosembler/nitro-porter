@@ -6,11 +6,6 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Origin extends Package
 {
-    /** @var int Conservative limit on non-429 4xx/5xx errors PER MINUTE to prevent bans. */
-    public const int MAX_ERRORS = 7;
-
-    public const int MAX_ERRORS_PAUSE_MINUTES = 2;
-
     /** @var array */
     protected array $config = [];
 
@@ -54,7 +49,7 @@ abstract class Origin extends Package
      * @param array $query
      * @param array $map
      * @param array $storeAll A set of [name => value] to insert into ALL resulting records.
-     * @return array $info from store()
+     * @return StorageInfo $info from get() and store()
      * @see Migration::import() for comparison.
      */
     protected function pull(
@@ -65,7 +60,7 @@ abstract class Origin extends Package
         array $query = [],
         array $map = [],
         array $storeAll = []
-    ): array {
+    ): StorageInfo {
         // Start timer.
         $start = microtime(true);
 
@@ -75,18 +70,13 @@ abstract class Origin extends Package
         $this->outputStorage->prepare($tableName, $fields);
 
         // Retrieve data from the origin.
-        $split_send = microtime(true);
-        $result = $this->originStorage->get($endpoint, $query);
-        if (empty($result)) {
-            return [];
-        }
-        list($content, $headers, $code) = $result;
-        $split_reply = microtime(true);
+        $originInfo = $this->originStorage->get($endpoint, $query);
+        $content = $originInfo->content;
 
         // Discard the rest of the content if we only want a key's contents.
-        if (!empty($key) && !empty($content)) {
-            if (isset($content[$key])) {
-                $content = $content[$key];
+        if (!empty($key) && !empty($originInfo->content)) {
+            if (isset($originInfo->content[$key])) {
+                $content = $originInfo->content[$key];
             } else {
                 Log::comment("> key '{$key}' not found in response from '{$endpoint}'.");
             }
@@ -97,31 +87,24 @@ abstract class Origin extends Package
             $item = array_merge($item, $storeAll);
         }
 
-        // Store the data.
+        // Store the $content.
         $info = $this->outputStorage->store($tableName, $map, $fields, $content, []);
 
-        // Add metadata for downstream logic. @todo Make an object
-        $info['content'] = $content;
-        $info['last'] = end($content);
-        $info['first'] = reset($content);
-        $info['headers'] = $headers;
-        $info['query'] = $query;
-        $info['http_code'] = $code;
-        $info['endpoint'] = $endpoint;
-        $info['api_time'] = $split_reply - $split_send;
-        $info['pull_time'] = microtime(true) - $start;
-        Log::pull($tableName, $info);
-
-        // Pause if needed.
-        if (429 === $code) {
-            $this->respect429s($headers);
-        } elseif (count($this->originStorage->getErrors()) >= self::MAX_ERRORS) {
-            // Detect excessive recent errors.
-            Log::comment("ERRORS: Pausing " . self::MAX_ERRORS_PAUSE_MINUTES . "m (exceeded " . self::MAX_ERRORS . ")");
-            sleep(self::MAX_ERRORS_PAUSE_MINUTES * 60); // TAKE A NAP BUT THEN FIRE ZE RETRY.
-        } else {
-            usleep($this->rateLimit($headers, $info['pull_time']));
-        }
+        // Send info.
+        $info = new StorageInfo(
+            name: $tableName,
+            memory: $info->memory,
+            rows: $info->rows,
+            content: $content,
+            startTime: $start,
+            endTime: microtime(true),
+            requestTime: $originInfo->requestTime,
+            headers: $originInfo->headers,
+            query: $originInfo->query,
+            http_code: $originInfo->http_code,
+            endpoint: $endpoint,
+        );
+        Log::pull($info);
 
         return $info;
     }
@@ -129,10 +112,13 @@ abstract class Origin extends Package
     /**
      * Extract a list to its own table.
      */
-    protected function extract(string $tableName, array $fields, array $data): array
+    protected function extract(string $tableName, array $fields, array $data): StorageInfo
     {
+        // May be called blindly without checking for records.
         if (empty($data)) {
-            return []; // May be called blindly without checking for records.
+            return new StorageInfo(
+                rows: 0
+            );
         }
 
         // Start timer.
@@ -147,38 +133,15 @@ abstract class Origin extends Package
         $info = $this->extractStorage->store($tableName, [], $fields, $data, []);
 
         // Report.
-        Log::storage('> extract', $tableName, microtime(true) - $start, count($data), $info['memory']);
+        $info = new StorageInfo(
+            name: $info->name,
+            memory: $info->memory,
+            rows: $info->rows,
+            startTime: $start,
+        );
+        Log::storage('> extract', $info);
 
         return $info;
-    }
-
-    /**
-     * Whether to attempt another get().
-     * Based on HTTP 429 response and retry-after header.
-     * @param array $headers
-     */
-    protected function respect429s(array $headers): void
-    {
-        $seconds = (int)($headers['retry-after'][0] ?? 0); // Standard HTTP header.
-        if ($seconds > 0 && $seconds < 300) { // Valid amount of time under 5 min.
-            Log::comment("429 'Too Many Requests': Pausing {$seconds}s (per `retry-after`)");
-            sleep($seconds); // TAKE A NAP BUT THEN FIRE ZE RETRY.
-        } else {
-            Log::comment("429 'Too Many Requests': Pausing 5s (no `retry-after` found)");
-            sleep(5); // Pause a beat for safety.
-        }
-    }
-
-    /**
-     * Override this method to implement non-429 custom rate limiting detection per Origin.
-     *
-     * @param array $headers from Https::parseResponse()
-     * @param float $elapsed from microtime(true) output in self::pull()
-     * @return int Number of microseconts to wait.
-     */
-    protected function rateLimit(array $headers, float $elapsed = 0): int
-    {
-        return 0;
     }
 
     /**

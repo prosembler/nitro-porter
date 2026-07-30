@@ -34,6 +34,7 @@ use Porter\Package;
  * A Discord server is referred to as a 'guild' in the API docs.
  * 429 response code will have Retry-After header & retry_after in JSON body.
  * @see https://discord.com/developers/docs/reference
+ * @see \Porter\Https\DiscordRetryStrategy
  */
 class Discord extends Origin
 {
@@ -43,16 +44,7 @@ class Discord extends Origin
 
     public const string CDN_BASE_URI = 'https://cdn.discordapp.com/';
 
-    /**
-     * Discord has both a 50/sec rate limit (API) and a 10K/10min rate limit (Cloudflare).
-     * 1 second = 1,000 milliseconds = 1,000,000 microseconds.
-     * Limits are therefore 1/20000 microseconds (API) and 1/62500 microseconds (CF).
-     * Because scrapes are likely to exceed 10 minutes, use the slower rate / longer wait.
-     */
-    public const int MIN_MICROSECONDS = 62500; // Wait to force rate limit compliance.
-
-    public const int MICROSECONDS_PER_SEC = 1000000;
-
+    /** @var int Sanity check boundary. */
     public const int MAX_CHANNEL_QUERIES = 10000; // Channels + threads.
 
     /**
@@ -338,45 +330,6 @@ class Discord extends Origin
     }
 
     /**
-     * Discord uses custom rate limit headers.
-     *
-     * Min pause to not reach CloudFlare limit = MIN_MICROSECONDS
-     * @see Origin::respect429s() for handling of 429s via `retry-after` header.
-     *
-     * x-ratelimit-limit - total number that can be made
-     * x-ratelimit-remaining - remaining number that can be made
-     * x-ratelimit-reset - epoch time when limit resets
-     * x-ratelimit-reset-after - seconds til reset
-     * x-ratelimit-bucket - what limit bucket this limit is in
-     * x-ratelimit-scope - user, shared, or global
-     */
-    protected function rateLimit(array $headers, float $elapsed = 0): int
-    {
-        // Get header info.
-        $limit = $headers['x-ratelimit-limit'][0] ?? null;
-        $remaining = $headers['x-ratelimit-remaining'][0] ?? null;
-        $after = $headers['x-ratelimit-reset-after'][0] ?? null;
-
-        // Calculate min pause for syncronous requests by subtracting cycle time from minimum.
-        $wait = self::MIN_MICROSECONDS - (int)($elapsed * self::MICROSECONDS_PER_SEC);
-        $wait = max(min($wait, self::MIN_MICROSECONDS), 0); // 0 <= $wait <= self::MIN_MICROSECONDS
-
-        // Extend the wait if headers dictate.
-        if (!is_null($remaining) && empty($remaining)) { // Zero (not null)
-            $msg = "> Header rate limit ($limit) exhausted: ";
-            if (!empty($after) && is_numeric($after)) {
-                $wait = ceil($after) * self::MICROSECONDS_PER_SEC;
-                Log::comment($msg . "pausing " . round($after, 1) . "s (per `reset-after`)");
-            } else {
-                $wait = 60 * self::MICROSECONDS_PER_SEC; // 1 minute fallback.
-                Log::comment($msg . "pausing 1m (no `reset-after` found)");
-            }
-        }
-
-        return $wait;
-    }
-
-    /**
      * Get channel id list.
      */
     private function getTextChannels(array $types): array
@@ -412,8 +365,8 @@ class Discord extends Origin
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
         $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS, []);
-        $this->guildUsers = array_column($info['content'], 'id');
-        $this->extractUserRoles($info['content']);
+        $this->guildUsers = array_column($info->content, 'id');
+        $this->extractUserRoles($info->content);
     }
 
     /** @see https://discord.com/developers/docs/topics/permissions#role-object */
@@ -499,7 +452,7 @@ class Discord extends Origin
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
         $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis', null, [], [], []);
-        $this->guildEmojis = array_column($info['content'], 'id');
+        $this->guildEmojis = array_column($info->content, 'id');
     }
 
     /**
@@ -585,8 +538,7 @@ class Discord extends Origin
         $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $info = $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
-            $this->rateLimit($info['headers']);
+            $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
         }
     }
 
@@ -669,38 +621,32 @@ class Discord extends Origin
                 $query['before'] = $channels[$channelId];
             }
             $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map, []);
-            if (empty($info)) {
-                continue; // @todo $info isn't safe as an array
-            }
 
             // Attachments.
-            $this->extractAttachments($info['content']);
+            $this->extractAttachments($info->content);
 
             // Reactions & non-guild emoji used in them.
-            $userReactionsQueue[$channelId] = $this->extractReactions($info['content'], $channelId);
+            $userReactionsQueue[$channelId] = $this->extractReactions($info->content, $channelId);
 
             // Non-guild authors.
-            $this->extractAuthors($info['content']);
+            $this->extractAuthors($info->content);
 
             // Polls.
-            $this->extractPolls($info['content'], $channelId);
+            $this->extractPolls($info->content, $channelId);
 
             // Note completed channels.
-            if (0 === (int)$info['rows']) {
+            if (0 === $info->rows) {
                 // Change status to 'done' if no more rows found.
                 $finished[$channelId] = true;
                 //Log::comment("> channel $channelId has no messages past {$channels[$channelId]}, skipping.");
             }
 
-            if (isset($info['last']['id'])) {
+            if (isset($info->getLast()['id'])) {
                 // Update offset & report where we are.
-                $id = $channels[$channelId] = $info['last']['id']; // Should be oldest message.
-                $time = $info['last']['timestamp'] ?? '';
+                $id = $channels[$channelId] = $info->getLast()['id']; // Should be oldest message.
+                $time = $info->getLast()['timestamp'] ?? '';
                 Log::comment("> last_msg=$id @ " . $time);
             }
-
-            // Rate limit.
-            $this->rateLimit($info['headers'], $info['pull_time']);
         }
 
         $this->processUserReactions(array_filter($userReactionsQueue));
@@ -738,10 +684,10 @@ class Discord extends Origin
         $info = $this->extract('discord_users', self::SCHEMA_USERS, $missingUsers);
 
         // Log actions & mark users as "found".
-        if (!empty($info['rows'])) { // Missing users were inserted.
+        if (!empty($info->rows)) { // Missing users were inserted.
             Log::comment("> non-guid user(s) added: " . implode(',', $missingUsers));
-            if ($info['rows'] !== count($missingUsers)) { // Some missing users weren't inserted.
-                $countSkipped = count($missingUsers) - $info['rows'];
+            if ($info->rows !== count($missingUsers)) { // Some missing users weren't inserted.
+                $countSkipped = count($missingUsers) - $info->rows;
                 Log::comment("> WARNING: $countSkipped user(s) were not captured");
             }
             $this->guildUsers = array_merge($this->guildUsers, $missingUserIDs);
@@ -863,8 +809,6 @@ class Discord extends Origin
                     $queue[$channelId] = $reactions; // -1 item.
                     $remaining += count($reactions);
                 }
-                // Rate limit.
-                $this->rateLimit($info['headers'], $info['pull_time']);
             }
             $channels = count($queue);
             Log::comment("> $remaining reactions remaining in queue across $channels channels after pass $pass");

@@ -3,8 +3,10 @@
 namespace Porter\Storage;
 
 use Porter\ConnectionManager;
+use Porter\Https\DiscordRetryStrategy;
 use Porter\Log;
 use Porter\Storage;
+use Porter\StorageInfo;
 use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
@@ -105,11 +107,18 @@ class Https extends Storage
      * Send the request & retrieve the response content.
      * @param string $endpoint URI to fetch.
      * @param array $query paramName => value.
-     * @param int $retries How many times we've tried (recursively).
-     * @return array Response content.
+     * @return StorageInfo
      */
-    public function get(string $endpoint, array $query, int $retries = 0): array
+    public function get(string $endpoint, array $query): StorageInfo
     {
+        // Setup client.
+        $client = new RetryableHttpClient(
+            client: $this->connectionManager->connection(),
+            strategy: new DiscordRetryStrategy(),
+            maxRetries: 10,
+            logger: Log::getInstance()
+        );
+
         // Build request.
         $endpoint = ltrim($endpoint, '/'); // No `/` at start or path of base_uri will be overwritten.
         $options = ['headers' => $this->getHeaders()];
@@ -117,25 +126,20 @@ class Https extends Storage
             $options['query'] = $query;
         }
 
-        while (empty($parsed)) {
-            // Detect excessive retries.
-            if ($retries > self::MAX_RETRIES) {
-                return [];
-            }
-            $retries++;
-
-            // Send request.
-            try {
-                $response = $this->connectionManager->connection()->request('GET', $endpoint, $options);
-            } catch (TransportExceptionInterface $e) { // Bad option passed; most likely a bug in Porter.
-                Log::comment("\nABORTED " . date('H:i:s e') . " — GET ($endpoint) " . $e->getMessage() . "\n");
-                exit();
-            }
-
-            $parsed = $this->parseResponse($response);
+        // Send request.
+        try {
+            $response = $client->request('GET', $endpoint, $options);
+        } catch (TransportExceptionInterface $e) { // Bad option passed; most likely a bug in Porter.
+            Log::comment("\nABORTED " . date('H:i:s e') . " — GET ($endpoint) " . $e->getMessage() . "\n");
+            exit();
         }
 
-        return $parsed;
+        return new StorageInfo(
+            content: $response->toArray(false),
+            requestTime: $response->getInfo('start_time') - microtime(true), // http_method
+            headers: $response->getInfo('response_headers'),
+            http_code: $response->getInfo('http_code')
+        );
     }
 
     /**
@@ -197,37 +201,9 @@ class Https extends Storage
     /**
      * @inheritDoc
      */
-    public function stream(array $row, array $structure, array $info = [], bool $final = false): array
+    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
-        return [];
-    }
-
-    /**
-     * Parse `ResponseInterface` from get() for content & headers.
-     * @return array Empty means retry.
-     */
-    protected function parseResponse(ResponseInterface $response): array
-    {
-        $code = 0;
-        $headers = [];
-        $message = '';
-        try {
-            $headers = $response->getHeaders(false); // Forcibly retrieve headers.
-            $message = $response->getContent(false); // Forcibly retrieve body.
-            $code = $response->getStatusCode();
-            $content = $response->toArray();
-        } catch (ClientExceptionInterface | ServerExceptionInterface $e) { // 4xx|5xx
-            if (429 !== $code) { // Track this class of errors.
-                $this->addError(['code' => $code, 'message' => $message, 'headers' => $headers, 'exception' => $e]);
-            }
-            return []; // RETRY.
-        } catch (RedirectionExceptionInterface | TransportExceptionInterface | DecodingExceptionInterface $e) {
-            // Redirect=3xx, Transport=network, Decoding=data. Unlikely to have consequences; log & retry.
-            Log::comment("HTTP $code " . $e->getMessage());
-            return []; // RETRY.
-        }
-
-        return [$content, $headers, $code];
+        return new StorageInfo();
     }
 
     /**

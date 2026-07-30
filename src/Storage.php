@@ -15,7 +15,7 @@ abstract class Storage
      * @param array $structure Name -> type
      * @param ResultSet|Builder|array $data
      * @param array $filters Name -> callable
-     * @return array Information about the results.
+     * @return StorageInfo Information about the results.
      */
     public function store(
         string $name,
@@ -23,13 +23,8 @@ abstract class Storage
         array $structure,
         ResultSet|Builder|array $data,
         array $filters
-    ): array {
-        $info = [
-            'rows' => 0,
-            'memory' => memory_get_usage(),
-            'name' => $name,
-        ];
-
+    ): StorageInfo {
+        $info = new StorageInfo();
         if (is_a($data, '\Porter\Database\ResultSet')) {
             // Iterate on @deprecated ResultSet.
             while ($row = $data->nextResultRow()) {
@@ -51,7 +46,11 @@ abstract class Storage
         }
         $this->stream([], [], $info, true); // Insert remaining records.
 
-        return $info;
+        return new StorageInfo(
+            name: $name,
+            memory: $info->memory !== 0 ? $info->memory : memory_get_usage(),
+            rows: $info->rows
+        );
     }
 
     /**
@@ -71,7 +70,12 @@ abstract class Storage
     abstract public function exists(string $resourceName = '', array $structure = []): bool;
 
     /** Send one record for storage at a time. */
-    abstract public function stream(array $row, array $structure, array $info = [], bool $final = false): array;
+    abstract public function stream(
+        array $row,
+        array $structure,
+        ?StorageInfo $info = null,
+        bool $final = false
+    ): StorageInfo;
 
     /** Retrieve a reference to the underlying storage method library. */
     abstract public function getHandle(): mixed;

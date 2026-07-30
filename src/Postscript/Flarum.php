@@ -2,7 +2,7 @@
 
 namespace Porter\Postscript;
 
-use Porter\ConnectionManager;
+use Porter\PorterConnection;
 use Porter\Log;
 use Porter\Parser\Flarum\QuoteEmbed;
 use Porter\Postscript;

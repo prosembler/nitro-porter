@@ -141,7 +141,7 @@ class Config
 
         // Database required fields.
         if ($info['type'] === 'database') {
-            foreach (['adapter', 'host','name','user'] as $property) {
+            foreach (['adapter', 'host'] as $property) {
                 if (!array_key_exists($property, $info)) {
                     throw new \Exception('Database `' . $property . '` missing for alias "' . $alias . '" in config');
                 }

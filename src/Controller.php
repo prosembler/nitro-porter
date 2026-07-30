@@ -135,7 +135,7 @@ class Controller
         $this->captureOnly = ($outputName === 'sql');
 
         // Add legacy database support to Sources.
-        $inputDB = new \Porter\Database\DbFactory(new ConnectionManager($inputName)->connection()->getPDO());
+        $inputDB = new \Porter\Database\DbFactory(new PorterConnection($inputName)->connection()->getPDO());
         $source->addLegacySupport($inputDB);
 
         // Evaluate the Source & Target flags.
@@ -184,11 +184,11 @@ class Controller
         $inputName = $request->getInput();
 
         // Create new migration artifacts.
-        $inputStorage = new Storage\Database(new ConnectionManager($inputName));
-        $extractStorage = new Storage\Database(new ConnectionManager($inputName));
+        $inputStorage = new Storage\Database(new PorterConnection($inputName));
+        $extractStorage = new Storage\Database(new PorterConnection($inputName));
         $origin = Factory::origin($originName, $inputStorage, $extractStorage);
 
-        $originStorage = new Storage\Https(new ConnectionManager($originName)); // @todo non-API origins
+        $originStorage = new Storage\Https(new PorterConnection($originName)); // @todo non-API origins
         $origin->addHttps($originStorage);
 
         // Report on request.

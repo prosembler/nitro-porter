@@ -9,10 +9,9 @@ class Factory
     /**
      * Setup a new FileTransfer service.
      */
-    public static function fileTransfer(Source $source, Target $target, string $porterName): FileTransfer
+    public static function fileTransfer(Source $source, Target $target, string $outputName): FileTransfer
     {
-        // The `PORT_` intermediary is always relational, so read it via the porter (SQL) connection.
-        $porterStorage = new Storage\Database(new ConnectionManager($porterName, 'PORT_'));
+        $porterStorage = new Storage\Database(new PorterConnection($outputName, 'PORT_'));
         return new FileTransfer($source, $target, $porterStorage);
     }
 
@@ -74,7 +73,8 @@ class Factory
         if ($name === 'file') { // @todo storageFactory
             return new Storage\File();
         }
-        $connection = new ConnectionManager($name, $prefix);
+
+        $connection = new PorterConnection($name, $prefix);
         if ($connection->getType() === 'mongo') {
             return new Storage\Mongo($connection);
         }

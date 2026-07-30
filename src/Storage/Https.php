@@ -9,20 +9,13 @@ use Porter\Storage;
 use Porter\StorageInfo;
 use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
-use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
-use Symfony\Contracts\HttpClient\ResponseInterface;
 
 class Https extends Storage
 {
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
-
-    /** @var int Number of tries to retry a request on non-4xx/5xx errors. */
-    public const int MAX_RETRIES = 3;
 
     /** @var ConnectionManager */
     protected ConnectionManager $connectionManager;
@@ -115,7 +108,7 @@ class Https extends Storage
         $client = new RetryableHttpClient(
             client: $this->connectionManager->connection(),
             strategy: new DiscordRetryStrategy(),
-            maxRetries: 10,
+            maxRetries: 5,
             logger: Log::getInstance()
         );
 
@@ -134,11 +127,19 @@ class Https extends Storage
             exit();
         }
 
+        // Get content.
+        try {
+            $content = $response->toArray();
+        } catch (ExceptionInterface $e) {
+            Log::comment("\nFAILED: GET ($endpoint) " . $e->getCode() . " " . $e->getMessage() . "\n");
+            $content = [];
+        }
+
         return new StorageInfo(
-            content: $response->toArray(false),
+            content: $content,
             requestTime: $response->getInfo('start_time') - microtime(true), // http_method
             headers: $response->getInfo('response_headers'),
-            http_code: $response->getInfo('http_code')
+            http_code: $response->getInfo('http_code'),
         );
     }
 

@@ -36,8 +36,7 @@ class DiscordRetryStrategy extends GenericRetryStrategy
         AsyncContext $context,
         ?string $responseContent,
         ?TransportExceptionInterface $exception
-    ): ?bool
-    {
+    ): ?bool {
         $headers = $context->getHeaders();
         $statusCode = $context->getStatusCode();
         $bucket = $headers['x-ratelimit-bucket'][0] ?? null;
@@ -62,8 +61,7 @@ class DiscordRetryStrategy extends GenericRetryStrategy
         AsyncContext $context,
         ?string $responseContent,
         ?TransportExceptionInterface $exception
-    ): int
-    {
+    ): int {
         $headers = $context->getHeaders();
         $bucket = $headers['x-ratelimit-bucket'][0] ?? null;
         $now = microtime(true);

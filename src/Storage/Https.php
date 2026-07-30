@@ -120,12 +120,14 @@ class Https extends Storage
         }
 
         // Send request.
+        $start = microtime(true);
         try {
             $response = $client->request('GET', $endpoint, $options);
         } catch (TransportExceptionInterface $e) { // Bad option passed; most likely a bug in Porter.
             Log::comment("\nABORTED " . date('H:i:s e') . " — GET ($endpoint) " . $e->getMessage() . "\n");
             exit();
         }
+        $requestTime = microtime(true) - $start;
 
         // Get content.
         try {
@@ -137,7 +139,7 @@ class Https extends Storage
 
         return new StorageInfo(
             content: $content,
-            requestTime: $response->getInfo('start_time') - microtime(true), // http_method
+            requestTime: $requestTime,
             headers: $response->getInfo('response_headers'),
             http_code: $response->getInfo('http_code'),
         );

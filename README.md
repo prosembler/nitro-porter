@@ -15,13 +15,18 @@ When everyone owns their own data and can freely choose their platform, everyone
 
 ### 🤔 How is this possible?
 
-Data is first converted to an intermediary "porter format," reducing the number of code paths from `#sources x #targets` to `#sources + #targets`.
+Data is first converted to an intermediary "porter schema," reducing the number of code paths from `#sources x #targets` to `#sources + #targets`.
 The result is repeatable results in a single multi-tool rather than myriad low-quality, single-purpose tools.
 
-### 🪴 How is it extended?
+### 🪴 Why not 1-off migration tools?
 
-Nitro Porter packages allow anyone with _basic_ programming skills to add any community software (commercial or free) as source or target.
-Nitro Porter uses the [GNU AGPL 3.0 license](COPYING) to ensure it remains freely available to all.
+Data migrations typically require either time & skill (you are a programmer) or capital (you are a for-profit company).
+Nitro Porter aims to become increasingly accessible to _everyone else_ by making both migrations & extensibility simple.
+Software tools should not be assumed disposible just because they don't have a 30% profit margin to exploit.
+
+### 📿 Can't AI do this?
+
+No.
 
 ## 🚥 Get started
 
@@ -91,11 +96,10 @@ You will **always** need to reassign permissions after a migration.
 ### 🔭 Future support
 
 Don't see your software? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to request it and keep an eye on our [informal roadmap](https://github.com/orgs/prosembler/projects/1).
-We're happy to add a new **Source** for any software, provided it is not bespoke.
-For a new **Target**, we typically require support from the vendor.
+We're happy to accept **contributions** of a new Source, Target, or Origin for any publicly available software.
+We occassionally accept **requests** for a new Source or **sponsorships** for any package type.
 
-Currently, nearly all data sources and targets are based on MySQL-compatible databases.
-Other storage formats (e.g. mbox, MSSQL, API) require pre-conversion to a MySQL database. 
-The 3.0 rewrite of Nitro Porter[^1] was built with native support for those alternate formats in mind and it will continue to expand.
+Today, some storage formats (e.g. mbox, MSSQL, API) first require conversion to a relational database with other software. 
+The 3.0 rewrite of Nitro Porter[^1] was built with future support for those many more formats in mind and it will continue to expand.
 
 [^1]: 🚀 Forked 27 Sep 2021 in memory of Kyle

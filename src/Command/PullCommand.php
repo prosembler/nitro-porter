@@ -14,7 +14,7 @@ class PullCommand extends Command
         parent::__construct('pull', 'Pull data from origin.');
         $this
             ->option('-r --origin', 'Origin package alias')
-            ->option('-i --input', 'Target connection alias (defined in config)')
+            ->option('-i --inputstore', 'Target storage alias (defined in config)')
             ->usage(
                 '<bold>  pull -r discord -i myserver </end><eol/>' .
                 '<comment>  Pull data from Discord into database with alias `myserver` (in config.php). ' .
@@ -45,7 +45,7 @@ class PullCommand extends Command
     {
         $request = (new Request(
             originPackage: $this->origin,
-            inputConnection: $this->input,
+            inputStorage: $this->input,
         ));
 
         (new \Porter\Controller())->pull($request);

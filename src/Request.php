@@ -23,9 +23,9 @@ class Request
     private ?string $originName;
     private ?string $sourceName;
     private ?string $targetName;
-    private ?string $inputConnection;
-    private ?string $outputConnection;
-    private ?string $porterConnection;
+    private ?string $inputStorage;
+    private ?string $outputStorage;
+    private ?string $porterStorage;
     private string $inputTablePrefix = '';
     private string $outputTablePrefix = '';
     private ?string $cdnPrefix;
@@ -37,8 +37,9 @@ class Request
      * @param ?string $originPackage Origin package alias
      * @param ?string $sourcePackage Source package alias (or 'port')
      * @param ?string $targetPackage Target package alias (or 'file', 'sql')
-     * @param ?string $inputConnection Connection alias in config.php
-     * @param ?string $outputConnection Connection alias in config.php
+     * @param ?string $inputStorage Storage alias in config.php
+     * @param ?string $outputStorage Storage alias in config.php
+     * @param ?string $porterStorage Storage alias in config.php
      * @param ?string $inputTablePrefix If the input is a database, override source package with this table prefix.
      * @param ?string $outputTablePrefix If the output is a database, override target package with this table prefix.
      * @param ?string $cdnPrefix Text to prepend to attachment URIs.
@@ -49,8 +50,9 @@ class Request
         ?string $originPackage = null,
         ?string $sourcePackage = null,
         ?string $targetPackage = null,
-        ?string $inputConnection = null,
-        ?string $outputConnection = null,
+        ?string $inputStorage = null,
+        ?string $outputStorage = null,
+        ?string $porterStorage = null,
         ?string $inputTablePrefix = null,
         ?string $outputTablePrefix = null,
         ?string $cdnPrefix = null,
@@ -60,10 +62,10 @@ class Request
         $this->sourceName = $sourcePackage ?? Config::getInstance()->get('source');
         $this->targetName = $targetPackage ?? Config::getInstance()->get('target');
 
-        $this->inputConnection = $inputConnection ?? Config::getInstance()->get('input_alias');
-        $this->outputConnection = $outputConnection ?? Config::getInstance()->get('output_alias');
-        // The `PORT_` intermediary is always relational; falls back to the output connection.
-        $this->porterConnection = Config::getInstance()->get('porter_alias') ?: $this->outputConnection;
+        $this->inputStorage = $inputStorage ?? Config::getInstance()->get('input_alias');
+        $this->outputStorage = $outputStorage ?? Config::getInstance()->get('output_alias');
+        // `PORT_` intermediary MUST be relational; fallback to the output storage.
+        $this->porterStorage = $porterStorage ?? Config::getInstance()->get('porter_alias') ?: $this->outputStorage;
 
         // Table prefixes: CLI > Config > Package defaults
         if (!empty($this->sourceName)) {
@@ -104,17 +106,17 @@ class Request
 
     public function getInput(): ?string
     {
-        return $this->inputConnection;
+        return $this->inputStorage;
     }
 
     public function getOutput(): ?string
     {
-        return $this->outputConnection;
+        return $this->outputStorage;
     }
 
     public function getPorter(): ?string
     {
-        return $this->porterConnection;
+        return $this->porterStorage;
     }
 
     public function getInputTablePrefix(): ?string

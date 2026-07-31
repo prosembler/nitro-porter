@@ -45,9 +45,23 @@ class Factory
     /**
      * Get Source if it exists.
      */
-    public static function source(string $source, ?Storage $input = null, ?Storage $porter = null): ?Source
-    {
-        return Factory::package('Source', $source, $input, $porter);
+    public static function source(
+        string $source,
+        ?Storage $input = null,
+        ?Storage $porter = null,
+        string $dataTypes = '',
+        string $inputName = ''
+    ): ?Source {
+        $source = Factory::package('Source', $source, $input, $porter);
+
+        // Set constraints.
+        $source->limitTables($dataTypes);
+
+        // Add legacy database support to Sources.
+        $inputDB = new \Porter\Database\DbFactory(new ConnectionManager($inputName)->connection()->getPDO());
+        $source->addLegacySupport($inputDB);
+
+        return $source;
     }
 
     /**

@@ -12,21 +12,16 @@ namespace Porter;
 class Controller
 {
     /**
-     * @var bool Whether to capture SQL without executing.
+     * Export workflow (Source -> `PORT_`).
      */
-    public bool $captureOnly = false;
-
-    /**
-     * Export workflow.
-     */
-    protected function doExport(Source $source): void
+    protected function doExport(Source $source, bool $captureOnly = false): void
     {
         $source->verifySource($source->sourceTables);
         if (!defined('PORTER_INPUT_ENCODING')) {
             define('PORTER_INPUT_ENCODING', $source->getInputEncoding($source::getCharsetTable()));
         }
 
-        if (!$this->captureOnly) {
+        if (!$captureOnly) {
             $source->porterStorage->begin();
         }
 
@@ -38,10 +33,14 @@ class Controller
     }
 
     /**
-     * Import workflow.
+     * Import workflow (`PORT_` -> Target).
      */
-    protected function doImport(Target $target): void
+    protected function doImport(?Target $target): void
     {
+        // Nothing to do if there's no Target.
+        if (empty($target)) {
+            return;
+        }
         $target->outputStorage->begin();
         $target->validate();
         $target->run();
@@ -54,9 +53,24 @@ class Controller
      * Use a separate database connection since re-querying data may be necessary.
      *    -> "Cannot execute queries while other unbuffered queries are active."
      */
-    protected function doPostscript(Postscript $postscript): void
+    protected function doPostscript(?Postscript $postscript): void
     {
+        // Nothing to do if there's no Postscript.
+        if (empty($postscript)) {
+            return;
+        }
         $postscript->run();
+    }
+
+    /**
+     * Transfer files if supported.
+     */
+    protected function doFileTransfer(FileTransfer $fileTransfer): void
+    {
+        if (!$fileTransfer->isSupported()) {
+            return;
+        }
+        $fileTransfer->run();
     }
 
     /**
@@ -65,10 +79,15 @@ class Controller
      * This is the ONLY opportunity for the source & target to "coordinate."
      *
      * @param Source $source
-     * @param Target $target
+     * @param ?Target $target
      */
-    protected function setFlags(Source $source, Target $target): void
+    protected function setFlags(Source $source, ?Target $target): void
     {
+        // Nothing to negotiate if there's no Target.
+        if (empty($target)) {
+            return;
+        }
+
         // If both the source and target don't store content/body on the discussion/thread record,
         // skip the conversion on both sides so we don't do joins and renumber keys for nothing.
         if (
@@ -102,7 +121,7 @@ class Controller
         set_time_limit(0); // Disable PHP time limit.
         ini_set('memory_limit', '256M'); // Override memory limit to be high enough.
 
-        // Break down the Request.
+        // Collect request.
         $sourceName = $request->getSource();
         $targetName = $request->getTarget();
         $inputName = $request->getInput();
@@ -112,7 +131,7 @@ class Controller
         $targetPrefix = $request->getOutputTablePrefix();
         $dataTypes = $request->getDatatypes();
 
-        // Log the Request.
+        // Log request.
         Log::comment("NITRO PORTER RUNNING...");
         Log::comment("Porting " . $sourceName . " to " . $targetName);
         Log::comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
@@ -120,46 +139,22 @@ class Controller
         Log::comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
         Log::comment("\n" . sprintf('[ STARTED at %s ]', date('H:i:s e')) . "\n");
 
-        // Factory for migration artifacts.
+        // Build artifacts.
         $inputStorage = Factory::storage($inputName, $sourcePrefix);
         $porterStorage = Factory::storage($porterName, 'PORT_');
         $outputStorage = Factory::storage($outputName, $targetPrefix);
         $postscriptStorage = Factory::storage($outputName, $targetPrefix); // Postscript names must match target names.
-        $source = Factory::source($sourceName, $inputStorage, $porterStorage);
+        $source = Factory::source($sourceName, $inputStorage, $porterStorage, $dataTypes, $inputName);
         $target = Factory::target($targetName, $porterStorage, $outputStorage);
         $postscript = Factory::postscript($targetName, $outputStorage, $postscriptStorage);
         $fileTransfer = Factory::fileTransfer($source, $target, $porterName);
 
-        // Set constraints.
-        $source->limitTables($dataTypes);
-        $this->captureOnly = ($outputName === 'sql');
-
-        // Add legacy database support to Sources.
-        $inputDB = new \Porter\Database\DbFactory(new ConnectionManager($inputName)->connection()->getPDO());
-        $source->addLegacySupport($inputDB);
-
-        // Evaluate the Source & Target flags.
-        if ($target) {
-            $this->setFlags($source, $target);
-        }
-
-        // Export (Source -> `PORT_`).
-        $this->doExport($source);
-
-        // Import (`PORT_` -> Target).
-        if ($target) {
-            $this->doImport($target);
-            if ($postscript) {
-                $this->doPostscript($postscript);
-            }
-        }
-
-        // File transfer.
-        if ($fileTransfer->isSupported()) {
-            Log::comment('File Transfer started...');
-            $fileTransfer->run();
-            Log::comment('File Transfer completed.');
-        }
+        // Main workflow.
+        $this->setFlags($source, $target);
+        $this->doExport($source, ($outputName === 'sql'));
+        $this->doImport($target);
+        $this->doPostscript($postscript);
+        $this->doFileTransfer($fileTransfer);
 
         // Report finished.
         Log::comment("\n" . sprintf(

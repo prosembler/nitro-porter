@@ -6,7 +6,7 @@
 
 namespace Porter;
 
-class Request
+final readonly class Request
 {
     private const VALID_DATA_TYPES = [
         'all',
@@ -26,8 +26,8 @@ class Request
     private ?string $inputConnection;
     private ?string $outputConnection;
     private ?string $porterConnection;
-    private string $inputTablePrefix = '';
-    private string $outputTablePrefix = '';
+    private ?string $inputTablePrefix;
+    private ?string $outputTablePrefix;
     private ?string $cdnPrefix;
     private ?string $dataTypes;
 
@@ -66,16 +66,16 @@ class Request
         $this->porterConnection = Config::getInstance()->get('porter_alias') ?: $this->outputConnection;
 
         // Table prefixes: CLI > Config > Package defaults
-        if (!empty($this->sourceName)) {
-            $this->inputTablePrefix = $inputTablePrefix ??
-                (Config::getInstance()->get('source_prefix') ??
-                    Factory::source($this->sourceName)->getPrefix());
+        $i = $inputTablePrefix ?? Config::getInstance()->get('source_prefix');
+        if (!empty($this->sourceName) && empty($i)) {
+            $i = Factory::source($this->sourceName)->getPrefix();
         }
-        if (!empty($this->targetName)) {
-            $this->outputTablePrefix = $outputTablePrefix ??
-                (Config::getInstance()->get('target_prefix') ??
-                    Factory::target($this->targetName)->getPrefix());
+        $this->inputTablePrefix = $i;
+        $o = $outputTablePrefix ?? Config::getInstance()->get('target_prefix');
+        if (!empty($this->targetName) && empty($o)) {
+            $o = Factory::target($this->targetName)->getPrefix();
         }
+        $this->outputTablePrefix = $o;
         $this->cdnPrefix = $cdnPrefix ?? Config::getInstance()->get('option_cdn_prefix');
 
         if (!empty($dataTypes) && !count(array_diff(explode(',', $dataTypes), self::VALID_DATA_TYPES))) {

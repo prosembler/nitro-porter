@@ -36,9 +36,17 @@ class Factory
     /**
      * Get Origin if it exists.
      */
-    public static function origin(string $origin, ?Storage $input = null, ?Storage $extract = null): ?Origin
-    {
-        return Factory::package('Origin', $origin, $input, $extract);
+    public static function origin(
+        string $origin,
+        ?Storage $input = null,
+        ?Storage $extract = null,
+        ?Storage $https = null,
+    ): ?Origin {
+        $origin = Factory::package('Origin', $origin, $input, $extract);
+        if (is_a($https, Storage\Https::class)) {
+            $origin->addHttps($https);
+        }
+        return $origin;
     }
 
     /**
@@ -70,14 +78,13 @@ class Factory
      */
     public static function storage(string $name, ?string $prefix = ''): Storage
     {
-        if ($name === 'file') { // @todo storageFactory
+        if ($name === 'file') { // File storage has no connection.
             return new Storage\File();
         }
 
+        // Connection info contains the type of storage we want to instantiate.
         $connection = new PorterConnection($name, $prefix);
-        if ($connection->getType() === 'mongo') {
-            return new Storage\Mongo($connection);
-        }
-        return new Storage\Database($connection);
+        $storage = 'Storage\\' . ucfirst($connection->getType());
+        return new $storage($connection);
     }
 }

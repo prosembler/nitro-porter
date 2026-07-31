@@ -184,12 +184,10 @@ class Controller
         $inputName = $request->getInput();
 
         // Create new migration artifacts.
-        $inputStorage = new Storage\Database(new PorterConnection($inputName));
-        $extractStorage = new Storage\Database(new PorterConnection($inputName));
-        $origin = Factory::origin($originName, $inputStorage, $extractStorage);
-
-        $originStorage = new Storage\Https(new PorterConnection($originName)); // @todo non-API origins
-        $origin->addHttps($originStorage);
+        $inputStorage = Factory::storage($inputName);
+        $extractStorage = Factory::storage($inputName);
+        $originStorage = Factory::storage($originName);
+        $origin = Factory::origin($originName, $inputStorage, $extractStorage, $originStorage);
 
         // Report on request.
         Log::comment("NITRO PORTER PULLING...");

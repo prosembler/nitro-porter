@@ -25,6 +25,10 @@ final readonly class StorageInfo
 
     public function getElapsed(): float
     {
+        if (empty($this->startTime)) {
+            Log::comment('WARNING: Storage timer stopped before being started.');
+            return 0;
+        }
         $end = (!empty($this->endTime)) ? $this->endTime : microtime(true);
         return $end - $this->startTime;
     }

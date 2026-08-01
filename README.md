@@ -1,12 +1,12 @@
 Nitro Porter — free your community! 🚀
 ==============
 
-Nitro Porter is the _only_ multi-platform community migration tool. 
-Its goal is 1-hour no-code data migrations for any community with accessible data.
+Nitro Porter is the _only_ multi-platform community migration tool.
+Its goal is fast no-code migrations for any community with accessible data.
 
-Every community deserves the best software for its mission while preserving its unique history.
-Platform lock-in stifles competition and all proprietary software has a finite lifespan.
-When everyone owns their own data and can freely choose their platform, everyone wins.
+Every community deserves the agency to choose the best software for its mission while preserving its history.
+All proprietary software has a finite lifespan and lock-in stifles competition, which leads to stagnation. 
+When we own our data and can freely choose betweeen platforms, everyone wins.
 
 ## Get Started
 

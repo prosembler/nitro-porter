@@ -171,7 +171,7 @@ class Discord extends Origin
         'text' => 'text',
         'keys' => [
             'discord_answers_index' => [
-                'type' => 'unique',
+                'type' => 'index',
                 'columns' => ['answer_id'],
             ]
         ],

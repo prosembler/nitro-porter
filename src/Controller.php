@@ -136,7 +136,7 @@ class Controller
         Log::comment("Porting " . $sourceName . " to " . $targetName);
         Log::comment("Input: " . $inputName . ' (' . (empty($sourcePrefix) ? 'no prefix' : $sourcePrefix) . ')');
         Log::comment("Porter: " . $porterName . ' (PORT_)');
-        Log::comment("Output: " . $outputName . ' (' . (empty($targetPrefix) ? 'no prefix': $targetPrefix) . ')');
+        Log::comment("Output: " . $outputName . ' (' . (empty($targetPrefix) ? 'no prefix' : $targetPrefix) . ')');
         Log::comment("\n" . sprintf('[ STARTED at %s ]', date('H:i:s e')) . "\n");
 
         // Build artifacts.

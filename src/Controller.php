@@ -134,9 +134,9 @@ class Controller
         // Log request.
         Log::comment("NITRO PORTER RUNNING...");
         Log::comment("Porting " . $sourceName . " to " . $targetName);
-        Log::comment("Input: " . $inputName . ' (' . ($sourcePrefix ?? 'no prefix') . ')');
+        Log::comment("Input: " . $inputName . ' (' . (empty($sourcePrefix) ? 'no prefix' : $sourcePrefix) . ')');
         Log::comment("Porter: " . $porterName . ' (PORT_)');
-        Log::comment("Output: " . $outputName . ' (' . ($targetPrefix ?? 'no prefix') . ')');
+        Log::comment("Output: " . $outputName . ' (' . (empty($targetPrefix) ? 'no prefix': $targetPrefix) . ')');
         Log::comment("\n" . sprintf('[ STARTED at %s ]', date('H:i:s e')) . "\n");
 
         // Build artifacts.

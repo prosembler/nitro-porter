@@ -32,6 +32,7 @@ class Discord extends Source
         ]
     ];
 
+    /** @var int Milliseconds from Unix Epoch. */
     public const int DISCORD_EPOCH_DIFF = 1288834974657;
 
     public const array CHANNEL_TYPE = [
@@ -74,13 +75,13 @@ class Discord extends Source
 
         // UserRoles
         $map = [
-            'new_user_id' => 'UserID',
+            'user_id' => 'UserID', // Already renumbered.
             'new_role_id' => 'RoleID',
         ];
         $query = $this->sourceQB()->from('discord_user_roles')
-            ->join('discord_roles', 'discord_roles.id = discord_user_roles.role_id')
-            ->join('discord_users', 'discord_users.id = discord_roles.user_id')
-            ->selectRaw('discord_users.new_id as new_user_id')
+            ->join('discord_roles', 'discord_roles.id', '=', 'discord_user_roles.role_id')
+            //->join('discord_users', 'discord_users.id', '=', 'discord_user_roles.user_id')
+            //->selectRaw('discord_users.new_id as new_user_id')
             ->selectRaw('discord_roles.new_id as new_role_id');
         $this->export('UserRole', $query, $map);
     }
@@ -90,13 +91,17 @@ class Discord extends Source
         $map = [
             'new_id' => 'CategoryID',
             'name' => 'Name',
-            'parent_id' => 'ParentCategoryID',
+            'new_parent_id' => 'ParentCategoryID',
             'position' => 'Sort',
             'topic' => 'Description',
-            'last_message_id' => 'LastCommentID',
+            //'new_last_message_id' => 'LastCommentID',
         ];
         $query = $this->sourceQB()->from('discord_channels')->select('discord_channels.*')
-            ->whereIn('type', [
+            ->selectRaw('dc.new_id as new_parent_id')
+            //->selectRaw('discord_messages.new_id as new_last_message_id')
+            ->join('discord_channels as dc', 'discord_channels.id', '=', 'dc.parent_id')
+            //->join('discord_messages', 'discord_messages.id', '=', 'discord_channels.last_message_id')
+            ->whereIn('discord_channels.type', [
                 self::CHANNEL_TYPE['GUILD_CATEGORY'],
                 self::CHANNEL_TYPE['GUILD_FORUM'],
                 self::CHANNEL_TYPE['GUILD_TEXT']
@@ -109,23 +114,24 @@ class Discord extends Source
         $map = [
             'new_id' => 'DiscussionID',
             'name' => 'Name',
-            'parent_id' => 'CategoryID',
+            'new_parent_id' => 'CategoryID',
             'new_owner_id' => 'InsertUserID',
-            'last_message_id' => 'LastCommentID', // Cannot be updated.
-            //'message_count' => 'LastCommentID',
+            //'last_message_id' => 'LastCommentID', // Cannot be updated due to timing.
             'derived_timestamp' => 'DateInserted',
         ];
         $filters = [
-            'parent_id' => fn($val, $col, $row) // Text channels use 'id' as 'parent_id' — they are their own category.
-                => (Discord::CHANNEL_TYPE['GUILD_TEXT'] === $row['type']) ? $row['id'] : $row['parent_id'],
+            'new_parent_id' => fn($val, $col, $row) // Text channels use 'id' as 'parent_id' — they are own category.
+                => (Discord::CHANNEL_TYPE['GUILD_TEXT'] === $row['type']) ? $row['new_id'] : $row['new_parent_id'],
             'derived_timestamp' => __NAMESPACE__ . '\Discord::timestampFromSnowflake',
         ];
         $query = $this->sourceQB()->from('discord_channels')
-            ->join('discord_users', 'discord_users.id = discord_messages.owner_id')
+            ->join('discord_users', 'discord_users.id', '=', 'discord_channels.owner_id')
+            ->join('discord_channels as dcparent', 'discord_channels.parent_id', '=', 'dcparent.id')
             ->select('discord_channels.*')
-            ->select('discord_users.new_id as new_owner_id')
-            ->selectRaw('id as derived_timestamp')
-            ->whereIn('type', [
+            ->selectRaw('discord_users.new_id as new_owner_id')
+            ->selectRaw('discord_channels.id as derived_timestamp')
+            ->selectRaw('dcparent.new_id as new_parent_id')
+            ->whereIn('discord_channels.type', [
                 self::CHANNEL_TYPE['PUBLIC_THREAD'],
                 self::CHANNEL_TYPE['GUILD_ANNOUNCEMENT'],
                 self::CHANNEL_TYPE['GUILD_TEXT']
@@ -145,11 +151,11 @@ class Discord extends Source
                 // [{"type":"link","url":"http:\/\/www.example.com","description":"Your source for video game news..."}]
         ];
         $query = $this->sourceQB()->from('discord_messages')
-            ->join('discord_channels', 'discord_channels.id = discord_messages.channel_id')
-            ->join('discord_users', 'discord_users.id = discord_messages.authorid')
-            ->select('discord_channels.new_id as new_channel_id')
-            ->select('discord_users.new_id as new_authorid')
+            ->join('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
+            ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
             ->select('discord_messages.*')
+            ->selectRaw('discord_channels.new_id as new_channel_id')
+            ->selectRaw('discord_users.new_id as new_authorid')
             ->selectRaw('timestamp(timestamp) as DateInserted')
             ->selectRaw('timestamp(edited_timestamp) as DateUpdated');
         $this->export('Comment', $query, $map);
@@ -168,9 +174,9 @@ class Discord extends Source
             'download_path' => 'SourceFullPath',
         ];
         $query = $this->sourceQB()->from('discord_attachments')
-            ->join('discord_messages', 'discord_messages.id = discord_attachments.message_id')
-            ->select('discord_messages.new_id as new_message_id')
-            ->select('discord_attachments.*');
+            ->join('discord_messages', 'discord_messages.id', '=', 'discord_attachments.message_id')
+            ->select('discord_attachments.*')
+            ->selectRaw('discord_messages.new_id as new_message_id');
         $this->export('Media', $query, $map);
     }
 
@@ -200,9 +206,9 @@ class Discord extends Source
         $this->export('Tag', $query, $map);
 
         // ReactionType: All Tags we just added are Reactions.
-        $query = $this->porterQB()->from('Tag') // NOTE: PORTERQB!
-            ->select(['Name', 'TagID']);
-        $this->export('ReactionType', $query);
+        // Unbuffered use of PorterQB -> must put in memory!
+        $tags = $this->porterQB()->from('Tag')->get(['Name', 'TagID'])->toArray();
+        $this->porterStorage->store('ReactionType', [], ['Name' => 'varchar(100)', 'TagID' => 'int'], $tags, []);
 
         // UserTag: Individual user reactions.
         $map = [
@@ -211,9 +217,9 @@ class Discord extends Source
             'new_emoji_id' => 'TagID',
         ];
         $query = $this->sourceQB()->from('discord_user_reactions')
-            ->join('discord_users', 'discord_users.id = discord_user_reactions.user_id')
-            ->join('discord_messages', 'discord_messages.id = discord_user_reactions.message_id')
-            ->join('discord_emojis', 'discord_emojis.id = discord_user_reactions.emoji_id')
+            ->join('discord_users', 'discord_users.id', '=', 'discord_user_reactions.user_id')
+            ->join('discord_messages', 'discord_messages.id', '=', 'discord_user_reactions.message_id')
+            ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_user_reactions.emoji_id')
             ->selectRaw('discord_users.new_id as new_user_id')
             ->selectRaw('discord_messages.new_id as new_message_id')
             ->selectRaw('discord_emojis.new_id as new_emoji_id');
@@ -221,15 +227,15 @@ class Discord extends Source
 
         // UserTag: Reaction counts.
         $map = [
-            'new_user_id' => 'TagID',
+            'new_emoji_id' => 'TagID',
             'new_message_id' => 'RecordID',
             'count' => 'Total',
         ];
         $query = $this->sourceQB()->from('discord_reactions')
-            ->join('discord_users', 'discord_users.id = discord_user_reactions.user_id')
-            ->join('discord_messages', 'discord_messages.id = discord_user_reactions.message_id')
+            ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_reactions.emoji_id')
+            ->join('discord_messages', 'discord_messages.id', '=', 'discord_reactions.message_id')
             ->select('discord_reactions.*')
-            ->selectRaw('discord_users.new_id as new_user_id')
+            ->selectRaw('discord_emojis.new_id as new_emoji_id')
             ->selectRaw('discord_messages.new_id as new_message_id')
             ->selectRaw('"Comment-Total" as RecordType');
         $this->export('UserTag', $query, $map);
@@ -245,12 +251,14 @@ class Discord extends Source
         ];
         $query = $this->sourceQB()->from('discord_polls')
             ->join('discord_messages', 'discord_messages.id', '=', 'discord_polls.id')
+            ->join('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
+            ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
             ->select('discord_polls.*')
-            ->selectRaw('discord_polls.id as CommentID')
-            ->selectRaw('discord_messages.authorid as InsertUserID')
+            ->selectRaw('discord_messages.new_id as CommentID')
             ->selectRaw('discord_messages.timestamp as DateInserted')
             ->selectRaw('discord_messages.edited_timestamp as DateUpdated')
-            ->selectRaw('discord_messages.channel_id as DiscussionID');
+            ->selectRaw('discord_channels.new_id as DiscussionID')
+            ->selectRaw('discord_users.new_id as InsertUserID');
         $this->export('Poll', $query, $map);
 
         $map = [
@@ -260,19 +268,28 @@ class Discord extends Source
             'count' => 'CountVotes',
             'new_emoji_id' => 'EmojiID',
         ];
-        $query = $this->sourceQB()->from('discord_polloptions')
-            ->join('discord_polls', 'discord_polls.id', '=', 'discord_polloptions.poll_id')
-            ->join('discord_emojis', 'discord_emojis.id = discord_polloptions.emoji_id')
+        $query = $this->sourceQB()->from('discord_poll_answers')
+            ->join('discord_polls', 'discord_polls.id', '=', 'discord_poll_answers.poll_id')
+            ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_poll_answers.emoji_id')
+            ->select('discord_poll_answers.*')
             ->selectRaw('discord_polls.new_id as new_poll_id')
-            ->selectRaw('discord_emojis.new_id as new_emoji_id')
-            ->select('discord_polloptions.*');
-        $this->export('PollOptions', $query, $map);
+            ->selectRaw('discord_emojis.new_id as new_emoji_id');
+        $this->export('PollOption', $query, $map);
 
         $map = [
-            'user_id' => 'UserID',
-            'answer_id' => 'PollOptionID',
+            'new_user_id' => 'UserID',
+            'new_poll_id' => 'PollID',
+            'new_answer_id' => 'PollOptionID',  // answer_is non-unique in Discord
         ];
-        $query = $this->sourceQB()->from('discord_pollvotes')->select('discord_pollvotes.*');
+        $query = $this->sourceQB()->from('discord_poll_user_answers')
+            ->selectRaw('discord_polls.new_id as new_poll_id')
+            ->selectRaw('discord_users.new_id as new_user_id')
+            ->join('discord_polls', 'discord_polls.id', '=', 'discord_poll_user_answers.poll_id')
+            ->join('discord_poll_answers', function ($join) {
+                $join->on('discord_poll_answers.poll_id', '=', 'discord_poll_user_answers.poll_id')
+                    ->where('discord_poll_answers.answer_id', '=', 'discord_poll_user_answers.answer_id');
+            })
+            ->join('discord_users', 'discord_users.id', '=', 'discord_poll_user_answers.user_id');
         $this->export('PollVote', $query, $map);
     }
 
@@ -280,14 +297,14 @@ class Discord extends Source
      * Discord SnowflakeIDs have timestamps embedded within them.
      *
      * @param mixed $value A Discord SnowflakeID
-     * @return int|null Unix timestamp
+     * @return ?string MySQL timestamp
      */
-    protected static function timestampFromSnowflake(mixed $value): ?int
+    public static function timestampFromSnowflake(mixed $value): ?string
     {
         if (empty($value)) {
             return null;
         }
-        $timestamp = substr(decbin((int) $value), 0, -22);
-        return bindec($timestamp) + self::DISCORD_EPOCH_DIFF;
+        $timestamp = (($value >> 22) + self::DISCORD_EPOCH_DIFF) / 1000;
+        return gmdate("Y-m-d H:i:s", (int)$timestamp); // FROM_UNIXTIME() equivalent.
     }
 }

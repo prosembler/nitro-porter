@@ -192,9 +192,6 @@ abstract class Source extends Package
             return;
         }
 
-        // Start timer.
-        $start = microtime(true);
-
         // Validate table structure exists.
         if (!array_key_exists($tableName, $this->porterStructure)) {
             Log::comment("Error: $tableName is not a valid table for export.");

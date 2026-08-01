@@ -521,7 +521,8 @@ return array(
     ),
     'PollVote' => array(
         'UserID' => 'int',
-        'PollOptionID' => 'int'
+        'PollOptionID' => 'int',
+        'PollID' => 'int', // Added 2026-07 for Discord
     ),
     'Rank' => array(
         'RankID' => 'int',

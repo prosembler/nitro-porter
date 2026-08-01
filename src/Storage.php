@@ -49,7 +49,9 @@ class Storage
         return new StorageInfo(
             name: $name,
             memory: $info->memory !== 0 ? $info->memory : memory_get_usage(),
-            rows: $info->rows
+            rows: $info->rows,
+            startTime: $info->startTime,
+            endTime: $info->endTime,
         );
     }
 

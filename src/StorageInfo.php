@@ -25,7 +25,8 @@ final readonly class StorageInfo
 
     public function getElapsed(): float
     {
-        return $this->endTime - $this->startTime;
+        $end = (!empty($this->endTime)) ? $this->endTime : microtime(true);
+        return $end - $this->startTime;
     }
 
     public function getFirst(): mixed

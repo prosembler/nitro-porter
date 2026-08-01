@@ -575,7 +575,7 @@ class Flarum extends Target
 
         $map = [
             'MediaID' => 'id',
-            'Name' => 'base_name',
+            //'Name' => 'base_name',
             'InsertUserID' => 'actor_id',
             'DateInserted' => 'created_at',
             'Size' => 'size',
@@ -599,7 +599,7 @@ class Flarum extends Target
             // MIME type cannot be null, so default to "application/octet-stream" as most generic default.
             ->selectRaw('COALESCE(Type, "application/octet-stream") as type')
             // fof_upload_files disallows null for base_name.
-            ->selectRaw('COALESCE(Name, "untitled") as base_name')
+            ->selectRaw('COALESCE(RIGHT(Name, 220), "untitled") as base_name')
             // @see packages/upload/src/Providers/DownloadProvider.php
             ->selectRaw("case
                 when Type like 'image/%' then 'image-preview'

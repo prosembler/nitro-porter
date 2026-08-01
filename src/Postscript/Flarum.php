@@ -2,7 +2,6 @@
 
 namespace Porter\Postscript;
 
-use Porter\ConnectionManager;
 use Porter\Log;
 use Porter\Parser\Flarum\QuoteEmbed;
 use Porter\Postscript;
@@ -65,6 +64,10 @@ class Flarum extends Postscript
 
         // Find & record mentions in batches.
         foreach ($posts->cursor() as $post) {
+            if (empty($post->content)) {
+                continue;
+            }
+
             // Find converted mentions and connect to userID.
             $mentions = [];
             preg_match_all(
@@ -169,6 +172,10 @@ class Flarum extends Postscript
 
         // Find & record mentions in batches.
         foreach ($posts->cursor() as $post) {
+            if (empty($post->content)) {
+                continue;
+            }
+
             // Find converted mentions and connect to userID.
             $mentions = [];
             preg_match_all(

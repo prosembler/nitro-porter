@@ -243,9 +243,10 @@ class Discord extends Source
 
     protected function polls(): void
     {
+        // Polls.
         $map = [
-            'new_id' => 'PollID',
-            'text' => 'Name',
+            'new_poll_id' => 'PollID',
+            'question' => 'Name',
             'allow_multiselect' => 'AllowMultiple',
             'expiry' => 'DateClosed',
         ];
@@ -253,7 +254,8 @@ class Discord extends Source
             ->join('discord_messages', 'discord_messages.id', '=', 'discord_polls.id')
             ->join('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
             ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
-            ->select('discord_polls.*')
+            ->select(['discord_polls.expiry', 'discord_polls.allow_multiselect', 'discord_polls.question'])
+            ->selectRaw('discord_polls.new_id as new_poll_id')
             ->selectRaw('discord_messages.new_id as CommentID')
             ->selectRaw('discord_messages.timestamp as DateInserted')
             ->selectRaw('discord_messages.edited_timestamp as DateUpdated')
@@ -261,9 +263,10 @@ class Discord extends Source
             ->selectRaw('discord_users.new_id as InsertUserID');
         $this->export('Poll', $query, $map);
 
+        // Answers.
         $map = [
             'new_poll_id' => 'PollID',
-            'new_id' => 'PollOptionID',
+            'new_answer_id' => 'PollOptionID',
             'text' => 'Body',
             'count' => 'CountVotes',
             'new_emoji_id' => 'EmojiID',
@@ -271,25 +274,28 @@ class Discord extends Source
         $query = $this->sourceQB()->from('discord_poll_answers')
             ->join('discord_polls', 'discord_polls.id', '=', 'discord_poll_answers.poll_id')
             ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_poll_answers.emoji_id')
-            ->select('discord_poll_answers.*')
+            ->select(['discord_poll_answers.text', 'discord_poll_answers.count'])
+            ->selectRaw('discord_poll_answers.new_id as new_answer_id')
             ->selectRaw('discord_polls.new_id as new_poll_id')
             ->selectRaw('discord_emojis.new_id as new_emoji_id');
         $this->export('PollOption', $query, $map);
 
+        // Votes.
         $map = [
             'new_user_id' => 'UserID',
             'new_poll_id' => 'PollID',
             'new_answer_id' => 'PollOptionID',  // answer_is non-unique in Discord
         ];
         $query = $this->sourceQB()->from('discord_poll_user_answers')
-            ->selectRaw('discord_polls.new_id as new_poll_id')
-            ->selectRaw('discord_users.new_id as new_user_id')
+            ->join('discord_users', 'discord_users.id', '=', 'discord_poll_user_answers.user_id')
             ->join('discord_polls', 'discord_polls.id', '=', 'discord_poll_user_answers.poll_id')
             ->join('discord_poll_answers', function ($join) {
                 $join->on('discord_poll_answers.poll_id', '=', 'discord_poll_user_answers.poll_id')
                     ->where('discord_poll_answers.answer_id', '=', 'discord_poll_user_answers.answer_id');
             })
-            ->join('discord_users', 'discord_users.id', '=', 'discord_poll_user_answers.user_id');
+            ->selectRaw('discord_polls.new_id as new_poll_id')
+            ->selectRaw('discord_users.new_id as new_user_id')
+            ->selectRaw('discord_poll_answers.new_id as new_answer_id');
         $this->export('PollVote', $query, $map);
     }
 

@@ -24,7 +24,9 @@ class Storage
         ResultSet|Builder|array $data,
         array $filters
     ): StorageInfo {
-        $info = new StorageInfo();
+        $info = new StorageInfo(
+            startTime: microtime(true),
+        );
         if (is_a($data, '\Porter\Database\ResultSet')) {
             // Iterate on @deprecated ResultSet.
             while ($row = $data->nextResultRow()) {
@@ -49,7 +51,9 @@ class Storage
         return new StorageInfo(
             name: $name,
             memory: $info->memory !== 0 ? $info->memory : memory_get_usage(),
-            rows: $info->rows
+            rows: $info->rows,
+            startTime: $info->startTime,
+            endTime: $info->endTime,
         );
     }
 

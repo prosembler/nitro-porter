@@ -165,14 +165,14 @@ class Discord extends Origin
     protected const array SCHEMA_POLL_ANSWERS = [
         'new_id' => 'increments',
         'poll_id' => 'bigint',
-        'answer_id' => 'bigint',
+        'answer_id' => 'bigint', // Non-unique.
         'count' => 'int',
         'emoji_id' => 'bigint',
         'text' => 'text',
         'keys' => [
             'discord_answers_index' => [
                 'type' => 'unique',
-                'columns' => ['answer_id'],
+                'columns' => ['poll_id', 'answer_id'],
             ]
         ],
     ];

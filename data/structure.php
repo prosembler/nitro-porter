@@ -509,7 +509,7 @@ return array(
     'PollOption' => array(
         'PollOptionID' => 'int',
         'PollID' => 'int',
-        'Body' => 'varchar(500)',
+        'Body' => 'varchar(255)',
         'Format' => 'varchar(20)',
         'Sort' => 'smallint',
         'CountVotes' => 'int',
@@ -521,7 +521,8 @@ return array(
     ),
     'PollVote' => array(
         'UserID' => 'int',
-        'PollOptionID' => 'int'
+        'PollOptionID' => 'int',
+        'PollID' => 'int', // Added 2026-07 for Discord
     ),
     'Rank' => array(
         'RankID' => 'int',

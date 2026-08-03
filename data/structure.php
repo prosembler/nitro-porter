@@ -509,7 +509,7 @@ return array(
     'PollOption' => array(
         'PollOptionID' => 'int',
         'PollID' => 'int',
-        'Body' => 'varchar(500)',
+        'Body' => 'varchar(255)',
         'Format' => 'varchar(20)',
         'Sort' => 'smallint',
         'CountVotes' => 'int',

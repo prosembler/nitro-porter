@@ -23,9 +23,9 @@ final readonly class Request
     private ?string $originName;
     private ?string $sourceName;
     private ?string $targetName;
-    private ?string $inputConnection;
-    private ?string $outputConnection;
-    private ?string $porterConnection;
+    private ?string $inputStorage;
+    private ?string $outputStorage;
+    private ?string $porterStorage;
     private ?string $inputTablePrefix;
     private ?string $outputTablePrefix;
     private ?string $cdnPrefix;

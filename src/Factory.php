@@ -65,7 +65,7 @@ class Factory
         $source->limitTables($dataTypes);
 
         // Add legacy database support to Sources.
-        $inputDB = new \Porter\Database\DbFactory(new ConnectionManager($inputName)->connection()->getPDO());
+        $inputDB = new \Porter\Database\DbFactory(new PorterConnection($inputName)->connection()->getPDO());
         $source->addLegacySupport($inputDB);
 
         return $source;

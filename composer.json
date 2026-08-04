@@ -70,7 +70,6 @@
             "Porter\\": "src/"
         },
         "files": [
-            "src/Functions/core.php",
             "src/Functions/filter.php"
         ]
     }

@@ -10,21 +10,26 @@ When we own our data and can freely choose betweeen platforms, everyone wins.
 
 ## Get Started
 
+Working through a migration often takes weeks, not hours! Set reasonable expectations and be patient.
+
 * [**User Guide**](https://nitroporter.org/guide) — requirements & install steps.
 * [**Migration Guide**](https://nitroporter.org/migrations) — plan a community migration.
 * [**Sources**](https://nitroporter.org/sources) & [**Targets**](https://nitroporter.org/targets) — support details.
-* [**Start a Discussion**](https://github.com/prosembler/nitro-porter/discussions) — share how it went!
 
-## What's Supported?
+We greatly appreciate [feedback](https://github.com/prosembler/nitro-porter/discussions)! However, we check in periodically as our schedule allows, not daily.
 
-### Targets ([4](https://nitroporter.org/targets)) 📥
+## What can it do?
+
+It migrates community data from a supported Source to a supported Target as comprehensively as possible.
+
+### Supported Targets (where you're going) — [4](https://nitroporter.org/targets) total 📥
 
 ![Flarum](docs/assets/logos/flarum-300x100.png)
 ![NodeBB](docs/assets/logos/nodebb-300x100.png)
 ![Vanilla](docs/assets/logos/vanilla-300x100.png)
 ![Waterhole](docs/assets/logos/waterhole-300x100.png)
 
-### Sources ([37](https://nitroporter.org/sources)) 📤
+### Supported Sources (where you're from) — [37](https://nitroporter.org/sources) total 📤
 
 ![AnswerHub](docs/assets/logos/answerhub-150x50.jpg)
 ![ASPPlayground.NET](docs/assets/logos/aspplayground-150x50.png)
@@ -48,32 +53,18 @@ When we own our data and can freely choose betweeen platforms, everyone wins.
 
 _...[and MORE](https://nitroporter.org/sources)!_
 
+Don't see your software? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to request it and check our [informal roadmap](https://github.com/orgs/prosembler/projects/1).
+
 ### What data gets migrated, exactly? 🚥
 
 All sources & targets support migrating:
 * users & roles
-* discussions (or _threads_)
-* posts (or _comments_)
+* discussions (or _threads_) & posts (or _comments_)
 * categories (or _subforums_, _channels_, etc.)
 
-Beyond that, each supports **different types of data** depending on feature availability, extension choice, and maturity of the source/target package.
-These include things like badges, reactions, bookmarks, and polls.
-
-**_Both the source and target must support a data type for it to transfer!_**
-
-Nitro Porter **never** transfers permissions. It's not safe to do so automatically due to variations in how platforms implement them.
-You will **always** need to reassign permissions after a migration.
-
-**Passwords** are generally _hashed_, which means no system can "decrypt" or "convert" them. However, if both the source and target platform support the same hashing algorithm, they should transfer seamlessly. Alternatively, the target system could add support for the source hashing algorithm and convert password hashes as users login next (see [Garden/Password](https://github.com/prosembler/garden-password)). This is beyond the scope of what any migration tool can do in isolation, but we're happy to [answer questions](https://github.com/prosembler/nitro-porter/discussions/new) about the process should you wish to build that functionality.
-
-### Future support 🔭
-
-Don't see your software? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to request it and keep an eye on our [informal roadmap](https://github.com/orgs/prosembler/projects/1).
-We're happy to accept **contributions** of a new Source, Target, or Origin for any publicly available software.
-We occassionally accept **requests** for a new Source or **sponsorships** for any package type.
-
-Today, some storage formats (e.g. mbox, MSSQL, API) first require conversion to a relational database with other software. 
-The 3.0 rewrite of Nitro Porter[^1] was built with future support for those many more formats in mind and it will continue to expand.
+Beyond that, each package as different support based on feature availability, extension choice, and maturity of the package.
+These include things like badges, reactions, bookmarks, & polls. Both source and target must support a data type for it to transfer.
+Read more about [how data is transferred]((https://nitroporter.org/data).
 
 ## Project Info
 
@@ -82,7 +73,15 @@ The 3.0 rewrite of Nitro Porter[^1] was built with future support for those many
 Data is first converted to an intermediary "porter schema," reducing the number of data paths from `#sources x #targets` to `#sources + #targets`.
 The result is repeatable results in a single multi-tool rather than myriad low-quality, single-purpose tools.
 
-### Why not 1-off migration tools? 🪴
+### Will you do it for me? 🙏
+
+Rarely. It's more effective to work through it yourself, ask questions, and file tickets if you confirm a bug.
+Feedback on how the tool works for you (or doesn't) is very valuable and we're not running a migration business.
+
+We occassionally accept **requests** for a new Source or **sponsorships** for any package type, and we do
+have a cost estimation guide if you really must outsource it. Contact migrations@prosembler.com.
+
+### Why not use 1-off migration tools? 🪴
 
 Data migrations typically require either time & skill (you are a programmer) or capital (you are a for-profit company).
 Nitro Porter aims to become increasingly accessible to _everyone else_ by making both migrations & extensibility simple.
@@ -97,6 +96,12 @@ No.
 * [**Contribute**](docs/contribute.md) — data, requests, & fixes.
 * [**Changelog**](CHANGELOG.md) — latest fixes & updates.
 * [**Roadmap**](https://github.com/orgs/prosembler/projects/1) — informal goals.
-* [**History**](docs/history.md) — how we got here.
+
+### Where did this come from? 📚
+
+Vanilla Porter was created in 2010 at Vanilla Forums as a single-script multi-source export tool, abandoned by 2020.
+Nitro Porter 3.0 was a rewrite[^1] that preserved compatibility with existing sources while reimagining the framework.
+In 2026, the [Open Social Fund](https://nlnet.nl/opensocial), a fund established by [NLnet](https://nlnet.nl/), 
+sponspored major development work in the 5.0 release. [More history on our website](docs/history.md).
 
 [^1]: 🚀 Forked 27 Sep 2021 in memory of Kyle

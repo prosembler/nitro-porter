@@ -64,7 +64,7 @@ All sources & targets support migrating:
 
 Beyond that, each package as different support based on feature availability, extension choice, and maturity of the package.
 These include things like badges, reactions, bookmarks, & polls. Both source and target must support a data type for it to transfer.
-Read more about [how data is transferred]((https://nitroporter.org/data).
+Read more about [how data is transferred](https://nitroporter.org/data).
 
 ## Project Info
 

@@ -35,7 +35,7 @@ class Flarum extends Postscript
         $this->setLastRead();
         $this->addDefaultGroups();
         $this->addDefaultBadgeCategory();
-        $this->promoteAdmin();
+        //$this->promoteAdmin();
         $this->resetAccessTokens();
     }
 
@@ -367,32 +367,6 @@ class Flarum extends Postscript
                 ->table('badge_category')
                 ->insertOrIgnore(['id' => 1, 'name' => 'Imported Badges', 'created_at' => date('Y-m-d h:m:s')]);
             Log::comment('Added  badge category "Imported Badges".');
-        }
-    }
-
-    /**
-     * Promote the superadmin to the Flarum admin role.
-     *
-     */
-    protected function promoteAdmin(): void
-    {
-        // Find the Vanilla superadmin (User.Admin = 1) and make them an Admin.
-        $result = $this->outputQB()
-            ->from('User')
-            ->where('Admin', '>', 0)
-            ->first();
-
-        if (isset($result->UserID, $result->Name, $result->Email)) {
-            // Add the admin.
-            $this->dbPostscript()
-                ->table('group_user')
-                ->insert(['group_id' => 1, 'user_id' => $result->UserID]);
-
-            // Report promotion.
-            Log::comment('Promoted to Admin: ' . $result->Name . ' (' . $result->Email . ')');
-        } else {
-            // Report failure.
-            Log::comment('No user found to promote to Admin. (Searching for Admin=1 flag on PORT_User.)');
         }
     }
 

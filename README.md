@@ -22,14 +22,14 @@ We greatly appreciate [feedback](https://github.com/prosembler/nitro-porter/disc
 
 Migrate a community from a supported Source to a supported Target as comprehensively as possible.
 
-### Supported Targets (where you're going) — [4](https://nitroporter.org/targets) total 📥
+### Supported Targets (where you're going) — [4 total](https://nitroporter.org/targets) 📥
 
 ![Flarum](docs/assets/logos/flarum-300x100.png)
 ![NodeBB](docs/assets/logos/nodebb-300x100.png)
 ![Vanilla](docs/assets/logos/vanilla-300x100.png)
 ![Waterhole](docs/assets/logos/waterhole-300x100.png)
 
-### Supported Sources (where you're from) — [37](https://nitroporter.org/sources) total 📤
+### Supported Sources (what you're using now) — [37 total](https://nitroporter.org/sources) 📤
 
 ![AnswerHub](docs/assets/logos/answerhub-150x50.jpg)
 ![ASPPlayground.NET](docs/assets/logos/aspplayground-150x50.png)

@@ -30,22 +30,3 @@ function loadData(string $name): array
         return [];
     }
 }
-
-/**
- * Create folder if it doesn't exit.
- *
- * @param string $path Full path of the folder to be created.
- */
-function touchFolder(string $path): bool
-{
-    if (is_dir($path) && chmod($path, 0755)) {
-        return true;
-    }
-    if (mkdir($path, 0755, true)) {
-        Log::comment("Folder '{$path}' was created.");
-        return true;
-    }
-
-    Log::comment("Folder '{$path}' could not be created.");
-    return false;
-}

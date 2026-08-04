@@ -165,7 +165,7 @@ abstract class Origin extends Package
 
         // Build the path & return it.
         $folder = rtrim($srcRoot, '/') . '/' . trim($name, '/');
-        $exists = touchFolder($folder);
+        $exists = FileTransfer::touchFolder($folder);
         $folders[$name] = ($exists) ? $folder . '/' : '';
         return $folders[$name];
     }

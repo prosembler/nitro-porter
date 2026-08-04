@@ -34,6 +34,6 @@ if (\Porter\Config::getInstance()->debugEnabled()) {
 }
 
 // Load source & target support.
-\Porter\Support::getInstance()->setOrigins(loadData('origins'));
-\Porter\Support::getInstance()->setSources(loadData('sources'));
-\Porter\Support::getInstance()->setTargets(loadData('targets'));
+\Porter\Support::getInstance()->setOrigins(\Porter\Data::load('origins'));
+\Porter\Support::getInstance()->setSources(\Porter\Data::load('sources'));
+\Porter\Support::getInstance()->setTargets(\Porter\Data::load('targets'));

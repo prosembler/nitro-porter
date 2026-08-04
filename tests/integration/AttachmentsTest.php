@@ -3,6 +3,7 @@
 use Illuminate\Database\Query\Builder;
 use PHPUnit\Framework\TestCase;
 use Porter\Config;
+use Porter\Data;
 use Porter\Factory;
 use Porter\Storage;
 use Porter\Target;
@@ -94,7 +95,7 @@ class AttachmentsTest extends TestCase
      */
     protected static function seed(Storage $storage): void
     {
-        $structure = loadData('structure');
+        $structure = Data::load('structure');
         foreach (['User', 'Category', 'Discussion', 'Comment', 'Media'] as $table) {
             $storage->prepare($table, $structure[$table]);
         }
@@ -194,7 +195,7 @@ class AttachmentsTest extends TestCase
     public static function getAttachmentTargets(): array
     {
         $targets = [];
-        foreach (loadData('targets') as $name) {
+        foreach (Data::load('targets') as $name) {
             $support = ('\Porter\Target\\' . $name)::getSupport();
             if (!empty($support['attachmentPath']) && !empty($support['features']['Attachments'])) {
                 $targets[$name] = [$name];

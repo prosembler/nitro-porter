@@ -3,6 +3,7 @@
 use MongoDB\Database;
 use PHPUnit\Framework\TestCase;
 use Porter\Config;
+use Porter\Data;
 use Porter\Factory;
 use Porter\Storage;
 use Porter\Storage\Mongo;
@@ -119,7 +120,7 @@ class NodeBbTest extends TestCase
      */
     protected function seed(Storage $storage, bool $withGuest = false): void
     {
-        $structure = loadData('structure');
+        $structure = Data::load('structure');
         foreach (['User', 'Role', 'UserRole', 'Category', 'Discussion', 'Comment', 'Media'] as $table) {
             $storage->prepare($table, $structure[$table]);
         }

@@ -18,9 +18,9 @@ Working through a migration often takes weeks, not hours! Set reasonable expecta
 
 We greatly appreciate [feedback](https://github.com/prosembler/nitro-porter/discussions)! However, we check in periodically as our schedule allows, not daily.
 
-## What can it do?
+## What Can It Do?
 
-It migrates community data from a supported Source to a supported Target as comprehensively as possible.
+Migrate a community from a supported Source to a supported Target as comprehensively as possible.
 
 ### Supported Targets (where you're going) — [4](https://nitroporter.org/targets) total 📥
 
@@ -55,7 +55,7 @@ _...[and MORE](https://nitroporter.org/sources)!_
 
 Don't see your software? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to request it and check our [informal roadmap](https://github.com/orgs/prosembler/projects/1).
 
-### What data gets migrated, exactly? 🚥
+### What gets migrated, exactly? 🚥
 
 All sources & targets support migrating:
 * users & roles

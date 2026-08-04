@@ -34,7 +34,7 @@ class AttachmentsTest extends TestCase
      */
     public static function setUpBeforeClass(): void
     {
-        $config = loadConfig();
+        $config = Config::loadFile();
         self::$alias = $config['test_alias'] ?? '';
         self::$skip = self::findUnsafeAlias($config, self::$alias);
         if (self::$skip !== null) {

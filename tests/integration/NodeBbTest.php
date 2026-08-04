@@ -59,7 +59,7 @@ class NodeBbTest extends TestCase
      */
     public static function setUpBeforeClass(): void
     {
-        $config = loadConfig();
+        $config = Config::loadFile();
         self::$porterAlias = $config['test_alias'] ?? '';
         // Named explicitly, never discovered: scanning for "a mongodb connection" finds the
         // operator's real NodeBB, and these tests clear whatever they are pointed at.

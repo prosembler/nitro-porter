@@ -24,7 +24,7 @@ if (ini_get('date.timezone') == '') {
 }
 
 // Require & load config.
-\Porter\Config::getInstance()->set(loadConfig());
+\Porter\Config::getInstance()->set(\Porter\Config::loadFile());
 
 // See deprecation notices in debug mode only.
 if (\Porter\Config::getInstance()->debugEnabled()) {

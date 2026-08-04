@@ -24,10 +24,10 @@ Migrate a community from a supported Source to a supported Target as comprehensi
 
 ### Supported Targets (where you're going) — [4 total](https://nitroporter.org/targets) 📥
 
-![Flarum](docs/assets/logos/flarum-300x100.png)
-![NodeBB](docs/assets/logos/nodebb-300x100.png)
-![Vanilla](docs/assets/logos/vanilla-300x100.png)
-![Waterhole](docs/assets/logos/waterhole-300x100.png)
+[![Flarum](docs/assets/logos/flarum-300x100.png)](https://flarum.org)
+[![NodeBB](docs/assets/logos/nodebb-300x100.png)](https://nodebb.org)
+[![Vanilla](docs/assets/logos/vanilla-300x100.png)](https://github.com/prosembler/vanilla)
+[![Waterhole](docs/assets/logos/waterhole-300x100.png)](https://waterhole.dev)
 
 ### Supported Sources (what you're using now) — [37 total](https://nitroporter.org/sources) 📤
 

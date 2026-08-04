@@ -73,14 +73,6 @@ Read more about [how data is transferred](https://nitroporter.org/data).
 Data is first converted to an intermediary "porter schema," reducing the number of data paths from `#sources x #targets` to `#sources + #targets`.
 The result is repeatable results in a single multi-tool rather than myriad low-quality, single-purpose tools.
 
-### Will you do it for me? 🙏
-
-Rarely. It's more effective to work through it yourself, ask questions, and file tickets if you confirm a bug.
-Feedback on how the tool works for you (or doesn't) is very valuable and we're not running a migration business.
-
-We occassionally accept **requests** for a new Source or **sponsorships** for any package type, and we do
-have a cost estimation guide if you really must outsource it. Contact migrations@prosembler.com.
-
 ### Why not use 1-off migration tools? 🪴
 
 Data migrations typically require either time & skill (you are a programmer) or capital (you are a for-profit company).
@@ -90,6 +82,14 @@ Software tools should not be assumed disposible just because they don't have a 3
 ### Can't AI do this? 📿
 
 No.
+
+### Will you do it for me? 🙏
+
+Rarely. It's more effective to work through it yourself, ask questions, and file tickets if you confirm a bug.
+Feedback on how the tool works for you (or doesn't) is very valuable and we're not running a migration business.
+
+We occassionally accept **requests** for a new Source or **sponsorships** for any package type, and we do
+have a cost estimation guide if you really must outsource it. Contact migrations@prosembler.com.
 
 ### How can I learn more or help? 🎟️
 

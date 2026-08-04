@@ -379,6 +379,23 @@ class Flarum extends Target
             ->select()
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
         $this->import('group_user', $query, self::SCHEMA_USER_ROLES, $map);
+
+        // Superadmin promotion.
+        $this->promote();
+    }
+
+    /**
+     * Promote a superadmin (User.Admin = 1) to the Flarum admin role.
+     */
+    protected function promote(): void
+    {
+        $result = $this->porterQB()->from('User')->where('Admin', '>', 0)->first();
+        if (isset($result->UserID, $result->Name, $result->Email)) {
+            $this->dbOutput()->table('group_user')->insert(['group_id' => 1, 'user_id' => $result->UserID]);
+            Log::comment('Promoted to Admin: ' . $result->Name . ' (' . $result->Email . ')');
+        } else {
+            Log::comment('No user found to promote to Admin. (Searching for Admin=1 flag on PORT_User.)');
+        }
     }
 
     /**

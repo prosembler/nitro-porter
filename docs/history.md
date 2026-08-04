@@ -1,5 +1,7 @@
 # History of Nitro Porter
 
+## Origins
+
 Nitro Porter was created in 2010 at Vanilla Forums, Inc. as "Vanilla Porter".
 Originally designed as a single-file "lifeboat" for rescuing forum data on older webservers, it morphed into an efficient CLI-based export tool.
 
@@ -18,6 +20,8 @@ it contains a detailed record of how Web software databases evolved over decades
 
 By late 2019, Vanilla had ceased creating packaged open source releases and Vanilla Porter was receiving only minimal updates.
 
+## Recently
+
 On 27 September 2021, [Lincoln](https://lincolnwebs.com/about/) forked the project as Nitro Porter and rebuilt it into a general-purpose migration pipeline.
 It continues to use Vanilla's database schema as an intermediary format to allow backwards compatibility with the source packages already created.
 
@@ -33,3 +37,13 @@ testability through Phinx & dependency injection, file transfer support (beginni
 improved config & CLI options, improved logging, and completed integration of Laravel's database library.
 It also advanced work on the [Domain Model](https://nitroporter.org/domain.html#domain-diagram) & architecture
 to make connection handling & the overall workflow clearer.
+
+In 2026, NLnet [sponspored](https://nitroporter.org/sponsors) major feature development including the first open source API integration with Discord.
+While Vanilla Forums had a few closed-source scrapers based on Porter, they were never incorporated into the framework.
+Introducing the "Origin" package type allowed for a generic data-retrieval system to be embedded, enabling the use of a normal Source package locally.
+Sponsorship brought the first non-MySQL, non-file output support: MongoDB for NodeBB and PostgreSQL for Discourse, both added as Targets.
+Finally, it expediated support for Agorakit as a target, and support for merging multiple platforms.
+
+## Next
+
+To see a possible future, check our [informal roadmap](https://github.com/orgs/prosembler/projects/1).

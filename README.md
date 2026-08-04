@@ -18,18 +18,18 @@ Working through a migration often takes weeks, not hours! Set reasonable expecta
 
 We greatly appreciate [feedback](https://github.com/prosembler/nitro-porter/discussions)! However, we check in periodically as our schedule allows, not daily.
 
-## What can it do?
+## What Can It Do?
 
-It migrates community data from a supported Source to a supported Target as comprehensively as possible.
+Migrate a community from a supported Source to a supported Target as comprehensively as possible.
 
-### Supported Targets (where you're going) — [4](https://nitroporter.org/targets) total 📥
+### Supported Targets (where you're going) — [4 total](https://nitroporter.org/targets) 📥
 
 ![Flarum](docs/assets/logos/flarum-300x100.png)
 ![NodeBB](docs/assets/logos/nodebb-300x100.png)
 ![Vanilla](docs/assets/logos/vanilla-300x100.png)
 ![Waterhole](docs/assets/logos/waterhole-300x100.png)
 
-### Supported Sources (where you're from) — [37](https://nitroporter.org/sources) total 📤
+### Supported Sources (what you're using now) — [37 total](https://nitroporter.org/sources) 📤
 
 ![AnswerHub](docs/assets/logos/answerhub-150x50.jpg)
 ![ASPPlayground.NET](docs/assets/logos/aspplayground-150x50.png)
@@ -55,7 +55,7 @@ _...[and MORE](https://nitroporter.org/sources)!_
 
 Don't see your software? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to request it and check our [informal roadmap](https://github.com/orgs/prosembler/projects/1).
 
-### What data gets migrated, exactly? 🚥
+### What gets migrated, exactly? 🚥
 
 All sources & targets support migrating:
 * users & roles
@@ -73,14 +73,6 @@ Read more about [how data is transferred](https://nitroporter.org/data).
 Data is first converted to an intermediary "porter schema," reducing the number of data paths from `#sources x #targets` to `#sources + #targets`.
 The result is repeatable results in a single multi-tool rather than myriad low-quality, single-purpose tools.
 
-### Will you do it for me? 🙏
-
-Rarely. It's more effective to work through it yourself, ask questions, and file tickets if you confirm a bug.
-Feedback on how the tool works for you (or doesn't) is very valuable and we're not running a migration business.
-
-We occassionally accept **requests** for a new Source or **sponsorships** for any package type, and we do
-have a cost estimation guide if you really must outsource it. Contact migrations@prosembler.com.
-
 ### Why not use 1-off migration tools? 🪴
 
 Data migrations typically require either time & skill (you are a programmer) or capital (you are a for-profit company).
@@ -90,6 +82,14 @@ Software tools should not be assumed disposible just because they don't have a 3
 ### Can't AI do this? 📿
 
 No.
+
+### Will you do it for me? 🙏
+
+Rarely. It's more effective to work through it yourself, ask questions, and file tickets if you confirm a bug.
+Feedback on how the tool works for you (or doesn't) is very valuable and we're not running a migration business.
+
+We occassionally accept **requests** for a new Source or **sponsorships** for any package type, and we do
+have a cost estimation guide if you really must outsource it. Contact migrations@prosembler.com.
 
 ### How can I learn more or help? 🎟️
 

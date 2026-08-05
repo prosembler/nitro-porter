@@ -85,11 +85,9 @@ No.
 
 ### Will you do it for me? 🙏
 
-Rarely. It's more effective to work through it yourself, ask questions, and file tickets if you confirm a bug.
-Feedback on how the tool works for you (or doesn't) is very valuable and we're not running a migration business.
-
-We occassionally accept **requests** for a new Source or **sponsorships** for any package type, and we do
-have a cost estimation guide if you really must outsource it. Contact migrations@prosembler.com.
+We encourage you to work through using the tool and ask us questions.
+Feedback on how the tool works for you (or doesn't) is very valuable! 
+However, if you prefer to outsource, contact migrations@prosembler.com for a cost estimate.
 
 ### How can I learn more or help? 🎟️
 

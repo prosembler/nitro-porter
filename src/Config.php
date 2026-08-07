@@ -27,6 +27,18 @@ class Config
     }
 
     /**
+     * Retrieve the config.
+     */
+    public static function loadFile(): array
+    {
+        if (file_exists(ROOT_DIR . '/config.php')) {
+            return require(ROOT_DIR . '/config.php');
+        } else {
+            return require(ROOT_DIR . '/config-sample.php');
+        }
+    }
+
+    /**
      * @param mixed[] $config
      */
     public function set(array $config): void

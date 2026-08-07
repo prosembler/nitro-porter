@@ -24,10 +24,10 @@ Migrate a community from a supported Source to a supported Target as comprehensi
 
 ### Supported Targets (where you're going) — [4 total](https://nitroporter.org/targets) 📥
 
-![Flarum](docs/assets/logos/flarum-300x100.png)
-![NodeBB](docs/assets/logos/nodebb-300x100.png)
-![Vanilla](docs/assets/logos/vanilla-300x100.png)
-![Waterhole](docs/assets/logos/waterhole-300x100.png)
+[![Flarum](docs/assets/logos/flarum-300x100.png)](https://flarum.org)
+[![NodeBB](docs/assets/logos/nodebb-300x100.png)](https://nodebb.org)
+[![Vanilla](docs/assets/logos/vanilla-300x100.png)](https://github.com/prosembler/vanilla)
+[![Waterhole](docs/assets/logos/waterhole-300x100.png)](https://waterhole.dev)
 
 ### Supported Sources (what you're using now) — [37 total](https://nitroporter.org/sources) 📤
 
@@ -85,11 +85,9 @@ No.
 
 ### Will you do it for me? 🙏
 
-Rarely. It's more effective to work through it yourself, ask questions, and file tickets if you confirm a bug.
-Feedback on how the tool works for you (or doesn't) is very valuable and we're not running a migration business.
-
-We occassionally accept **requests** for a new Source or **sponsorships** for any package type, and we do
-have a cost estimation guide if you really must outsource it. Contact migrations@prosembler.com.
+We encourage you to work through using the tool and ask us questions.
+Feedback on how the tool works for you (or doesn't) is very valuable! 
+However, if you prefer to outsource, contact migrations@prosembler.com for a cost estimate.
 
 ### How can I learn more or help? 🎟️
 

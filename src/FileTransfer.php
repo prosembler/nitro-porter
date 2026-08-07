@@ -67,6 +67,25 @@ class FileTransfer
         return $support;
     }
 
+    /**
+     * Create folder if it doesn't exit.
+     *
+     * @param string $path Full path of the folder to be created.
+     */
+    public static function touchFolder(string $path): bool
+    {
+        if (is_dir($path) && chmod($path, 0755)) {
+            return true;
+        }
+        if (mkdir($path, 0755, true)) {
+            Log::comment("Folder '{$path}' was created.");
+            return true;
+        }
+
+        Log::comment("Folder '{$path}' could not be created.");
+        return false;
+    }
+
     public function isSupported(): bool
     {
         return $this->supported;
@@ -110,7 +129,7 @@ class FileTransfer
         array $params = []
     ): void {
         //$this->verifyFolder($inputFolder);
-        //$this->touchFolder($outputFolder);
+        //self::touchFolder($outputFolder);
         $resourceFolder = opendir($inputFolder);
 
         while (($file = readdir($resourceFolder)) !== false) {
@@ -146,7 +165,7 @@ class FileTransfer
         $missed = 0;
         foreach ($map as $row) {
             if (!empty($row->SourceAvatarFullPath) && !empty($row->TargetAvatarFullPath)) {
-                touchFolder(dirname($row->TargetAvatarFullPath));
+                self::touchFolder(dirname($row->TargetAvatarFullPath));
                 copy($row->SourceAvatarFullPath, $row->TargetAvatarFullPath); // @todo TouchDir
                 $found++;
             } else {
@@ -179,7 +198,7 @@ class FileTransfer
         $missed = 0;
         foreach ($map as $row) {
             if (!empty($row->SourceFullPath) && !empty($row->TargetFullPath)) {
-                touchFolder(dirname($row->TargetFullPath));
+                self::touchFolder(dirname($row->TargetFullPath));
                 copy($row->SourceFullPath, $row->TargetFullPath);
                 $found++;
             } else {

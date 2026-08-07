@@ -18,6 +18,7 @@ class Discord extends Source
     public const array SUPPORTED = [
         'name' => 'Discord',
         'defaultTablePrefix' => '',
+        'charsetTable' => 'discord_messages',
         'features' => [
             'Users' => 1,
             'Categories' => 1,

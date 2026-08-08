@@ -43,12 +43,12 @@ class RunCommand extends Command
             $this->set('target', $io->prompt('Target package alias (see `porter list targets`)'));
         }
 
-        if (!$this->input && !Config::getInstance()->get('input_alias')) {
-            $this->set('input', $io->prompt('Input storage alias (see config.php)'));
+        if (!$this->inputstore && !Config::getInstance()->get('input_alias')) {
+            $this->set('inputstore', $io->prompt('Input storage alias (see config.php)'));
         }
 
-        if (!$this->output && $this->source !== 'file' && !Config::getInstance()->get('output_alias')) {
-            $this->set('output', $io->prompt('Output storage alias (see config.php)'));
+        if (!$this->outputstore && $this->source !== 'file' && !Config::getInstance()->get('output_alias')) {
+            $this->set('outputstore', $io->prompt('Output storage alias (see config.php)'));
         }
     }
 
@@ -62,9 +62,9 @@ class RunCommand extends Command
         $request = (new Request(
             sourcePackage: $this->source,
             targetPackage: $this->target,
-            inputStorage: $this->input,
-            outputStorage: $this->output,
-            porterStorage: $this->output,
+            inputStorage: $this->inputstore,
+            outputStorage: $this->outputstore,
+            porterStorage: $this->porterstore,
             inputTablePrefix: $this->sp,
             outputTablePrefix: $this->tp,
             cdnPrefix: $this->cdn,

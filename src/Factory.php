@@ -98,7 +98,7 @@ class Factory
 
         // Connection info contains the type of storage we want to instantiate.
         $connection = new PorterConnection($name, $prefix);
-        $storage = 'Storage\\' . ucfirst($connection->getType());
+        $storage = '\Porter\Storage\\' . ucfirst($connection->getType());
         return new $storage($connection);
     }
 }

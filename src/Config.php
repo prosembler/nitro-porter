@@ -88,11 +88,11 @@ class Config
     }
 
     /**
-     * @todo Allow start IDs per key to be set in config.
+     * Allow start IDs per key to be set in config.
      */
     public function getOffsets(): array
     {
-        return [];
+        return $this->config['offsets'];
     }
 
     /**

@@ -789,7 +789,7 @@ class Flarum extends Target
      * Requires addon `fof/byobu`.
      * Export PMs to fof/byobu format, which uses the `posts` & `discussions` tables.
      */
-    protected function privateMessages(): void
+    protected function conversations(): void
     {
         // Verify source support.
         if (!$this->hasPortSchema('Conversation')) {

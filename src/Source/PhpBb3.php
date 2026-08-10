@@ -80,34 +80,9 @@ class PhpBb3 extends Source
         'bookmarks' => array('user_id', 'topic_id')
     );
 
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->userNotes();
-        $this->ranks();
-        $this->signatures();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->bookmarks();
-        $this->polls();
-        $this->conversations();
-        $this->attachments();
-    }
-
-    /**
-     */
-    protected function userNotes(): void
+    protected function usernotes(): void
     {
         $corruptedRecords = [];
-
-        // User notes.
         $userNote_Map = array(
             'log_id' => array('Column' => 'UserNoteID', 'Type' => 'int'),
             'user_id' => array('Column' => 'InsertUserID', 'Type' => 'int'),
@@ -156,31 +131,24 @@ class PhpBb3 extends Source
         }
     }
 
-    public static function entityDecode(string $value): string
-    {
-        return html_entity_decode($value, ENT_QUOTES, 'UTF-8');
-    }
-
     /**
-     * @param mixed $r
-     * @param string $field
-     * @param array $row
-     * @return array|string|string[]|null
+     * Filter: Remove phpBB BBcode from message bodies.
      */
-    public function removeBBCodeUIDs($r, $field, $row): array|string|null
+    public function removeBBCodeUIDs(mixed $r, string $field, array $row): mixed
     {
-        if (!$r) {
+        if (empty($r)) {
             return $r;
         }
 
-        $UID = trim($row['bbcode_uid']);
-        //      $UID = '2zp03s9s';
-        if ($UID) {
+        // Remove UIDs.
+        if (!empty($row['bbcode_uid'])) {
+            $UID = trim($row['bbcode_uid']);  // ex: '2zp03s9s';
             $r = preg_replace("`((?::[a-zA-Z])?:$UID)`", '', $r);
         }
 
         // Remove smilies.
-        $r = preg_replace('#<!\-\- s(.*?) \-\-><img src="\{SMILIES_PATH\}\/.*? \/><!\-\- s\1 \-\->#', '\1', $r);
+        $r = preg_replace('#<!-- s(.*?) --><img src="\{SMILIES_PATH}/.*? /><!-- s -->#', '\1', $r);
+
         // Remove links.
         $regex = '`<!-- [a-z] --><a\s+class="[^"]+"\s+href="([^"]+)">([^<]+)</a><!-- [a-z] -->`';
         $r = preg_replace($regex, '[url=$1]$2[/url]', $r);
@@ -189,36 +157,24 @@ class PhpBb3 extends Source
         $regex = '`<!-- [a-z] --><a\s+href="mailto:([^"]+)">([^<]+)</a><!-- [a-z] -->`i';
         $r = preg_replace($regex, '[url=$1]$2[/url]', $r);
 
-        $r = str_replace(
-            array('&quot;', '&#39;', '&#58;', 'Â', '&#46;', '&amp;'),
-            array('"', "'", ':', '', '.', '&'),
-            $r
-        );
-
-        return $r;
+        // Fix encoded characters.
+        return str_replace(['&quot;', '&#39;', '&#58;', 'Â', '&#46;', '&amp;'], ['"', "'", ':', '', '.', '&'], $r);
     }
 
     /**
-     * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
+     * Filter: Used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
      *
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     *@see    Migration::writeTableToFile
-     *
+     * @return mixed Return the supplied value if the record's file is an image. Return null otherwise.
+     * @see    Migration::writeTableToFile
      */
-    public function filterThumbnailData($value, $field, $row): ?string
+    public function filterThumbnailData(mixed $value, string $field, array $row): mixed
     {
-        if (strpos(strtolower($row['mimetype']), 'image/') === 0) {
+        if (!empty($row['mimetype']) && str_starts_with(strtolower($row['mimetype']), 'image/')) {
             return $value;
-        } else {
-            return null;
         }
+        return null;
     }
 
-    /**
-     */
     protected function users(): void
     {
         // Grab the avatar salt.
@@ -262,8 +218,6 @@ class PhpBb3 extends Source
         );
     }
 
-    /**
-     */
     protected function ranks(): void
     {
         $rank_Map = array(
@@ -273,7 +227,6 @@ class PhpBb3 extends Source
                 'Filter' => function ($value) {
                     static $level = 0;
                     $level++;
-
                     return $level;
                 }
             ),
@@ -283,11 +236,9 @@ class PhpBb3 extends Source
                 'Column' => 'Attributes',
                 'Filter' => function ($value, $field, $row) {
                     $result = array();
-
                     if ($row['rank_min']) {
                         $result['Criteria']['CountPosts'] = $row['rank_min'];
                     }
-
                     if ($row['rank_special']) {
                         $result['Criteria']['Manual'] = true;
                     }
@@ -298,20 +249,13 @@ class PhpBb3 extends Source
         );
         $this->export(
             'Rank',
-            "select
-                    r.*,
-                    r.rank_title as title2,
-                    0 as level
+            "select r.*, r.rank_title as title2, 0 as level
                 from :_ranks r
-                order by
-                    rank_special,
-                    rank_min;",
+                order by rank_special, rank_min;",
             $rank_Map
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = array(
@@ -335,8 +279,6 @@ class PhpBb3 extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $userMeta_Map = array(
@@ -365,8 +307,6 @@ class PhpBb3 extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = array(
@@ -384,8 +324,6 @@ class PhpBb3 extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = array(
@@ -413,8 +351,6 @@ class PhpBb3 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = array(
@@ -453,12 +389,9 @@ class PhpBb3 extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $this->query("drop table if exists z_pmto;");
-
         $this->query(
             "create table z_pmto(
                 id int unsigned,
@@ -466,7 +399,6 @@ class PhpBb3 extends Source
                 primary key(id, userid)
             );"
         );
-
         $this->query(
             "insert ignore into z_pmto(id, userid)
                 select
@@ -474,7 +406,6 @@ class PhpBb3 extends Source
                     author_id
                 from :_privmsgs"
         );
-
         $this->query(
             "insert ignore into z_pmto(id, userid)
                 select
@@ -482,7 +413,6 @@ class PhpBb3 extends Source
                     user_id
                 from :_privmsgs_to;"
         );
-
         $this->query(
             "insert ignore into z_pmto(id, userid)
                 select
@@ -490,9 +420,7 @@ class PhpBb3 extends Source
                     author_id
                 from :_privmsgs_to"
         );
-
         $this->query("drop table if exists z_pmto2;");
-
         $this->query(
             "create table z_pmto2 (
                 id int unsigned,
@@ -500,7 +428,6 @@ class PhpBb3 extends Source
                 primary key (id)
             );"
         );
-
         $this->query(
             "insert ignore into z_pmto2(id, userids)
                 select
@@ -509,9 +436,7 @@ class PhpBb3 extends Source
                 from z_pmto
                 group by id;"
         );
-
         $this->query("drop table if exists z_pm;");
-
         $this->query(
             "create table z_pm(
                 id int unsigned,
@@ -521,7 +446,6 @@ class PhpBb3 extends Source
                 groupid int unsigned
             );"
         );
-
         $this->query(
             "insert into z_pm(id, subject, subject2, userids)
                 select
@@ -535,11 +459,8 @@ class PhpBb3 extends Source
                 from :_privmsgs pm
                     join z_pmto2 t on t.id = pm.msg_id;"
         );
-
         $this->query("create index z_idx_pm on z_pm(id);");
-
         $this->query("drop table if exists z_pmgroup;");
-
         $this->query(
             "create table z_pmgroup(
                 groupid int unsigned,
@@ -547,7 +468,6 @@ class PhpBb3 extends Source
                 userids varchar(250)
             );"
         );
-
         $this->query(
             "insert into z_pmgroup(groupid, subject, userids)
                 select
@@ -558,10 +478,8 @@ class PhpBb3 extends Source
                 group by
                     pm.subject2, pm.userids;"
         );
-
         $this->query("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
         $this->query("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
-
         $this->query(
             "update z_pm pm
                 join z_pmgroup g on pm.subject2 = g.subject
@@ -575,7 +493,7 @@ class PhpBb3 extends Source
             'RealSubject' => array(
                 'Column' => 'Subject',
                 'Type' => 'varchar(250)',
-                'Filter' => array($this, 'EntityDecode')
+                'Filter' => 'HTMLDecoder'
             )
         );
         $this->export(
@@ -625,8 +543,6 @@ class PhpBb3 extends Source
         $this->query('drop table if exists z_pmgroup;');
     }
 
-    /**
-     */
     protected function polls(): void
     {
         $poll_Map = array(
@@ -676,71 +592,32 @@ class PhpBb3 extends Source
         );
         $this->export(
             'PollVote',
-            "select v.*,
-                    v.poll_option_id * 1000000 + v.topic_id as id
+            "select v.*, v.poll_option_id * 1000000 + v.topic_id as id
                 from :_poll_votes v",
             $pollVote_Map
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
-        $cdn = ''; //$this->param('cdn', '');
-        $media_Map = array(
+        $map = [
             'attach_id' => 'MediaID',
             'real_filename' => 'Name',
-            'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
-            'post_id' => 'InsertUserID',
+            'poster_id' => 'InsertUserID',
             'mimetype' => 'Type',
             'filesize' => 'Size',
-        );
-        $this->export(
-            'Media',
-            "select a.*,
-                    case when a.post_msg_id = t.topic_first_post_id
-                        then 'discussion' else 'comment' end as ForeignTable,
-                    case when a.post_msg_id = t.topic_first_post_id
-                        then a.topic_id else a.post_msg_id end as ForeignID,
-                    concat('$cdn','FileUpload/', a.physical_filename, '.', a.extension) as Path,
-                    concat('$cdn','FileUpload/', a.physical_filename, '.', a.extension) as thumb_path,
-                    128 as thumb_width,
-                    FROM_UNIXTIME(a.filetime) as DateInserted
-                from :_attachments a
-                    join :_topics t on a.topic_id = t.topic_id",
-            $media_Map
-        );
-    }
-
-    /**
-     * Add file extension to hashed phpBB3 attachment filenames.
-     *
-     * @param string $directory
-     */
-    protected function exportBlobs(string $directory): void
-    {
-        // Select attachments
-        $result = $this->query("select physical_filename as name, extension as ext from phpbb_attachments");
-
-        // Iterate thru files based on database results and rename.
-        $renamed = $failed = 0;
-        while ($row = $result->nextResultRow()) {
-            if (file_exists($directory . $row['name'])) {
-                rename($directory . $row['name'], $directory . $row['name'] . '.' . $row['ext']);
-                $renamed++;
-
-                if (file_exists($directory . 'thumb_' . $row['name'])) {
-                    rename(
-                        $directory . 'thumb_' . $row['name'],
-                        $directory . 'thumb_' . $row['name'] . '.' . $row['ext']
-                    );
-                }
-            } else {
-                $failed++;
-            }
-        }
-        Log::comment('Renamed ' . $renamed . ' files. ' . $failed . 'failures.');
+            'extension' => 'Extension',
+            'physical_filename' => 'Path',
+        ];
+        $query = $this->sourceQB()->from('attachments')
+            ->join('topics', 'attachments.topic_id', '=', 'topics.topic_id')
+            ->select('attachments.*')
+            ->selectRaw('FROM_UNIXTIME(attachments.filetime) as DateInserted')
+            ->selectRaw("case when attachments.post_msg_id = topics.topic_first_post_id
+                        then 'discussion' else 'comment' end as ForeignTable")
+            ->selectRaw("case when attachments.post_msg_id = topics.topic_first_post_id
+                        then a=attachments.topic_id else attachments.post_msg_id end as ForeignID")
+            ->selectRaw('concat(physical_filename, ".", extension) as TargetFullPath');
+        $this->export('Media', $query, $map);
     }
 }

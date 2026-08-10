@@ -35,9 +35,12 @@ abstract class Package
         'setup', // HOOK
         'filemap', // Map a file transfer.
         // users
-        'users', // inc. usermeta, signatures
+        'users',
         'roles',
         'badges',
+        'ranks',
+        'usermeta',
+        'signatures',
         // taxonomy
         'categories',
         'groups',

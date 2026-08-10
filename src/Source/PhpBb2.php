@@ -70,35 +70,14 @@ class PhpBb2 extends Source
         'privmsgs_text' => array('privmsgs_text_id', 'privmsgs_bbcode_uid', 'privmsgs_text')
     );
 
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->conversations();
-        $this->attachments();
-    }
-
-    public static function entityDecode(mixed $value): string
-    {
-        return html_entity_decode($value, ENT_QUOTES, 'UTF-8');
-    }
-
     public function removeBBCodeUIDs(string $value, string $field, array $row): array|string
     {
-        $UID = $row['bbcode_uid'];
-
-        return str_replace(':' . $UID, '', $value);
+        if (empty($row['bbcode_uid'])) {
+            return $value;
+        }
+        return str_replace(':' . $row['bbcode_uid'], '', $value);
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $this->export(
@@ -120,8 +99,6 @@ class PhpBb2 extends Source
         );
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = array(
@@ -143,8 +120,6 @@ class PhpBb2 extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = array(
@@ -163,17 +138,13 @@ class PhpBb2 extends Source
         // Skip pending memberships
         $this->export(
             'UserRole',
-            'select
-                    user_id,
-                    group_id
+            'select user_id, group_id
                 from :_user_group
                 where user_pending = 0;',
             $userRole_Map
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = array(
@@ -199,14 +170,11 @@ class PhpBb2 extends Source
                     c.cat_id * 1000 as parentid,
                     f.forum_desc
                 from :_forums f
-                left join :_categories c
-                    on f.cat_id = c.cat_id",
+                left join :_categories c on f.cat_id = c.cat_id",
             $category_Map
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = array(
@@ -214,7 +182,6 @@ class PhpBb2 extends Source
             'forum_id' => 'CategoryID',
             'topic_poster' => 'InsertUserID',
             'topic_title' => 'Name',
-            'Format' => 'Format',
             'topic_views' => 'CountViews'
         );
         $this->export(
@@ -229,15 +196,12 @@ class PhpBb2 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = array(
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
             'post_text' => array('Column' => 'Body', 'Filter' => array($this, 'removeBBCodeUIDs')),
-            'Format' => 'Format',
             'poster_id' => 'InsertUserID'
         );
         $this->export(
@@ -253,8 +217,6 @@ class PhpBb2 extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $this->query("drop table if exists z_pmto;");
@@ -341,7 +303,6 @@ class PhpBb2 extends Source
 
         $this->query("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
         $this->query("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
-
         $this->query(
             "update z_pm pm
                 join z_pmgroup g
@@ -356,7 +317,7 @@ class PhpBb2 extends Source
             'RealSubject' => array(
                 'Column' => 'Subject',
                 'Type' => 'varchar(250)',
-                'Filter' => array($this, 'EntityDecode')
+                'Filter' => 'HTMLDecoder'
             )
         );
 

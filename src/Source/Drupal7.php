@@ -70,12 +70,12 @@ class Drupal7 extends Source
         preg_replace_callback(
             self::PATTERN,
             function ($matches) use ($postId) {
-                if ($file = base64_decode($matches[1])) {
-                    $filename = "{$postId}_{$this->imageCount}.png";
-                    $this->imageCount++;
-                    //file_put_contents($this->param('attach-source', null) . '/' . $filename, $file);
-                    return "\"$this->path/$filename\"";
+                $filename = "{$postId}_{$this->imageCount}.png";
+                $this->imageCount++;
+                if (!empty($matches[1])) {
+                    file_put_contents($this->path . '/' . $filename, base64_decode($matches[1]));
                 }
+                return "\"$this->path/$filename\"";
             },
             $value
         );

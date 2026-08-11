@@ -7,6 +7,44 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Target extends Package
 {
+    /** Map standard Porter schema keys to the config offsets they should use.  */
+    public const array MERGE_KEYS = [
+        // Users
+        'InsertUserID' => 'users',
+        'UpdateUserID' => 'users',
+        'DeleteUserID' => 'users',
+        'ForeignUserID' => 'users',
+        'LastCommentUserID' => 'users',
+
+        // Roles
+        'RoleID' => 'roles',
+
+        // Categories
+        'CategoryID' => 'categories',
+        'ParentCategoryID' => 'categories',
+
+        // Discussions
+        'DiscussionID' => 'discussions',
+        'LastDiscussionID' => 'discussions',
+
+        // Comments
+        'CommentID' => 'comments',
+        "parentCommentID" => "comments",
+        'LastCommentID' => 'comments',
+        'FirstCommentID' => 'comments',
+
+        // Attachments
+        'MediaID' => 'attachments',
+        'ForeignID' => 'attachments',
+        'ForeignTable' => 'attachments',
+
+        // Etc.
+        'PollID' => 'polls',
+        'PollOptionID' => 'polloptions',
+        'TagID' => 'tags',
+        'BadgeID' => 'badges',
+    ];
+
     /** @var ConnectionManager  */
     public ConnectionManager $connection;
 
@@ -52,6 +90,46 @@ abstract class Target extends Package
             ->selectRaw('max(`' . $name . '`) as id')
             ->limit(1)->get()->pluck('id');
         return $max[0] ?? 0;
+    }
+
+    /**
+     * Get the configured offset value.
+     */
+    protected function getOffset(string $name): int
+    {
+        $valid = ['users', 'roles', 'categories', 'discussions', 'comments',
+            'attachments','polls', 'polloptions', 'tags', 'badges'];
+        if (!in_array($name, $valid)) {
+            Log::comment('Invalid offset name: ' . $name);
+            return 0;
+        }
+        $offsets = Config::getInstance()->getOffsets();
+        return (!empty($offsets[$name]) && is_numeric($offsets[$name])) ? (int) $offsets[$name] : 0;
+    }
+
+    /**
+     * Creates $filters closures that add the offset values.
+     */
+    protected function setOffsets(array $map): array
+    {
+        $keys = array_keys($map);
+        $filters = [];
+        foreach ($keys as $key) {
+            if (array_key_exists($key, self::MERGE_KEYS)) {
+                // Translate the mapped key to the offset key.
+                $offset = $this->getOffset(self::MERGE_KEYS[$key]);
+                // Create a single-use filter with exactly the correct offset addition.
+                if ($offset) { // Don't set a filter if the offset=0.
+                    $filters[$key] = function ($value) use ($offset) {
+                        return $value + $offset;
+                    };
+                    Log::comment(sprintf('Offset %s is set to: %s', $key, $offset));
+                }
+            } elseif ('RecordID' === $key) {
+                $filters[$key] = 'offsetRecord';
+            }
+        }
+        return $filters;
     }
 
     /**
@@ -194,6 +272,9 @@ abstract class Target extends Package
     {
         // Start timer.
         $start = microtime(true);
+
+        // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)
+        $filters = array_merge($filters, $this->setOffsets($map));
 
         // Prepare the storage medium for the incoming structure.
         $this->outputStorage->prepare($tableName, $struct);

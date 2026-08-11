@@ -17,6 +17,22 @@ function filterFlarumContent(?string $value, string $column, array $row): string
 }
 
 /**
+ * Create an offset for the ambiguous RecordID key.
+ */
+function offsetRecord(mixed $value, string $column, array $row): string
+{
+    if (!empty($row['RecordType']) && is_int($value)) {
+        $offsets = \Porter\Config::getInstance()->getOffsets();
+        $offsetName = strtolower($row['RecordType']) . 's';
+        if (!empty($offsets[$offsetName])) { // e.g. ['comments'] = 1000
+            $value += (int)$offsets[strtolower($row['RecordType'])];
+        }
+    }
+
+    return $value;
+}
+
+/**
  * De-duplicate deleted usernames.
  *
  * Check for '[Deleted User]' (and variants) as username and replace.

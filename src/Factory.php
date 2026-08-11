@@ -9,10 +9,9 @@ class Factory
     /**
      * Setup a new FileTransfer service.
      */
-    public static function fileTransfer(Source $source, Target $target, string $porterName): FileTransfer
+    public static function fileTransfer(Source $source, Target $target, string $outputName): FileTransfer
     {
-        // The `PORT_` intermediary is always relational, so read it via the porter (SQL) connection.
-        $porterStorage = new Storage\Database(new ConnectionManager($porterName, 'PORT_'));
+        $porterStorage = new Storage\Database(new PorterConnection($outputName, 'PORT_'));
         return new FileTransfer($source, $target, $porterStorage);
     }
 
@@ -37,9 +36,17 @@ class Factory
     /**
      * Get Origin if it exists.
      */
-    public static function origin(string $origin, ?Storage $input = null, ?Storage $extract = null): ?Origin
-    {
-        return Factory::package('Origin', $origin, $input, $extract);
+    public static function origin(
+        string $origin,
+        ?Storage $input = null,
+        ?Storage $extract = null,
+        ?Storage $https = null,
+    ): ?Origin {
+        $origin = Factory::package('Origin', $origin, $input, $extract);
+        if (is_a($https, Storage\Https::class)) {
+            $origin->addHttps($https);
+        }
+        return $origin;
     }
 
     /**
@@ -58,7 +65,7 @@ class Factory
         $source->limitTables($dataTypes);
 
         // Add legacy database support to Sources.
-        $inputDB = new \Porter\Database\DbFactory(new ConnectionManager($inputName)->connection()->getPDO());
+        $inputDB = new \Porter\Database\DbFactory(new PorterConnection($inputName)->connection()->getPDO());
         $source->addLegacySupport($inputDB);
 
         return $source;
@@ -85,13 +92,13 @@ class Factory
      */
     public static function storage(string $name, ?string $prefix = ''): Storage
     {
-        if ($name === 'file') { // @todo storageFactory
+        if ($name === 'file') { // File storage has no connection.
             return new Storage\File();
         }
-        $connection = new ConnectionManager($name, $prefix);
-        if ($connection->getType() === 'mongo') {
-            return new Storage\Mongo($connection);
-        }
-        return new Storage\Database($connection);
+
+        // Connection info contains the type of storage we want to instantiate.
+        $connection = new PorterConnection($name, $prefix);
+        $storage = '\Porter\Storage\\' . ucfirst($connection->getType());
+        return new $storage($connection);
     }
 }

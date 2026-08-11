@@ -7,8 +7,8 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Target extends Package
 {
-    /** @var ConnectionManager  */
-    public ConnectionManager $connection;
+    /** @var PorterConnection  */
+    public PorterConnection $connection;
 
     public function __construct(public ?Storage $porterStorage = null, public ?Storage $outputStorage = null)
     {

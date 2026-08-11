@@ -2,8 +2,8 @@
 
 namespace Porter\Storage;
 
-use Porter\ConnectionManager;
 use Porter\Https\DiscordRetryStrategy;
+use Porter\PorterConnection;
 use Porter\Log;
 use Porter\Storage;
 use Porter\StorageInfo;
@@ -17,8 +17,8 @@ class Https extends Storage
 {
     public const string USER_AGENT = 'NitroPorter (https://nitroporter.org, v' . APP_VERSION . ')';
 
-    /** @var ConnectionManager */
-    protected ConnectionManager $connectionManager;
+    /** @var PorterConnection */
+    protected PorterConnection $connectionManager;
 
     /** @var array Name => Value */
     protected array $headers = [];
@@ -26,8 +26,8 @@ class Https extends Storage
     /** @var array Use 'code', 'message', 'headers', 'exception' */
     protected array $errors = [];
 
-    /** @param ConnectionManager $c */
-    public function __construct(ConnectionManager $c)
+    /** @param PorterConnection $c */
+    public function __construct(PorterConnection $c)
     {
         $this->connectionManager = $c;
         $this->setHeader('Content-Type', 'application/json');
@@ -37,7 +37,7 @@ class Https extends Storage
     /** Allow an Origin to reset the connection. */
     public function resetConnection(string $originName): void
     {
-        $this->connectionManager = new ConnectionManager($originName);
+        $this->connectionManager = new PorterConnection($originName);
     }
 
     /**

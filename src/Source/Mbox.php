@@ -263,7 +263,8 @@ class Mbox extends Source
             while ($row = $result->nextResultRow()) {
                 $discussions[] = $row['PostID'];
             }
-            $this->query('update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')');
+            $query = 'update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')';
+            $this->query($query);
         }
 
         // Thread the comments

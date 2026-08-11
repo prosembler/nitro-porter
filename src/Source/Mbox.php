@@ -157,27 +157,31 @@ class Mbox extends Source
             (UserID int AUTO_INCREMENT, Name varchar(255), Email varchar(255), PRIMARY KEY (UserID))');
         $result = $this->query('select Sender from :_mbox group by Sender');
 
+
+
         // Users, pt 1: Build ref array; Parse name & email out - strip quotes, <, >
         $users = [];
-        while ($row = $result->nextResultRow()) {
-            // Most senders are "Name <Email>"
-            $nameParts = explode('<', trim($row['Sender'], '"'));
-            // Sometimes the sender is just <email>
-            if ($nameParts[0] == '') {
-                $name = trim(str_replace('>', '', $nameParts[1]));
-            } else // Normal?
-            {
-                $name = trim(str_replace('\\', '', $nameParts[0]));
-            }
-            if (strstr($name, '@') !== false) {
-                // Only wound up with an email
-                $name = explode('@', $name);
-                $name = $name[0];
-            }
-            $email = $this->parseEmail($row['Sender']);
+        if ($result) {
+            while ($row = $result->nextResultRow()) {
+                // Most senders are "Name <Email>"
+                $nameParts = explode('<', trim($row['Sender'], '"'));
+                // Sometimes the sender is just <email>
+                if ($nameParts[0] == '') {
+                    $name = trim(str_replace('>', '', $nameParts[1]));
+                } else // Normal?
+                {
+                    $name = trim(str_replace('\\', '', $nameParts[0]));
+                }
+                if (str_contains($name, '@')) {
+                    // Only wound up with an email
+                    $name = explode('@', $name);
+                    $name = $name[0];
+                }
+                $email = $this->parseEmail($row['Sender']);
 
-            // Compile by unique email
-            $users[$email] = $name;
+                // Compile by unique email
+                $users[$email] = $name;
+            }
         }
 
         // Users, pt 2: loop thru unique emails
@@ -188,6 +192,9 @@ class Mbox extends Source
             );
             $userID = 0;
             $maxRes = $this->query("select max(UserID) as id from :_mbox_user");
+            if (!$maxRes) {
+                continue;
+            }
             while ($max = $maxRes->nextResultRow()) {
                 $userID = $max['id'];
             }
@@ -203,17 +210,21 @@ class Mbox extends Source
         $result = $this->query('select Folder from :_mbox group by Folder');
         // Parse name out & build ref array
         $categories = [];
-        while ($row = $result->nextResultRow()) {
-            $this->query(
-                'insert into :_mbox_category (Name)
+        if ($result) {
+            while ($row = $result->nextResultRow()) {
+                $this->query(
+                    'insert into :_mbox_category (Name)
                 values ("' . $this->dbInput()->escape($row["Folder"]) . '")'
-            );
-            $categoryID = 0;
-            $maxRes = $this->query("select max(CategoryID) as id from :_mbox_category");
-            while ($max = $maxRes->nextResultRow()) {
-                $categoryID = $max['id'];
+                );
+                $categoryID = 0;
+                $maxRes = $this->query("select max(CategoryID) as id from :_mbox_category");
+                if ($maxRes) {
+                    while ($max = $maxRes->nextResultRow()) {
+                        $categoryID = $max['id'];
+                    }
+                }
+                $categories[$row["Folder"]] = $categoryID;
             }
-            $categories[$row["Folder"]] = $categoryID;
         }
 
         // Temporary post table
@@ -224,21 +235,23 @@ class Mbox extends Source
         );
         $result = $this->query('select * from :_mbox');
         // Parse name, body, date, userid, categoryid
-        while ($row = $result->nextResultRow()) {
-            // Assemble posts into a format we can actually export.
-            // Subject: trim quotes, 're: ', 'fwd: ', 'fw: ', [category]
-            $name = trim(preg_replace('#^(re:)|(fwd?:) #i', '', trim($row['Subject'], '"')));
-            $name = trim(preg_replace('#^\[[0-9a-zA-Z_-]*] #', '', $name));
-            $email = $this->parseEmail($row['Sender']);
-            $userID = (isset($users[$email])) ? $users[$email] : 0;
-            $this->query(
-                'insert into :_mbox_post (Name, InsertUserID, CategoryID, DateInserted, Body)
+        if ($result) {
+            while ($row = $result->nextResultRow()) {
+                // Assemble posts into a format we can actually export.
+                // Subject: trim quotes, 're: ', 'fwd: ', 'fw: ', [category]
+                $name = trim(preg_replace('#^(re:)|(fwd?:) #i', '', trim($row['Subject'], '"')));
+                $name = trim(preg_replace('#^\[[0-9a-zA-Z_-]*] #', '', $name));
+                $email = $this->parseEmail($row['Sender']);
+                $userID = (isset($users[$email])) ? $users[$email] : 0;
+                $this->query(
+                    'insert into :_mbox_post (Name, InsertUserID, CategoryID, DateInserted, Body)
                 values ("' . $this->dbInput()->escape($name) . '",
                ' . $userID . ',
                ' . $categories[$row['Folder']] . ',
                from_unixtime(' . strtotime($row['Date']) . '),
                "' . $this->dbInput()->escape($this->parseBody($row['Body'])) . '")'
-            );
+                );
+            }
         }
 
         // Decide which posts are OPs
@@ -246,10 +259,12 @@ class Mbox extends Source
             'select PostID from (select * from :_mbox_post order by DateInserted asc) x group by Name'
         );
         $discussions = [];
-        while ($row = $result->nextResultRow()) {
-            $discussions[] = $row['PostID'];
+        if ($result) {
+            while ($row = $result->nextResultRow()) {
+                $discussions[] = $row['PostID'];
+            }
+            $this->query('update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')');
         }
-        $this->query('update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')');
 
         // Thread the comments
         $result = $this->query(
@@ -257,9 +272,11 @@ class Mbox extends Source
             left join :_mbox_post d on c.Name like d.Name and d.IsDiscussion = 1
             where c.IsDiscussion = 0'
         );
-        while ($row = $result->nextResultRow()) {
-            $this->query('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
+        if ($result) {
+            while ($row = $result->nextResultRow()) {
+                $this->query('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
                 where PostID = ' . $row['PostID']);
+            }
         }
     }
 }

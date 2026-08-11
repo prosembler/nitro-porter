@@ -26,9 +26,9 @@ class PdoDB implements DbResource
     /**
      * {@inheritdoc}
      */
-    public function query(string $sql): bool|ResultSet
+    public function query(string $sql): false|ResultSet
     {
-        if (isset($this->result)) {
+        if (!empty($this->result)) {
             $this->result->closeCursor();
         }
         $this->result = $this->link->query($sql);
@@ -51,8 +51,11 @@ class PdoDB implements DbResource
     /**
      * {@inheritdoc}
      */
-    public function nextRow(bool $assoc): bool|array
+    public function nextRow(bool $assoc): false|array
     {
+        if (empty($this->result)) {
+            return false;
+        }
         $row = $this->result->fetch($assoc ? \PDO::FETCH_ASSOC : \PDO::FETCH_NUM);
         if (isset($row)) {
             return $row;

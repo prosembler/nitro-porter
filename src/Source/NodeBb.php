@@ -124,7 +124,7 @@ class NodeBb extends Source
         $regex = '/\w*:([\w|\s|-]*):/';
         preg_match($regex, $key, $matches);
 
-        return $matches[1];
+        return $matches[1] ?? '';
     }
 
     /**
@@ -136,7 +136,7 @@ class NodeBb extends Source
         $regex = '/\w*:(\d*):/';
         preg_match($regex, $key, $matches);
 
-        return $matches[1];
+        return $matches[1] ?? '';
     }
 
     /**

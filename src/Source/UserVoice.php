@@ -62,7 +62,7 @@ class UserVoice extends Source
      */
     public function roleIDConverter($roleID): int
     {
-        return hexdec(substr($roleID, 0, 4));
+        return (int)hexdec(substr($roleID, 0, 4));
     }
 
     /**
@@ -76,7 +76,9 @@ class UserVoice extends Source
         $result = $this->query("select UserID, Length, ContentType, Content from :_UserAvatar");
         $path = '/www/porter/userpics';
         $count = 0;
-
+        if (!$result) {
+            return;
+        }
         while ($row = $result->nextResultRow()) {
             // Build path
             if (!file_exists(dirname($path))) {
@@ -117,6 +119,9 @@ class UserVoice extends Source
         );
         $path = '/www/porter/attach';
         $count = 0;
+        if (!$result) {
+            return;
+        }
 
         while ($row = $result->nextResultRow()) {
             // Build path

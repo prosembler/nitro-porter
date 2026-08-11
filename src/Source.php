@@ -202,8 +202,8 @@ abstract class Source extends Package
 
         // Pre-run the export query if it's raw SQL from a legacy Source.
         if (is_string($query)) { // @todo remove this support after Sources are updated
-            $data = $this->query($query);
-            if (empty($data)) {
+            $query = $this->query($query);
+            if (empty($query)) {
                 Log::comment("Error: No data found in $tableName.");
                 return;
             }
@@ -224,7 +224,7 @@ abstract class Source extends Package
         $this->porterStorage->prepare($tableName, $structure);
 
         // Store the data.
-        $info = $this->porterStorage->store($tableName, $map, $structure, $data ?? $query, $filters);
+        $info = $this->porterStorage->store($tableName, $map, $structure, $query, $filters);
 
         // Report.
         Log::storage('export', $info);
@@ -249,13 +249,13 @@ abstract class Source extends Package
      * Determine if an index exists in a table
      * @deprecated Builder::hasIndex()
      *
-     * @param string $indexName
-     * @param string $table
-     * @return bool
      */
-    public function indexExists($indexName, $table): bool
+    public function indexExists(string $indexName, string $table): bool
     {
         $result = $this->query("show index from `$table` WHERE Key_name = '$indexName'");
+        if (false === $result) {
+            return false;
+        }
         return $result->nextResultRow() !== false;
     }
 
@@ -268,6 +268,9 @@ abstract class Source extends Package
      */
     public function hasInputSchema(string $table, array|string $columns = []): bool
     {
+        if (is_string($columns)) {
+            $columns = [$columns];
+        }
         return $this->inputStorage->exists($table, $columns);
     }
 
@@ -368,7 +371,11 @@ abstract class Source extends Package
      */
     public static function generateThumbnail($path, $thumbPath, $height = 50, $width = 50): void
     {
-        list($widthSource, $heightSource, $type) = getimagesize($path);
+        $size = getimagesize($path);
+        if ($size === false) {
+            return;
+        }
+        list($widthSource, $heightSource, $type) = $size;
 
         $xCoordinate = 0;
         $yCoordinate = 0;
@@ -400,28 +407,37 @@ abstract class Source extends Package
                 case 2:
                     $sourceImage = @imagecreatefromjpeg($path);
                     if (!$sourceImage) {
-                        $sourceImage = imagecreatefromstring(file_get_contents($path));
+                        $str = file_get_contents($path);
+                        if (empty($str)) {
+                            return;
+                        }
+                        $sourceImage = imagecreatefromstring($str);
                     }
                     break;
                 case 3:
                     $sourceImage = imagecreatefrompng($path);
+                    if (empty($sourceImage)) {
+                        return;
+                    }
                     imagealphablending($sourceImage, true);
                     break;
             }
 
-            $targetImage = imagecreatetruecolor($width, $height);
-            imagecopyresampled(
-                $targetImage,
-                $sourceImage,
-                0,
-                0,
-                $xCoordinate,
-                $yCoordinate,
-                $width,
-                $height,
-                $widthSource,
-                $heightSource
-            );
+            $targetImage = imagecreatetruecolor(max(1, $width), max(1, $height));
+            if (!empty($sourceImage)) {
+                imagecopyresampled(
+                    $targetImage,
+                    $sourceImage,
+                    0,
+                    0,
+                    (int)$xCoordinate,
+                    (int)$yCoordinate,
+                    $width,
+                    $height,
+                    (int)max(0, $widthSource),
+                    (int)max(0, $heightSource)
+                );
+            }
             if ($sourceImage) {
                 imagedestroy($sourceImage);
             }

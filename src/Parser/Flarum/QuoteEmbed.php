@@ -67,8 +67,10 @@ class QuoteEmbed extends EmbedExternalListener
         if (isset($embed['data']['attributes']['bodyRaw'])) {
             $text = json_encode($embed['data']['attributes']['bodyRaw']);
             $format = $embed['data']['attributes']['format'] ?? 'Rich';
-            $body = Formatter::instance()->toTextFormatter($format, $text);
-            $body = Formatter::unwrap($body); // Undo 'r' XML tag from parsing since we're mid-post.
+            if ($text) {
+                $body = Formatter::instance()->toTextFormatter($format, $text);
+                $body = Formatter::unwrap($body); // Undo 'r' XML tag from parsing since we're mid-post.
+            }
         }
         return $body;
     }

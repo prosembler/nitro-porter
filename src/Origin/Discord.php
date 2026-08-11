@@ -909,12 +909,14 @@ class Discord extends Origin
      */
     protected function getAvatarUrl(object $user): string
     {
-        if (!$user->global_avatar && !$user->avatar) {
+        if (empty($user->id) || (empty($user->global_avatar) && empty($user->avatar))) {
             return '';
         }
-
-        $url = 'avatars/' . $user->id . '/' . $user->global_avatar;
-        if ($user->avatar) {
+        $url = ''; // PHPStan can't figure out it's impossible to get to the return from here without setting this.
+        if (!empty($user->global_avatar)) {
+            $url = 'avatars/' . $user->id . '/' . $user->global_avatar;
+        }
+        if (!empty($user->avatar)) {
             $url = 'guilds/' . $this->getGuildId() . '/users/' . $user->id . '/avatars/' . $user->avatar;
         }
         return self::CDN_BASE_URI . $url . '.png';

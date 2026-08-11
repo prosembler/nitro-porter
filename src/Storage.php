@@ -27,7 +27,13 @@ class Storage
         $info = new StorageInfo(
             startTime: microtime(true),
         );
-        if (is_a($data, '\Porter\Database\ResultSet')) {
+        if (is_array($data)) {
+            // Iterate on API data.
+            foreach ($data as $row) {
+                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
+                $info = $this->stream($row, $structure, $info);
+            }
+        } elseif (is_a($data, '\Porter\Database\ResultSet')) {
             // Iterate on @deprecated ResultSet.
             while ($row = $data->nextResultRow()) {
                 $row = $this->normalizeRow($row, $structure, $map, $filters);
@@ -36,12 +42,6 @@ class Storage
         } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
             // Use the Builder to process results one at a time.
             foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
-                $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
-                $info = $this->stream($row, $structure, $info);
-            }
-        } elseif (is_array($data)) {
-            // Iterate on API data.
-            foreach ($data as $row) {
                 $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
                 $info = $this->stream($row, $structure, $info);
             }
@@ -236,7 +236,11 @@ class Storage
                 mb_detect_encoding($value) && // Verify we know the encoding at all.
                 (mb_detect_encoding($value) !== 'UTF-8') &&
                 (is_string($value) || is_numeric($value));
-            return ($doEncode) ? mb_convert_encoding($value, 'UTF-8', mb_detect_encoding($value)) : $value;
+            if ($doEncode) {
+                $from = mb_detect_encoding((string)$value);
+                $value = mb_convert_encoding((string)$value, 'UTF-8', $from ?: null);
+            }
+            return $value;
         }, $row);
     }
 

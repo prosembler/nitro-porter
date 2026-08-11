@@ -69,7 +69,7 @@ class Toast extends Source
         // Determine safe RoleID to use for non-existant Member role
         $lastRoleID = 1001;
         $lastRoleResult = $this->query("select max(ID) as LastID from :_Group");
-        if ($lastRole = $lastRoleResult->nextResultRow()) {
+        if ($lastRoleResult && $lastRole = $lastRoleResult->nextResultRow()) {
             $lastRoleID = $lastRole['LastID'] + 1;
         }
 

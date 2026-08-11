@@ -40,9 +40,9 @@ class Mongo extends Storage
      *
      * @return Database
      */
-    public function getHandle(): Database
+    public function getHandle(): \MongoDB\Database
     {
-        return $this->connectionManager->connection();
+        return $this->connectionManager->mongoConnection();
     }
 
     /**

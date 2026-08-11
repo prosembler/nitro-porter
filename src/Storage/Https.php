@@ -106,7 +106,7 @@ class Https extends Storage
     {
         // Setup client.
         $client = new RetryableHttpClient(
-            client: $this->connectionManager->connection(),
+            client: $this->connectionManager->httpsConnection(),
             strategy: new DiscordRetryStrategy(),
             maxRetries: 5,
             logger: Log::getInstance()
@@ -152,7 +152,7 @@ class Https extends Storage
      */
     public function getHandle(): HttpClientInterface
     {
-        return $this->connectionManager->connection();
+        return $this->connectionManager->httpsConnection();
     }
 
     /**
@@ -180,7 +180,7 @@ class Https extends Storage
     {
         // Get & validate response.
         try {
-            $response = $this->connectionManager->connection()->request('GET', $url);
+            $response = $this->connectionManager->httpsConnection()->request('GET', $url);
             $response->getStatusCode();
         } catch (ClientExceptionInterface $e) {
             Log::comment("4xx error downloading [$url]", false);
@@ -194,8 +194,10 @@ class Https extends Storage
         // Write file.
         $fileHandler = fopen($path, 'w');
         try {
-            foreach ($this->connectionManager->connection()->stream($response) as $chunk) {
-                fwrite($fileHandler, $chunk->getContent());
+            foreach ($this->connectionManager->httpsConnection()->stream($response) as $chunk) {
+                if ($fileHandler) {
+                    fwrite($fileHandler, $chunk->getContent());
+                }
             }
         } catch (ExceptionInterface $e) {
             Log::comment("Failed to write $url to $path");
@@ -229,7 +231,7 @@ class Https extends Storage
         $start = microtime(true);
         $memoryPeak = memory_get_usage();
         $errors = 0;
-        $client = new RetryableHttpClient($this->connectionManager->connection()); // maxRetries: 3
+        $client = new RetryableHttpClient($this->connectionManager->httpsConnection()); // maxRetries: 3
 
         // Send requests.
         $responses = [];
@@ -274,7 +276,7 @@ class Https extends Storage
                 // Aggressively purge the file from memory.
                 $response->cancel(); // Terminate the response to clear its cached data.
                 unset($responses[$url]);
-                if (isset($files[$url])) {
+                if (!empty($files[$url])) {
                     fflush($files[$url]); // Dump stream buffer.
                     fclose($files[$url]); // Attempt to terminate stream.
                     unset($files[$url]); // Don't come back to this one.

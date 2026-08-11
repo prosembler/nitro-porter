@@ -43,18 +43,14 @@ class Database extends Storage
 
     /**
      * Retrieve a reference to the underlying storage method library.
-     * @return Connection
      */
     public function getHandle(): Connection
     {
-        return $this->porterConnection->connection();
+        return $this->porterConnection->dbConnection();
     }
 
     /**
      * Report incremental storage for large datasets.
-     *
-     * @param string $name
-     * @param int $rows
      */
     public function logBatchProgress(string $name, int $rows): void
     {
@@ -134,7 +130,7 @@ class Database extends Storage
         $tableName = $this->getBatchTable();
         $action = (in_array($tableName, $this->ignoreErrorsTables)) ? 'insertOrIgnore' : 'insert';
         try {
-            $this->porterConnection->connection()->table($tableName)->$action($batch);
+            $this->porterConnection->dbConnection()->table($tableName)->$action($batch);
         } catch (\Illuminate\Database\QueryException $e) {
             echo "\n\nBatch insert error: " . substr($e->getMessage(), 0, 500);
             echo "\n[...]\n" . substr($e->getMessage(), -300) . "\n";
@@ -247,7 +243,7 @@ class Database extends Storage
      */
     public function exists(string $resourceName = '', array $structure = []): bool
     {
-        $schema = $this->porterConnection->connection()->getSchemaBuilder();
+        $schema = $this->porterConnection->dbConnection()->getSchemaBuilder();
         if (empty($structure)) {
             // No columns requested.
             return $schema->hasTable($resourceName);
@@ -266,9 +262,9 @@ class Database extends Storage
      *
      * @param array $tableInfo Keys are column names, values are MySQL data types.
      *      A special key 'keys' can be passed to define database columns.
-     * @return callable Closure defining a single Illuminate Database table.
+     * @return \Closure Closure defining a single Illuminate Database table.
      */
-    private function getTableStructureClosure(array $tableInfo): callable
+    private function getTableStructureClosure(array $tableInfo): \Closure
     {
         // Build the closure using given structure.
         return function (Blueprint $table) use ($tableInfo) {
@@ -340,6 +336,6 @@ class Database extends Storage
     {
         $matches = [];
         preg_match('/varchar\(([0-9]{1,3})\)/', $type, $matches);
-        return (int)$matches[1] ?: 100;
+        return (int) ($matches[1] ?? 100);
     }
 }

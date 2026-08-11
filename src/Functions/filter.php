@@ -424,7 +424,7 @@ function timestampToDate(mixed $value): ?string
  */
 function long2ipf(mixed $value): ?string
 {
-    return (!empty($value) && ctype_digit($value)) ? long2ip($value) : null;
+    return (is_int($value) && ctype_digit($value)) ? long2ip($value) : null;
 }
 
 /**

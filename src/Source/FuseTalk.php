@@ -175,7 +175,7 @@ class FuseTalk extends Source
     {
         $memberRoleID = 1;
         $result = $this->query("select max(igroupid) as maxRoleID from :_groups");
-        if ($row = $result->nextResultRow()) {
+        if ($result && $row = $result->nextResultRow()) {
             $memberRoleID += $row['maxRoleID'];
         }
 

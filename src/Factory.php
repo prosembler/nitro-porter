@@ -65,8 +65,11 @@ class Factory
         $source->limitTables($dataTypes);
 
         // Add legacy database support to Sources.
-        $inputDB = new \Porter\Database\DbFactory(new PorterConnection($inputName)->connection()->getPDO());
-        $source->addLegacySupport($inputDB);
+        $connection = new PorterConnection($inputName);
+        if ($connection->getType() === 'database') {
+            $inputDB = new \Porter\Database\DbFactory($connection->dbConnection()->getPDO());
+            $source->addLegacySupport($inputDB);
+        }
 
         return $source;
     }
@@ -98,7 +101,11 @@ class Factory
 
         // Connection info contains the type of storage we want to instantiate.
         $connection = new PorterConnection($name, $prefix);
-        $storage = '\Porter\Storage\\' . ucfirst($connection->getType());
-        return new $storage($connection);
+        return match ($connection->getType()) {
+            'database' => new \Porter\Storage\Database($connection),
+            'https' => new \Porter\Storage\Https($connection),
+            'mongo' => new \Porter\Storage\Mongo($connection),
+            default => new \Porter\Storage(),
+        };
     }
 }

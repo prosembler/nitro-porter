@@ -27,7 +27,7 @@ interface DbResource
 
     /**
      * @param bool $assoc
-     * @return array|bool returns the next row if possible false if we've reached the end of the result set.
+     * @return array|false returns the next row if possible false if we've reached the end of the result set.
      */
-    public function nextRow(bool $assoc): bool|array;
+    public function nextRow(bool $assoc): false|array;
 }

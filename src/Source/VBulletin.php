@@ -344,6 +344,9 @@ class VBulletin extends Source
     {
         Log::comment('Exporting blobs...');
         $result = $this->query($sql);
+        if (!$result) {
+            return;
+        }
         $count = 0;
         while ($row = $result->nextResultRow()) {
             // vBulletin attachment hack (can't do this in MySQL)
@@ -632,14 +635,14 @@ class VBulletin extends Source
                     DateInserted,
                     InsertUserID
                 ) values ";
-        while ($row = $r->nextResultRow()) {
-            $options = explode('|||', $row['options']);
+        if ($r) {
+            while ($row = $r->nextResultRow()) {
+                $options = explode('|||', $row['options']);
+                foreach ($options as $i => $option) {
+                    $rowCount++;
+                    $option = addslashes($option);
 
-            foreach ($options as $i => $option) {
-                $rowCount++;
-                $option = addslashes($option);
-
-                $sql .= "(
+                    $sql .= "(
                         {$rowCount},
                         {$row['pollid']},
                         '{$option}',
@@ -647,6 +650,7 @@ class VBulletin extends Source
                         {$row['dateline']},
                         {$row['postuserid']}
                     ),";
+                }
             }
         }
 
@@ -846,7 +850,7 @@ class VBulletin extends Source
     {
         $sql = "select * from :_setting where varname = '$name'";
         $result = $this->query($sql);
-        if ($row = $result->nextResultRow()) {
+        if ($result && $row = $result->nextResultRow()) {
             return $row['value'];
         }
 

@@ -113,7 +113,7 @@ class FileTransfer
     protected function rePrefixFiles(string $path, string $oldPrefix, string $newPrefix): string
     {
         $i = pathinfo($path);
-        return $i['dirname'] . '/' .  $newPrefix . substr($i['basename'], strlen($oldPrefix));
+        return ($i['dirname'] ?? '') . '/' .  $newPrefix . substr($i['basename'], strlen($oldPrefix));
     }
 
     /**
@@ -131,6 +131,9 @@ class FileTransfer
         //$this->verifyFolder($inputFolder);
         //self::touchFolder($outputFolder);
         $resourceFolder = opendir($inputFolder);
+        if (!$resourceFolder) {
+            return;
+        }
 
         while (($file = readdir($resourceFolder)) !== false) {
             // Skip Unix files.

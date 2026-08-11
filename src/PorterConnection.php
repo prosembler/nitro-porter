@@ -4,8 +4,6 @@ namespace Porter;
 
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Database\Connection;
-use MongoDB\Client;
-use MongoDB\Database;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -23,8 +21,7 @@ class PorterConnection
 
     protected array $info = [];
 
-    /** @var Connection|HttpClientInterface|Database Data connection. */
-    protected Connection|HttpClientInterface|Database $connection;
+    protected Connection|HttpClientInterface|\MongoDB\Database $connection;
 
     public Capsule $capsule;
 
@@ -96,12 +93,35 @@ class PorterConnection
     }
 
     /**
-     * Get the current DBM connection.
-     *
-     * @return Connection|HttpClientInterface|Database
+     * Get the current connection.
      */
-    public function connection(): Connection|HttpClientInterface|Database
+    public function mongoConnection(): \MongoDB\Database
     {
+        if (!is_a($this->connection, '\MongoDB\Database')) {
+            throw new \Exception('MongoDB database must be instance of \MongoDB\Database');
+        }
+        return $this->connection;
+    }
+
+    /**
+     * Get the current connection.
+     */
+    public function dbConnection(): Connection
+    {
+        if (!is_a($this->connection, '\Illuminate\Database\Connection')) {
+            throw new \Exception('Relational database must be instance of Connection');
+        }
+        return $this->connection;
+    }
+
+    /**
+     * Get the current connection.
+     */
+    public function httpsConnection(): HttpClientInterface
+    {
+        if (!is_a($this->connection, '\Symfony\Contracts\HttpClient\HttpClientInterface')) {
+            throw new \Exception('Https must be instance of HttpClientInterface');
+        }
         return $this->connection;
     }
 
@@ -113,9 +133,6 @@ class PorterConnection
     protected function newDatabaseConnection(): Connection
     {
         $connection = $this->capsule->getConnection($this->alias);
-
-       //if ($this->alias === 'discourse') {
-        //echo "\n\nyes hello\n\n"; var_dump($connection); echo "\n\nyes goodbye\n\n";  }
 
         if ($connection->getDriverName() === 'mysql') {
             $this->optimizeMySQL($connection);
@@ -178,7 +195,7 @@ class PorterConnection
         $this->capsule = $capsule;
         $this->connection = $this->newDatabaseConnection();
         // Set prefix after connection is generated.
-        $this->connection()->setTablePrefix($info['prefix']);
+        $this->connection->setTablePrefix($info['prefix']);
     }
 
     /**
@@ -206,6 +223,6 @@ class PorterConnection
             $auth = rawurlencode($info['username']) . ':' . rawurlencode($info['password'] ?? '') . '@';
         }
         $uri = 'mongodb://' . $auth . $info['host'] . ':' . ($info['port'] ?? '27017');
-        $this->connection = new Client($uri)->getDatabase($info['database']);
+        $this->connection = new \MongoDB\Client($uri)->getDatabase($info['database']);
     }
 }

@@ -22,9 +22,9 @@ class ResultSet
      * Iterate to new result row via dbResource.
      *
      * @param bool $assoc will return result row as an enumerated array if false.
-     * @return array|bool
+     * @return array|false
      */
-    public function nextResultRow(bool $assoc = true): bool|array
+    public function nextResultRow(bool $assoc = true): false|array
     {
         return $this->dbResource->nextRow($assoc);
     }

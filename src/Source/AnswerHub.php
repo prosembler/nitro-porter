@@ -118,7 +118,7 @@ class AnswerHub extends Source
         $result = $this->query("select c_reserved as lastID
             from id_generators
             where c_identifier = 'AUTHORITABLE'");
-        if ($row = $result->nextResultRow()) {
+        if ($result && $row = $result->nextResultRow()) {
             $lastID = $row['lastID'];
         }
         if (!isset($lastID)) {

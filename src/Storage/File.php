@@ -2,6 +2,7 @@
 
 namespace Porter\Storage;
 
+use Porter\Log;
 use Porter\Storage;
 use Porter\StorageInfo;
 
@@ -62,7 +63,12 @@ class File extends Storage
         } else {
             $fp = fopen($this->path, 'wb');
         }
-        $this->file = $fp;
+        if ($fp) {
+            $this->file = $fp;
+        } else {
+            Log::comment('Failed to open file for writing: ' . $this->path);
+            exit();
+        }
 
         // Add meta info to the output.
         fwrite($fp, 'Nitro Porter Export' . self::NEWLINE . self::NEWLINE);
@@ -249,7 +255,7 @@ class File extends Storage
             return $value;
         } elseif (is_string($value) || is_numeric($value)) {
             // Fix carriage returns for file storage.
-            $value = str_replace(["\r\n", "\r"], [self::NEWLINE, self::NEWLINE], $value);
+            $value = str_replace(["\r\n", "\r"], [self::NEWLINE, self::NEWLINE], (string)$value);
             // Fix special chars in our file storage format.
             $value = $this->escapedValue($value);
         } elseif (is_bool($value)) {

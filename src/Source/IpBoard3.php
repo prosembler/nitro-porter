@@ -100,6 +100,9 @@ class IpBoard3 extends Source
         $skipped = 0;
         $completed = 0;
         $errors = [];
+        if (!$userList) {
+            return;
+        }
         while ($row = $userList->nextResultRow()) {
             $processed++;
             $error = false;

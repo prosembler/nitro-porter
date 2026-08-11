@@ -209,7 +209,7 @@ class VBulletin5 extends VBulletin
         $sql = "show tables like ':_poll';";
         $result = $this->query($sql);
 
-        if ($result->nextResultRow()) {
+        if ($result && $result->nextResultRow()) {
             $sql = "select count(*) AS Count
                 from :_poll as p
                     inner join :_node as n on n.nodeid = p.nodeid
@@ -218,7 +218,7 @@ class VBulletin5 extends VBulletin
                 where ct.class = 'Channel';";
 
             $result = $this->query($sql);
-            if ($row = $result->nextResultRow()) {
+            if ($result && $row = $result->nextResultRow()) {
                 $count = $row['Count'];
             }
         }
@@ -338,16 +338,18 @@ class VBulletin5 extends VBulletin
         $currentPollID = null;
         $currentSortID = 0;
         $pollCount = 0;
-        while ($row = $result->nextResultRow()) {
-            if ($currentPollID !== $row['nodeid']) {
-                $currentPollID = $row['nodeid'];
-                $currentSortID = 0;
+        if ($result) {
+            while ($row = $result->nextResultRow()) {
+                if ($currentPollID !== $row['nodeid']) {
+                    $currentPollID = $row['nodeid'];
+                    $currentSortID = 0;
+                }
+
+                $row['sort'] = ++$currentSortID;
+
+                //$ex->writeRow($fp, $row, $exportStructure, $revMappings, $legacyFilter);
+                $pollCount++;
             }
-
-            $row['sort'] = ++$currentSortID;
-
-            //$ex->writeRow($fp, $row, $exportStructure, $revMappings, $legacyFilter);
-            $pollCount++;
         }
         //$ex->writeEndTable($fp);
         Log::comment("Exported Table: PollOption (" . $pollCount . " rows)");
@@ -541,14 +543,15 @@ class VBulletin5 extends VBulletin
                     left join :_contenttype ct on n.contenttypeid = ct.contenttypeid
                 where ct.class = 'Channel';"
         );
-
-        while ($channel = $channelResult->nextResultRow()) {
-            $channels[$channel['nodeid']] = $channel;
-            if ($channel['title'] == 'Forum') {
-                $homeID = $channel['nodeid'];
-            }
-            if ($channel['title'] == 'Private Messages') {
-                $privateMessagesID = $channel['nodeid'];
+        if ($channelResult) {
+            while ($channel = $channelResult->nextResultRow()) {
+                $channels[$channel['nodeid']] = $channel;
+                if ($channel['title'] == 'Forum') {
+                    $homeID = $channel['nodeid'];
+                }
+                if ($channel['title'] == 'Private Messages') {
+                    $privateMessagesID = $channel['nodeid'];
+                }
             }
         }
 
@@ -630,7 +633,7 @@ class VBulletin5 extends VBulletin
         $result = $this->query($innerCommentQuery . ' limit 1');
 
         $innerCommentSQLFix = null;
-        if ($result->nextResultRow()) {
+        if ($result && $result->nextResultRow()) {
             $this->query(
                 "create table `vBulletinInnerCommentTable` (
                     `nodeid` int(10) unsigned not null,

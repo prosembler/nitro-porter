@@ -16,7 +16,7 @@ use Porter\Log;
 
 class VBulletin5 extends VBulletin
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'vBulletin 5 Connect',
         'defaultTablePrefix' => 'vb_',
         'charsetTable' => 'node',

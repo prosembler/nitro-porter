@@ -12,7 +12,7 @@ use Porter\Source;
 
 class Smf2 extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Simple Machines 2',
         'defaultTablePrefix' => 'smf_',
         'charsetTable' => 'messages',

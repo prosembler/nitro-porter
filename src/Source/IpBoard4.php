@@ -16,7 +16,7 @@ use Porter\Source;
  */
 class IpBoard4 extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'IP.Board 4',
         'defaultTablePrefix' => 'ibf_',
         'charsetTable' => 'forums_posts',

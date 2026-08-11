@@ -12,7 +12,7 @@ use Porter\Source;
 
 class AspPlayground extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'ASP Playground',
         'defaultTablePrefix' => 'pgd_',
         'charsetTable' => 'Threads',
@@ -27,7 +27,7 @@ class AspPlayground extends Source
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => false,
     ];
 

@@ -13,7 +13,7 @@ use Porter\Source;
 
 class EsoTalk extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'esoTalk',
         'defaultTablePrefix' => 'et_',
         'charsetTable' => 'post',

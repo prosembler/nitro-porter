@@ -25,10 +25,10 @@ class AttachmentsTest extends TestCase
     protected static ?string $skip = null;
 
     /** @var string Stands in for the target install's root during mapping. */
-    public const TARGET_ROOT = '/srv/target';
+    public const string TARGET_ROOT = '/srv/target';
 
     /** @var string Stands in for the source install's upload folder. */
-    public const SOURCE_UPLOADS = '/srv/source/uploads';
+    public const string SOURCE_UPLOADS = '/srv/source/uploads';
 
     /**
      * Shared fixture that runs exactly once prior to ALL the tests in this class.

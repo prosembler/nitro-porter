@@ -12,9 +12,9 @@ use Porter\Source;
 
 class Drupal7 extends Source
 {
-    public const PATTERN = "~\"data:image/png;base64,(.*?)\"~";
+    public const string PATTERN = "~\"data:image/png;base64,(.*?)\"~";
 
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Drupal 7',
         'defaultTablePrefix' => '',
         'charsetTable' => 'comment',

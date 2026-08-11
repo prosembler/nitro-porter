@@ -37,11 +37,11 @@ class Discourse extends Target
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => false,
     ];
 
-    protected const SCHEMA_USERS = [
+    protected const array SCHEMA_USERS = [
         'id' => 'int4',
         'username' => 'varchar(60)',
         'created_at' => 'timestamp',
@@ -59,7 +59,7 @@ class Discourse extends Target
         'first_seen_at' => 'timestamp',
     ];
 
-    protected const SCHEMA_DISCUSSIONS = [
+    protected const array SCHEMA_DISCUSSIONS = [
         'id' => 'int4',
         'title' => 'varchar',
         'last_posted_at' => 'timestamp',
@@ -78,7 +78,7 @@ class Discourse extends Target
         'fancy_title' => 'varchar',
         'pinned_globally' => 'bool',
     ];
-    protected const SCHEMA_COMMENTS = [
+    protected const array SCHEMA_COMMENTS = [
         'id' => 'int4',
         'user_id' => 'int4',
         'topic_id' => 'int4',
@@ -96,7 +96,7 @@ class Discourse extends Target
         'cook_method' => 'int4', // 1
     ];
 
-    protected const SCHEMA_CATEGORIES = [
+    protected const array SCHEMA_CATEGORIES = [
         'id' => 'int4',
         'name' => 'varchar',
         'topic_id' => 'int4',
@@ -115,7 +115,7 @@ class Discourse extends Target
         'emoji' => 'varchar',
     ];
 
-    protected const SCHEMA_ROLES = [
+    protected const array SCHEMA_ROLES = [
         'id' => 'int4',
         'name' => 'varchar',
         'created_at' => 'timestamp',
@@ -125,12 +125,12 @@ class Discourse extends Target
         'visibility_level' => 'int4',
     ];
 
-    protected const SCHEMA_USER_ROLES = [
+    protected const array SCHEMA_USER_ROLES = [
         'user_id' => 'int4',
         'group_id' => 'int4',
     ];
 
-    protected const SCHEMA_ATTACHMENTS = [
+    protected const array SCHEMA_ATTACHMENTS = [
         'id' => 'int4',
         'user_id' => 'int4',
         'original_filename' => 'varchar',
@@ -146,7 +146,7 @@ class Discourse extends Target
         'animated' => 'bool',
     ];
 
-    protected const SCHEMA_REACTIONS = [
+    protected const array SCHEMA_REACTIONS = [
         'id' => 'int4',
         'user_id' => 'int4',
         'post_id' => 'int4',
@@ -157,7 +157,7 @@ class Discourse extends Target
         'updated_at' => 'timestamp',
     ];
 
-    protected const SCHEMA_REACTION_USERS = [
+    protected const array SCHEMA_REACTION_USERS = [
         'id' => 'int4',
         'user_id' => 'int4',
         'post_id' => 'int4',

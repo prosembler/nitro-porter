@@ -4,7 +4,7 @@ namespace Porter;
 
 class Support
 {
-    public const SUPPORTED_INFO = [
+    public const array SUPPORTED_INFO = [
         'name',
         'defaultTablePrefix',
         'passwordHashMethod',
@@ -14,7 +14,7 @@ class Support
         'features',
     ];
 
-    public const SUPPORTED_FEATURES = [
+    public const array SUPPORTED_FEATURES = [
         'Users',
         'Categories',
         'Discussions',

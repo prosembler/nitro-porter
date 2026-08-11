@@ -19,7 +19,7 @@ use Porter\Target;
  */
 class Flarum extends Target
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Flarum',
         'defaultTablePrefix' => 'FLA_',
         'avatarPath' => 'assets/avatars',
@@ -50,7 +50,7 @@ class Flarum extends Target
         'fileTransferSupport' => true,
     ];
 
-    protected const SCHEMA_USERS = [
+    protected const array SCHEMA_USERS = [
         'id' => 'int',
         'username' => 'varchar(100)',
         'email' => 'varchar(100)',
@@ -63,7 +63,7 @@ class Flarum extends Target
         'comment_count' => 'int',
     ];
 
-    protected const SCHEMA_ROLES = [
+    protected const array SCHEMA_ROLES = [
         'id' => 'int',
         'name_singular' => 'varchar(100)',
         'name_plural' => 'varchar(100)',
@@ -72,12 +72,12 @@ class Flarum extends Target
         'is_hidden' => 'tinyint',
     ];
 
-    protected const SCHEMA_USER_ROLES = [
+    protected const array SCHEMA_USER_ROLES = [
         'user_id' => 'int',
         'group_id' => 'int',
     ];
 
-    protected const SCHEMA_CATEGORIES = [
+    protected const array SCHEMA_CATEGORIES = [
         'id' => 'int',
         'name' => 'varchar(100)',
         'slug' => 'varchar(100)',
@@ -93,7 +93,7 @@ class Flarum extends Target
      * @var array Table structure for `posts`.
      * @see \Porter\Postscript\Flarum::numberPosts() for 'keys' requirement.
      */
-    protected const SCHEMA_POSTS = [
+    protected const array SCHEMA_POSTS = [
         'id' => 'int',
         'discussion_id' => 'int',
         'user_id' => 'int',
@@ -119,7 +119,7 @@ class Flarum extends Target
      * @var array Table structure for 'discussions`.
      * @see \Porter\Postscript\Flarum::numberPosts() for 'keys' requirement.
      */
-    protected const SCHEMA_DISCUSSIONS = [
+    protected const array SCHEMA_DISCUSSIONS = [
         'id' => 'int',
         'user_id' => 'int',
         'title' => 'varchar(200)',
@@ -145,12 +145,12 @@ class Flarum extends Target
         ],
     ];
 
-    protected const SCHEMA_DISCUSSION_TAGS = [
+    protected const array SCHEMA_DISCUSSION_TAGS = [
         'discussion_id' => 'int',
         'tag_id' => 'int',
     ];
 
-    protected const SCHEMA_BOOKMARKS = [
+    protected const array SCHEMA_BOOKMARKS = [
         'discussion_id' => 'int',
         'user_id' => 'int',
         'last_read_at' => 'datetime',
@@ -164,7 +164,7 @@ class Flarum extends Target
         ],
     ];
 
-    protected const SCHEMA_ATTACHMENTS = [
+    protected const array SCHEMA_ATTACHMENTS = [
         'id' => 'int',
         'actor_id' => 'int',
         'discussion_id' => 'int',
@@ -179,7 +179,7 @@ class Flarum extends Target
         'tag' => 'varchar(255)', // Required; generates preview in Profile -> "My Media"
     ];
 
-    protected const SCHEMA_BADGES = [
+    protected const array SCHEMA_BADGES = [
         'id' => 'int',
         'name' => 'varchar(200)',
         'image' => 'text',
@@ -190,14 +190,14 @@ class Flarum extends Target
         'is_visible' => 'tinyint',
     ];
 
-    protected const SCHEMA_USER_BADGES = [
+    protected const array SCHEMA_USER_BADGES = [
         'badge_id' => 'int',
         'user_id' => 'int',
         'assigned_at' => 'datetime',
         'description' => 'text',
     ];
 
-    protected const SCHEMA_REACTIONS = [
+    protected const array SCHEMA_REACTIONS = [
         'id' => 'int',
         'identifier' => 'varchar(200)',
         'type' => 'varchar(200)',
@@ -205,7 +205,7 @@ class Flarum extends Target
         'display' => 'varchar(200)',
     ];
 
-    protected const SCHEMA_POST_REACTIONS = [
+    protected const array SCHEMA_POST_REACTIONS = [
         'id' => 'int',
         'post_id' => 'int',
         'user_id' => 'int',
@@ -214,7 +214,7 @@ class Flarum extends Target
         'updated_at' => 'timestamp',
     ];
 
-    protected const SCHEMA_POLLS = [
+    protected const array SCHEMA_POLLS = [
         'id' => 'int',
         'question' => 'varchar(200)',
         'discussion_id' => 'int',
@@ -226,7 +226,7 @@ class Flarum extends Target
         'vote_count' => 'int',
     ];
 
-    protected const SCHEMA_POLL_OPTIONS = [
+    protected const array SCHEMA_POLL_OPTIONS = [
         'id' => 'int',
         'answer' => 'varchar(200)',
         'poll_id' => 'int',
@@ -235,7 +235,7 @@ class Flarum extends Target
         'vote_count' => 'int',
     ];
 
-    protected const SCHEMA_POLL_VOTES = [
+    protected const array SCHEMA_POLL_VOTES = [
             //id
             'poll_id' => 'int',
             'option_id' => 'int',

@@ -12,7 +12,7 @@ use Porter\Source;
 
 class PhpBb2 extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'phpBB 2',
         'defaultTablePrefix' => 'phpbb_',
         'charsetTable' => 'posts',

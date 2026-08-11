@@ -13,12 +13,12 @@ abstract class Vanilla extends \s9e\TextFormatter\Bundle
     /**
     * @var ?object s9e\TextFormatter\Parser Singleton instance used by parse()
     */
-    protected static $parser;
+    protected static ?object $parser;
 
     /**
     * @var ?object s9e\TextFormatter\Renderer Singleton instance used by render()
     */
-    protected static $renderer;
+    protected static ?object $renderer;
 
     /**
     * {@inheritdoc}

@@ -18,7 +18,7 @@ use Porter\Source;
  */
 class IpBoard3 extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'IP.Board 3',
         'defaultTablePrefix' => 'ibf_',
         'charsetTable' => 'posts',
@@ -125,7 +125,7 @@ class IpBoard3 extends Source
             }
 
             $mainPhoto = trim($row['main_photo'] ?? null);
-            $thumbPhoto = trim($row['thumb_photo'] ?? null);
+            //$thumbPhoto = trim($row['thumb_photo'] ?? null);
 
             // Main Photo
             if (!$mainPhoto) {

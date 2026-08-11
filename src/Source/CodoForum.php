@@ -12,7 +12,7 @@ use Porter\Source;
 
 class CodoForum extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'CodoForum',
         'defaultTablePrefix' => 'codo_',
         'charsetTable' => 'posts',

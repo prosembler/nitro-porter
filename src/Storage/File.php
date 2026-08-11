@@ -8,22 +8,22 @@ use Porter\StorageInfo;
 class File extends Storage
 {
     /** Comment character in the import file. */
-    public const COMMENT = '//';
+    public const string COMMENT = '//';
 
     /** Delimiter character in the import file. */
-    public const DELIM = ',';
+    public const string DELIM = ',';
 
     /** Escape character in the import file. */
-    public const ESCAPE = '\\';
+    public const string ESCAPE = '\\';
 
     /** Newline character in the import file. */
-    public const NEWLINE = "\n";
+    public const string NEWLINE = "\n";
 
     /** Null character in the import file. */
-    public const NULL = '\N';
+    public const string NULL = '\N';
 
     /** Quote character in the import file. */
-    public const QUOTE = '"';
+    public const string QUOTE = '"';
 
     /** @var resource File pointer. */
     private $file;
@@ -38,9 +38,8 @@ class File extends Storage
      * Whether or not to use compression on the output file.
      *
      * @param  bool $value The value to set or NULL to just return the value.
-     * @return bool
      */
-    public function useCompression($value = null)
+    public function useCompression($value = null): bool
     {
         if ($value !== null) {
             $this->useCompression = $value;

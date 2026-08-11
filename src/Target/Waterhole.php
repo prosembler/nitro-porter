@@ -13,7 +13,7 @@ use Porter\Target;
 
 class Waterhole extends Target
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Waterhole',
         'defaultTablePrefix' => '',
         'features' => [
@@ -37,14 +37,14 @@ class Waterhole extends Target
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => true,
     ];
 
     /**
      * @var array Table structure for `comments`.
      */
-    protected const DB_STRUCTURE_COMMENTS = [
+    protected const array DB_STRUCTURE_COMMENTS = [
         'id' => 'bigint',
         'post_id' => 'bigint',
         'parent_id' => 'bigint',
@@ -59,7 +59,7 @@ class Waterhole extends Target
     /**
      * @var array Table structure for 'posts`.
      */
-    protected const DB_STRUCTURE_POSTS = [
+    protected const array DB_STRUCTURE_POSTS = [
         'id' => 'bigint',
         'channel_id' => 'bigint',
         'user_id' => 'bigint',

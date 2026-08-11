@@ -12,7 +12,7 @@ use Porter\Source;
 
 class NodeBb extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'NodeBB 0.*',
         'defaultTablePrefix' => 'gdn_',
         'charsetTable' => 'post',

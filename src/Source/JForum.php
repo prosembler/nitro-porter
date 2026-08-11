@@ -13,7 +13,7 @@ use Porter\Source;
 
 class JForum extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'jforum',
         'defaultTablePrefix' => 'jforum_',
         'charsetTable' => 'posts',

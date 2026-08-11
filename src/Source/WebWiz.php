@@ -12,7 +12,7 @@ use Porter\Source;
 
 class WebWiz extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Web Wiz Forums',
         'defaultTablePrefix' => 'tbl',
         'charsetTable' => 'Topic',

@@ -12,7 +12,7 @@ use Porter\Source;
 
 class ExampleSource extends Source // You MUST extend Source for this to work.
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => '_Example', // The package name users will see.
         'defaultTablePrefix' => '', // The default table prefix this software uses, if you know it.
         'charsetTable' => 'comments',  // Usually put the comments table name here. Used to derive charset.

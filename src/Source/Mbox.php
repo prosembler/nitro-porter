@@ -26,7 +26,7 @@ use Porter\Source;
 
 class Mbox extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => '.mbox files',
         'defaultTablePrefix' => '',
         'features' => [

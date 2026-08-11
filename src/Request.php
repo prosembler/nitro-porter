@@ -8,7 +8,7 @@ namespace Porter;
 
 final readonly class Request
 {
-    private const VALID_DATA_TYPES = [
+    private const array VALID_DATA_TYPES = [
         'all',
         'users',
         'roles',

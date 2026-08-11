@@ -38,11 +38,11 @@ class Agorakit extends Target
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => true,
     ];
 
-    protected const SCHEMA_USERS = [
+    protected const array SCHEMA_USERS = [
         'id' => 'int',
         'name' => 'varchar(100)',
         'username' => 'varchar(100)',
@@ -53,7 +53,7 @@ class Agorakit extends Target
         'admin' => 'tinyint',
     ];
 
-    protected const SCHEMA_DISCUSSIONS = [
+    protected const array SCHEMA_DISCUSSIONS = [
         'id' => 'int',
         'group_id' => 'int',
         'user_id' => 'int',
@@ -65,7 +65,7 @@ class Agorakit extends Target
         'deleted_at' => 'datetime',
         'total_comments' => 'int',
     ];
-    protected const SCHEMA_COMMENTS = [
+    protected const array SCHEMA_COMMENTS = [
         'id' => 'int',
         'discussion_id' => 'int',
         'user_id' => 'int',
@@ -75,7 +75,7 @@ class Agorakit extends Target
         'deleted_at' => 'datetime',
     ];
 
-    protected const SCHEMA_CATEGORIES = [
+    protected const array SCHEMA_CATEGORIES = [
         'id' => 'int',
         'name' => 'varchar(100)',
         'slug' => 'varchar(100)',
@@ -87,18 +87,18 @@ class Agorakit extends Target
         'is_restricted' => 'tinyint',
     ];
 
-    protected const SCHEMA_ROLES = [
+    protected const array SCHEMA_ROLES = [
         'id' => 'int',
         'name' => 'varchar(100)',
         'body' => 'text',
     ];
 
-    protected const SCHEMA_USER_ROLES = [
+    protected const array SCHEMA_USER_ROLES = [
         'user_id' => 'int',
         'group_id' => 'int',
     ];
 
-    protected const SCHEMA_ATTACHMENTS = [
+    protected const array SCHEMA_ATTACHMENTS = [
         'id' => 'int',
         'parent_id' => 'int',
         'group_id' => 'int',
@@ -116,7 +116,7 @@ class Agorakit extends Target
         'deleted_at' => 'datetime',
     ];
 
-    protected const SCHEMA_REACTIONS = [
+    protected const array SCHEMA_REACTIONS = [
         'id' => 'int',
         'user_id' => 'int',
         'reactable_id' => 'int',

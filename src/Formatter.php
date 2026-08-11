@@ -140,9 +140,7 @@ class Formatter
         // <br>
         $text = str_replace('<br>', '<br/>', $text);
         // <img src="">
-        $text = preg_replace('#<img ([^>]+[^/])>#', '<img $1 />', $text);
-
-        return $text;
+        return preg_replace('#<img ([^>]+[^/])>#', '<img $1 />', $text);
     }
 
     /**
@@ -157,9 +155,7 @@ class Formatter
     public static function fixIllegalTags(?string $text): ?string
     {
         // <span><div ... </div></span>
-        $text = preg_replace('#<span><div ([^>]+[^/])>(.+)</div></span>#U', '<div $1>$2</div>', $text);
-
-        return $text;
+        return preg_replace('#<span><div ([^>]+[^/])>(.+)</div></span>#U', '<div $1>$2</div>', $text);
     }
 
     /**

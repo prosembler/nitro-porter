@@ -12,7 +12,7 @@ use Porter\Source;
 
 class Toast extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Toast',
         'defaultTablePrefix' => 'tstdb_',
         'charsetTable' => 'Post',

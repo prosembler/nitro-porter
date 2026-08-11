@@ -12,7 +12,7 @@ use Porter\Source;
 
 class ExpressionEngine extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Expression Engine Discussion Forum',
         'defaultTablePrefix' => 'forum_',
         'charsetTable' => 'topics',

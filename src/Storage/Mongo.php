@@ -6,7 +6,6 @@ use MongoDB\Collection;
 use MongoDB\Database;
 use Porter\PorterConnection;
 use Porter\Storage;
-use Porter\StorageInfo;
 
 /**
  * Document storage for targets that run on MongoDB.

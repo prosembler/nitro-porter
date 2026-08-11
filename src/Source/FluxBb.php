@@ -12,7 +12,7 @@ use Porter\Source;
 
 class FluxBb extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'FluxBB 1',
         'defaultTablePrefix' => '',
         'charsetTable' => 'posts',
@@ -34,9 +34,9 @@ class FluxBb extends Source
     ];
 
     /**
-     * @var bool Path to avatar images
+     * @var bool|string Path to avatar images
      */
-    protected $avatarPath = false;
+    protected bool|string $avatarPath = false;
 
     /**
      * @var string CDN path prefix

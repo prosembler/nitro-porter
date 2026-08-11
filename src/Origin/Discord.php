@@ -25,10 +25,8 @@
 
 namespace Porter\Origin;
 
-use IntlChar;
 use Porter\Log;
 use Porter\Origin;
-use Porter\Package;
 
 /**
  * A Discord server is referred to as a 'guild' in the API docs.
@@ -353,7 +351,7 @@ class Discord extends Origin
     private function getLastMessageId(int $channelID): int
     {
         $message = $this->outputQB()->from('discord_messages')
-            ->orderBy('timestamp', 'asc')->limit(1)
+            ->orderBy('timestamp')->limit(1)
             ->where('channel_id', $channelID)
             ->get('id')->first();
         return $message->id ?? 0;
@@ -364,7 +362,7 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
-        $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS, []);
+        $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS);
         $this->guildUsers = array_column($info->content, 'id');
         $this->extractUserRoles($info->content);
     }
@@ -373,7 +371,7 @@ class Discord extends Origin
     protected function roles(): void
     {
         $endpoint = "guilds/" . $this->getGuildId();
-        $this->pull($endpoint, self::SCHEMA_ROLES, 'discord_roles', 'roles', [], [], []);
+        $this->pull($endpoint, self::SCHEMA_ROLES, 'discord_roles', 'roles');
     }
 
     /**
@@ -451,7 +449,7 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
-        $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis', null, [], [], []);
+        $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis');
         $this->guildEmojis = array_column($info->content, 'id');
     }
 
@@ -520,7 +518,7 @@ class Discord extends Origin
     protected function channels(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/channels";
-        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', null, [], [], []);
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels');
     }
 
     /**
@@ -532,13 +530,13 @@ class Discord extends Origin
     {
         // Active threads.
         $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
-        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
+        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
 
         // Archived threads.
         $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads', [], [], []);
+            $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
         }
     }
 
@@ -620,13 +618,13 @@ class Discord extends Origin
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map, []);
+            $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map);
 
             // Attachments.
             $this->extractAttachments($info->content);
 
             // Reactions & non-guild emoji used in them.
-            $userReactionsQueue[$channelId] = $this->extractReactions($info->content, $channelId);
+            $userReactionsQueue[$channelId] = $this->extractReactions($info->content);
 
             // Non-guild authors.
             $this->extractAuthors($info->content);
@@ -713,7 +711,7 @@ class Discord extends Origin
      * @see https://docs.discord.com/developers/resources/message#get-reactions
      * ex:  `/channels/{channel.id}/messages/{message.id}/reactions/{emoji.id}`
      */
-    protected function extractReactions(array $content, int $channelId): array
+    protected function extractReactions(array $content): array
     {
         // Filter to messages with reactions and discard other message data.
         $msgsWithReactions = array_filter(

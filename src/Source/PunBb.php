@@ -12,7 +12,7 @@ use Porter\Source;
 
 class PunBb extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'PunBB 1',
         'defaultTablePrefix' => 'punbb_',
         'charsetTable' => 'posts',

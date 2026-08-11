@@ -9,7 +9,7 @@ use Symfony\Component\Console\Output\NullOutput;
 
 class CoreTest extends TestCase
 {
-    public const ENV_ALIAS = 'test';
+    public const string ENV_ALIAS = 'test';
 
     /**
      * Shared fixture that runs exactly once prior to ALL the tests in this class.

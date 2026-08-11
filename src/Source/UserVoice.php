@@ -13,7 +13,7 @@ use Porter\Source;
 
 class UserVoice extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'User Voice',
         'defaultTablePrefix' => 'cs_',
         'charsetTable' => 'Threads',

@@ -18,7 +18,7 @@ use Porter\Source;
 
 class FuseTalk extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'FuseTalk',
         'defaultTablePrefix' => 'ftdb_',
         'charsetTable' => 'messages',

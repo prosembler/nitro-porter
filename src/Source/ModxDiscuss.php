@@ -12,7 +12,7 @@ use Porter\Source;
 
 class ModxDiscuss extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'MODX Discuss Extension',
         'defaultTablePrefix' => 'modx_discuss_',
         'charsetTable' => 'posts',

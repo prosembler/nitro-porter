@@ -14,13 +14,12 @@
 
 namespace Porter\Source;
 
-use Porter\Config;
 use Porter\Source;
 use Staudenmeir\LaravelCte\Query\Builder;
 
 class Xenforo extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Xenforo',
         'defaultTablePrefix' => 'xf_',
         'charsetTable' => 'post',
@@ -176,7 +175,7 @@ class Xenforo extends Source
             'parent_node_id' => [
                 'Column' => 'ParentCategoryID',
                 'Filter' => function ($value) {
-                    return $value ? $value : null;
+                    return $value ?: null;
                 }
             ],
             'display_order' => 'Sort',

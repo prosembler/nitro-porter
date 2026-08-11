@@ -12,7 +12,7 @@ use Porter\Source;
 
 class Q2a extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Questions2Answers',
         'defaultTablePrefix' => 'qa_',
         'charsetTable' => 'posts',

@@ -10,7 +10,7 @@ use PDO;
 class PdoDB implements DbResource
 {
     /** @var ?PDO */
-    private ?PDO $link = null;
+    private ?PDO $link;
 
     /** @var \PDOStatement|false|null query result */
     private \PDOStatement|null|false $result = null;

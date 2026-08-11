@@ -12,7 +12,7 @@ use Porter\Source;
 
 class Yaf extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'YAF.NET',
         'defaultTablePrefix' => 'yaf_',
         'charsetTable' => 'Topic',
@@ -66,7 +66,7 @@ class Yaf extends Source
         return $value;
     }
 
-    public function convertPassword(string $hash, string $columnName, array &$row): string
+    public function convertPassword(string $hash, string $columnName, array $row): string
     {
         $salt = $row['PasswordSalt'];
         $hash = $row['Password2'];
@@ -76,9 +76,7 @@ class Yaf extends Source
         } else {
             $method = 'sha1';
         }
-        $result = $method . '$' . $salt . '$' . $hash . '$';
-
-        return $result;
+        return $method . '$' . $salt . '$' . $hash . '$';
     }
 
     /**

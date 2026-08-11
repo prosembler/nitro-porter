@@ -12,7 +12,7 @@ use Porter\Source;
 
 class Kunena extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Joomla Kunena',
         'defaultTablePrefix' => 'jos_',
         'charsetTable' => 'kunena_messages',

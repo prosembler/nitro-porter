@@ -12,7 +12,7 @@ use Porter\Source;
 
 class Drupal6 extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Drupal 6',
         'defaultTablePrefix' => '',
         'charsetTable' => 'comment',

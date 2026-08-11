@@ -16,7 +16,7 @@ class Smf1 extends Source
         'hasDiscussionBody' => true, // SMF stores the OP body in the discussion export.
     ];
 
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Simple Machines 1',
         'defaultTablePrefix' => 'smf_',
         'charsetTable' => 'messages',

@@ -12,7 +12,7 @@ use Porter\Source;
 
 class SimplePress extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'SimplePress 1',
         'defaultTablePrefix' => 'wp_',
         'charsetTable' => 'posts',

@@ -15,7 +15,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 class PorterConnection
 {
     /** @var array Valid values for $type. */
-    public const ALLOWED_TYPES = ['database', 'file', 'https', 'mongo'];
+    public const array ALLOWED_TYPES = ['database', 'file', 'https', 'mongo'];
 
     protected string $type = 'database';
 

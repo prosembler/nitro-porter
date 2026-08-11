@@ -32,28 +32,28 @@ class NodeBbTest extends TestCase
     protected static ?string $skip = null;
 
     /** @var string Stands in for the target install's root during mapping. */
-    public const TARGET_ROOT = '/srv/target';
+    public const string TARGET_ROOT = '/srv/target';
 
     /** @var string Stands in for the source install's upload folder. */
-    public const SOURCE_UPLOADS = '/srv/source/uploads';
+    public const string SOURCE_UPLOADS = '/srv/source/uploads';
 
     /** @var int The seeded discussion's opening post, as a Comment row. */
-    public const OP_COMMENT_ID = 50;
+    public const int OP_COMMENT_ID = 50;
 
     /** @var int The seeded discussion's one reply. */
-    public const REPLY_COMMENT_ID = 51;
+    public const int REPLY_COMMENT_ID = 51;
 
     /** @var int Offset applied to CommentIDs when the OP came off the discussion record. */
-    public const PID_OFFSET = 1; // max(DiscussionID)
+    public const int PID_OFFSET = 1; // max(DiscussionID)
 
     /** @var int A UserRole pointing at a User row that does not exist. */
-    public const DELETED_USER_ID = 99;
+    public const int DELETED_USER_ID = 99;
 
     /** @var int A seeded attachment with no source file to copy. */
-    public const UNTRANSFERABLE_MEDIA_ID = 3;
+    public const int UNTRANSFERABLE_MEDIA_ID = 3;
 
     /** @var int A comment authored by user 0 (guest/authorless in Vanilla). */
-    public const GUEST_COMMENT_ID = 60;
+    public const int GUEST_COMMENT_ID = 60;
 
     /**
      * Shared fixture that runs exactly once prior to ALL the tests in this class.
@@ -679,7 +679,6 @@ class NodeBbTest extends TestCase
             ['RoleID' => 2, 'Name' => 'Members'],
             ['RoleID' => 3, 'Name' => 'administrators'],
         ]);
-        $db = $this->migrate();
 
         $groups = $this->getSetMembers($db, 'groups:createtime');
         $this->assertEquals(['Members'], $groups, 'Only the first non-reserved role becomes a group.');

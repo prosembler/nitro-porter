@@ -474,8 +474,7 @@ function mimeTypeFromExtension(?string $value): string
 function cleanBodyBrackets(mixed $value): mixed
 {
     if (strpos($value, '[') !== false) {
-        $result = str_replace(['<', '>'], ['[', ']'], $value);
-        return $result;
+        return str_replace(['<', '>'], ['[', ']'], $value);
     }
     return $value;
 }
@@ -499,9 +498,7 @@ function bb_Code_Trick_Reverse(?string $text): string
     $text = str_replace('</p>', "\n", $text);
     $text = str_replace('<coded_br />', '<br />', $text);
     $text = str_replace('<coded_p>', '<p>', $text);
-    $text = str_replace('</coded_p>', '</p>', $text);
-
-    return $text;
+    return str_replace('</coded_p>', '</p>', $text);
 }
 
 /**

@@ -80,7 +80,7 @@ class Flarum extends Postscript
                 $info = $this->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_user_id' => (int)$userid
-                ], self::DB_STRUCTURE_POST_MENTIONS_USER, $info, false);
+                ], self::DB_STRUCTURE_POST_MENTIONS_USER, $info);
             }
         }
 
@@ -195,7 +195,7 @@ class Flarum extends Postscript
                 $info = $this->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$postid
-                ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info, false);
+                ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info);
             }
 
             // There can also be multiple mentioned discussionids per post.
@@ -209,7 +209,7 @@ class Flarum extends Postscript
                 $info = $this->outputStorage()->stream([
                     'post_id' => $post->id,
                     'mentions_post_id' => (int)$discussions[$discussionid] // Use the OP lookup
-                ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info, false);
+                ], self::DB_STRUCTURE_POST_MENTIONS_POST, $info);
             }
         }
 
@@ -243,7 +243,7 @@ class Flarum extends Postscript
      * @return bool Whether the post mention was repaired.
      * @see QuoteEmbed — '<POSTMENTION discussionid="" displayname="{author}" id="{postid}" number="">'
      */
-    protected function repairPostMention(int $postid, string $content, int $quoteID, string $quoteType)
+    protected function repairPostMention(int $postid, string $content, int $quoteID, string $quoteType): bool
     {
         // Prep a secondary connection for updating markup (main one will be running unbuffered query).
         $db = $this->dbPostscript();
@@ -266,14 +266,14 @@ class Flarum extends Postscript
 
         // Swap it into the mention markup.
         // Only one of these will match and it's easier than a logic gate.
-        $body = str_replace(
+        $content = str_replace(
             '<POSTMENTION discussionid="" displayname="" id="' . $quoteID . '" number=""',
             '<POSTMENTION discussionid="' . $quotedPost->discussion_id .
             '" displayname="" id="' . $quoteID .
             '" number="' . $quotedPost->number . '"',
             $content
         );
-        $body = str_replace(
+        $content = str_replace(
             '<POSTMENTION discussionid="' . $quoteID . '" displayname="" id="" number=""',
             '<POSTMENTION discussionid="' . $quoteID .
             '" displayname="" id="' . $quotedPost->id .
@@ -284,7 +284,7 @@ class Flarum extends Postscript
         // Update the post in the database.
         $db->table('posts')
             ->where('id', '=', $postid)
-            ->update(['content' => $body]);
+            ->update(['content' => $content]);
 
         return true;
     }

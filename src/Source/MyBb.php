@@ -14,7 +14,7 @@ use Porter\Source;
 
 class MyBb extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'MyBB',
         'defaultTablePrefix' => 'mybb_',
         'charsetTable' => 'posts',

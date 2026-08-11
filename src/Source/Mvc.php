@@ -16,7 +16,7 @@ use Porter\Source;
 
 class Mvc extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'MVC',
         'defaultTablePrefix' => '',
         'charsetTable' => 'Post',

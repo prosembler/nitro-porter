@@ -2,8 +2,6 @@
 
 namespace Porter;
 
-use http\Exception;
-
 class Config
 {
     private static ?self $instance = null;

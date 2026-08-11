@@ -91,7 +91,7 @@ class VBulletin extends Source
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => false,
     ];
 
@@ -530,7 +530,7 @@ class VBulletin extends Source
         // files named .attach need to be named properly.
         // file needs to be renamed and db updated.
         // if its an images; we need to include .thumb
-        $attachmentPath = ''; //$this->param('files-source');
+        //$attachmentPath = ''; //$this->param('files-source');
         /*if ($attachmentPath) {
             $missingFiles = array();
             if (is_dir($attachmentPath)) {

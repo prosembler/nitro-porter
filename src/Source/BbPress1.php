@@ -12,7 +12,7 @@ use Porter\Source;
 
 class BbPress1 extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'bbPress 1',
         'defaultTablePrefix' => 'bb_',
         'charsetTable' => 'posts',

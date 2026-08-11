@@ -126,7 +126,7 @@ abstract class Target extends Package
     ): void {
         // `DELETE FROM $table WHERE $column NOT IN (SELECT $fnColumn FROM $fnTable)`
         $db = $this->dbPorter();
-        $duplicates = $db->table($table)
+        $db->table($table)
             ->whereNotIn($column, $db->table($fnTable)->pluck($fnColumn))
             ->delete();
     }
@@ -192,9 +192,6 @@ abstract class Target extends Package
      */
     public function import(string $tableName, Builder $exp, array $struct, array $map = [], array $filters = []): void
     {
-        // Start timer.
-        $start = microtime(true);
-
         // Prepare the storage medium for the incoming structure.
         $this->outputStorage->prepare($tableName, $struct);
 

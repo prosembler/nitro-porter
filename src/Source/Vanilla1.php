@@ -12,7 +12,7 @@ use Porter\Source;
 
 class Vanilla1 extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Vanilla 1',
         'defaultTablePrefix' => 'LUM_',
         'charsetTable' => 'Comment',

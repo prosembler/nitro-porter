@@ -13,7 +13,7 @@ use Porter\Source;
 
 class AnswerHub extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'answerhub',
         'defaultTablePrefix' => '',
         'charsetTable' => 'nodes',

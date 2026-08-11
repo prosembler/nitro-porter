@@ -12,7 +12,7 @@ use Porter\Source;
 
 class AdvancedForum extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Advanced Forum 7.x-2.*',
         'defaultTablePrefix' => '',
         'charsetTable' => 'Comment',
@@ -51,7 +51,7 @@ class AdvancedForum extends Source
      * @param array $row Full data row columns
      * @return string Translated format slug
      */
-    public static function translateFormatType($value, $field, $row)
+    public static function translateFormatType($value, $field, $row): string
     {
         switch ($value) {
             case 'filtered_html':

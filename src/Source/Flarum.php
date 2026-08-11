@@ -11,7 +11,7 @@ use Porter\Source;
 
 class Flarum extends Source
 {
-    public const SUPPORTED = [
+    public const array SUPPORTED = [
         'name' => 'Flarum',
         'defaultTablePrefix' => 'FLA_',
         'charsetTable' => 'posts',
@@ -29,7 +29,7 @@ class Flarum extends Source
         ]
     ];
 
-    protected const FLAGS = [
+    protected const array FLAGS = [
         'hasDiscussionBody' => false,
     ];
 

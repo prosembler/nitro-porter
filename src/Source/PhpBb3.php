@@ -609,14 +609,15 @@ class PhpBb3 extends Source
             'extension' => 'Extension',
             'physical_filename' => 'Path',
         ];
+        $prx = $this->dbInput()->getTablePrefix();
         $query = $this->sourceQB()->from('attachments')
             ->join('topics', 'attachments.topic_id', '=', 'topics.topic_id')
             ->select('attachments.*')
-            ->selectRaw('FROM_UNIXTIME(attachments.filetime) as DateInserted')
-            ->selectRaw("case when attachments.post_msg_id = topics.topic_first_post_id
+            ->selectRaw('FROM_UNIXTIME(filetime) as DateInserted')
+            ->selectRaw("case when {$prx}attachments.post_msg_id = {$prx}topics.topic_first_post_id
                         then 'discussion' else 'comment' end as ForeignTable")
-            ->selectRaw("case when attachments.post_msg_id = topics.topic_first_post_id
-                        then a=attachments.topic_id else attachments.post_msg_id end as ForeignID")
+            ->selectRaw("case when {$prx}attachments.post_msg_id = {$prx}topics.topic_first_post_id
+                        then {$prx}attachments.topic_id else {$prx}attachments.post_msg_id end as ForeignID")
             ->selectRaw('concat(physical_filename, ".", extension) as TargetFullPath');
         $this->export('Media', $query, $map);
     }

@@ -33,14 +33,14 @@ class CodoForum extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'users' => array('id', 'username', 'mail', 'user_status', 'pass', 'signature'),
-        'roles' => array('rid', 'rname'),
-        'user_roles' => array('uid', 'rid'),
-        'categories' => array('cat_id', 'cat_name'),
-        'topics' => array('topic_id', 'cat_id', 'uid', 'title'),
-        'posts' => array('post_id', 'topic_id', 'uid', 'imessage'),
-    );
+    public array $sourceTables = [
+        'users' => ['id', 'username', 'mail', 'user_status', 'pass', 'signature'],
+        'roles' => ['rid', 'rname'],
+        'user_roles' => ['uid', 'rid'],
+        'categories' => ['cat_id', 'cat_name'],
+        'topics' => ['topic_id', 'cat_id', 'uid', 'title'],
+        'posts' => ['post_id', 'topic_id', 'uid', 'imessage'],
+    ];
 
     /**
      * Main export process.

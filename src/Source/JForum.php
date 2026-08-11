@@ -41,12 +41,12 @@ class JForum extends Source
      *
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'forums' => array(), // This just requires the 'forum' table without caring about columns.
-        'posts' => array(),
-        'topics' => array(),
-        'users' => array('user_id', 'username', 'user_email'), // Require specific cols on 'users'
-    );
+    public array $sourceTables = [
+        'forums' => [], // This just requires the 'forum' table without caring about columns.
+        'posts' => [],
+        'topics' => [],
+        'users' => ['user_id', 'username', 'user_email'], // Require specific cols on 'users'
+    ];
 
     /**
      * Main export process.
@@ -196,9 +196,9 @@ class JForum extends Source
      */
     protected function discussions(string $postTextColumm, string $postTextSource): void
     {
-        $discussion_Map = array(
-            'topic_title' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
-        );
+        $discussion_Map = [
+            'topic_title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+        ];
         // It's easier to convert between Unix time and MySQL datestamps during the db query.
         $this->export(
             'Discussion',
@@ -250,10 +250,10 @@ class JForum extends Source
     protected function bookmarks(): void
     {
         // Guessing table is called "_watch" because they are all bookmarks.
-        $userDiscussion_Map = array(
+        $userDiscussion_Map = [
             'topic_id' => 'DiscussionID',
             'user_id' => 'UserID',
-        );
+        ];
         $this->export(
             'UserDiscussion',
             "select
@@ -297,11 +297,11 @@ class JForum extends Source
         );
 
         // Replying on /dba/counts to rebuild most of this data later.
-        $conversation_Map = array(
+        $conversation_Map = [
             'privmsgs_from_userid' => 'InsertUserID',
             'privmsgs_date' => 'DateInserted',
             'privmsgs_subject' => 'Subject',
-        );
+        ];
         $this->export(
             'Conversation',
             "select
@@ -322,12 +322,12 @@ class JForum extends Source
         // Conversation Message.
         // Messages with the same timestamps are sent/received copies.
         // Yes that'd probably break down on huge sites but it's too convenient to pass up for now.
-        $message_Map = array(
+        $message_Map = [
             'privmsgs_id' => 'MessageID',
             'privmsgs_from_userid' => 'InsertUserID',
             'privmsgs_date' => 'DateInserted',
             'privmsgs_text' => 'Body',
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select

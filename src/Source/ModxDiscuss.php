@@ -39,15 +39,15 @@ class ModxDiscuss extends Source
      *
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'categories' => array(), // This just requires the 'forum' table without caring about columns.
-        'boards' => array(),
-        'posts' => array(),
-        'threads' => array(),
-        'users' => array('user', 'username', 'email', 'createdon', 'gender',
+    public array $sourceTables = [
+        'categories' => [], // This just requires the 'forum' table without caring about columns.
+        'boards' => [],
+        'posts' => [],
+        'threads' => [],
+        'users' => ['user', 'username', 'email', 'createdon', 'gender',
             'birthdate', 'location', 'confirmed', 'last_login', 'last_active',
-            'title', 'avatar', 'show_email'), // Require specific cols on 'users'
-    );
+            'title', 'avatar', 'show_email'], // Require specific cols on 'users'
+    ];
 
     /**
      * Main export process.
@@ -170,9 +170,9 @@ class ModxDiscuss extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
-            'title2' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
-        );
+        $discussion_Map = [
+            'title2' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+        ];
         // It's easier to convert between Unix time and MySQL datestamps during the db query.
         $this->export(
             'Discussion',

@@ -88,9 +88,9 @@ class AnswerHub extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
-            'c_email' => array('Column' => 'Email', 'Filter' => array($this, 'generateEmail')),
-        );
+        $user_Map = [
+            'c_email' => ['Column' => 'Email', 'Filter' => [$this, 'generateEmail']],
+        ];
         $this->export(
             'User',
             "select
@@ -155,7 +155,7 @@ class AnswerHub extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array();
+        $category_Map = [];
         $this->export(
             'Category',
             "select containers.c_id as CategoryID,
@@ -176,7 +176,7 @@ class AnswerHub extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array();
+        $discussion_Map = [];
         // The query works fine but it will probably be slow for big tables
         $this->export(
             'Discussion',
@@ -226,7 +226,7 @@ class AnswerHub extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array();
+        $comment_Map = [];
         $this->export(
             'Comment',
             "select
@@ -289,9 +289,9 @@ class AnswerHub extends Source
      */
     protected function attachments(): void
     {
-        $media_Map = array(
-            'Name' => array('Column' => 'Name', 'Filter' => array($this, 'getFileName')),
-        );
+        $media_Map = [
+            'Name' => ['Column' => 'Name', 'Filter' => [$this, 'getFileName']],
+        ];
         $filters = [
             'Type' => 'mimeTypeFromExtension',
         ];

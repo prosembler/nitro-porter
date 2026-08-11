@@ -51,7 +51,7 @@ class PunBb extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array();
+    public array $sourceTables = [];
 
     /**
      * Forum-specific export format
@@ -143,15 +143,15 @@ class PunBb extends Source
     {
         if ($this->hasInputSchema('attach_files')) {
             // Media.
-            $media_Map = array(
+            $media_Map = [
                 'id' => 'MediaID',
                 'filename' => 'Name',
                 'file_mime_type' => 'Type',
                 'size' => 'Size',
                 'owner_id' => 'InsertUserID',
-                'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
-                'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
-            );
+                'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
+                'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+            ];
             $this->export(
                 'Media',
                 "select f.*,
@@ -172,16 +172,16 @@ class PunBb extends Source
     protected function tags(): void
     {
         if ($this->hasInputSchema('tags')) {
-            $tag_Map = array(
+            $tag_Map = [
                 'id' => 'TagID',
                 'tag' => 'Name'
-            );
+            ];
             $this->export('Tag', "SELECT * FROM :_tags", $tag_Map);
 
-            $tagDiscussionMap = array(
+            $tagDiscussionMap = [
                 'topic_id' => 'DiscussionID',
                 'tag_id' => 'TagID'
-            );
+            ];
             $this->export('TagDiscussion', "SELECT * FROM :_topic_tags", $tagDiscussionMap);
         }
     }
@@ -190,13 +190,13 @@ class PunBb extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'id' => 'CommentID',
             'topic_id' => 'DiscussionID',
             'poster_id' => 'InsertUserID',
             'poster_ip' => 'InsertIPAddress',
             'message' => 'Body'
-        );
+        ];
         $this->export(
             'Comment',
             "SELECT p.*,
@@ -218,7 +218,7 @@ class PunBb extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'id' => 'DiscussionID',
             'poster_id' => 'InsertUserID',
             'poster_ip' => 'InsertIPAddress',
@@ -228,7 +228,7 @@ class PunBb extends Source
             'subject' => 'Name',
             'message' => 'Body'
 
-        );
+        ];
         $this->export(
             'Discussion',
             "SELECT t.*,
@@ -252,13 +252,13 @@ class PunBb extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'id' => 'CategoryID',
             'forum_name' => 'Name',
             'forum_desc' => 'Description',
             'disp_position' => 'Sort',
             'parent_id' => 'ParentCategoryID'
-        );
+        ];
         $this->export(
             'Category',
             "SELECT
@@ -308,17 +308,17 @@ class PunBb extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'g_id' => 'RoleID',
             'g_title' => 'Name'
-        );
+        ];
         $this->export('Role', "SELECT * FROM :_groups", $role_Map);
 
         // UserRole.
-        $userRole_Map = array(
+        $userRole_Map = [
             'id' => 'UserID',
             'group_id' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             "SELECT
@@ -333,15 +333,15 @@ class PunBb extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
-            'AvatarID' => array('Column' => 'Photo', 'Filter' => array($this, 'getAvatarByID')),
+        $user_Map = [
+            'AvatarID' => ['Column' => 'Photo', 'Filter' => [$this, 'getAvatarByID']],
             'id' => 'UserID',
             'username' => 'Name',
             'email' => 'Email',
             //'timezone' => 'HourOffset',
             'registration_ip' => 'InsertIPAddress',
             'PasswordHash' => 'Password'
-        );
+        ];
         $this->export(
             'User',
             "SELECT

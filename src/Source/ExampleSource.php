@@ -96,10 +96,10 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
         // Role.
         // The Vanilla roles table will be wiped by any import. If your current platform doesn't have roles,
         // you can hard code new ones into the select statement. See Vanilla's defaults for a good example.
-        $map = array(
+        $map = [
             'Group_ID' => 'RoleID',
             'Name' => 'Name', // We let these arrays end with a comma to prevent typos later as we add.
-        );
+        ];
         $this->export(
             'Role',
             // @see https://api.laravel.com/docs/9.x/Illuminate/Database.html
@@ -161,12 +161,12 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
     protected function discussions(): void
     {
         // A frequent issue is for the OPs content to be on the comment/post table, so you may need to join it.
-        $map = array(
+        $map = [
             'Topic_ID' => 'DiscussionID',
             'Forum_ID' => 'CategoryID',
             'Author_ID' => 'InsertUserID',
             'Subject' => 'Name'
-        );
+        ];
         $filters = [
             'Subject' => 'HTMLDecoder', // Use the INPUT column name, not the Porter name.
         ];

@@ -39,13 +39,13 @@ class FuseTalk extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'categories' => array(),
-        'forums' => array(),
-        'threads' => array(),
-        'messages' => array(),
-        'users' => array(),
-    );
+    public array $sourceTables = [
+        'categories' => [],
+        'forums' => [],
+        'threads' => [],
+        'messages' => [],
+        'users' => [],
+    ];
 
     /**
      * Main export process.
@@ -122,7 +122,7 @@ class FuseTalk extends Source
      */
     protected function users(): void
     {
-        $user_Map = array();
+        $user_Map = [];
         $this->export(
             'User',
             "select
@@ -244,9 +244,9 @@ class FuseTalk extends Source
         );
 
         // Conversation Messages.
-        $conversationMessage_Map = array(
-            'txmessage' => array('Column' => 'Body', 'Filter' => array($this, 'fixSmileysURL')),
-        );
+        $conversationMessage_Map = [
+            'txmessage' => ['Column' => 'Body', 'Filter' => [$this, 'fixSmileysURL']],
+        ];
         $this->export(
             'ConversationMessage',
             "select
@@ -332,9 +332,9 @@ class FuseTalk extends Source
     {
         // The iparentid column doesn't make any sense since the display is ordered by date only
         // (there are no "sub" comment)
-        $comment_Map = array(
-            'txmessage' => array('Column' => 'Body', 'Filter' => array($this, 'fixSmileysURL')),
-        );
+        $comment_Map = [
+            'txmessage' => ['Column' => 'Body', 'Filter' => [$this, 'fixSmileysURL']],
+        ];
         $this->export(
             'Comment',
             "select

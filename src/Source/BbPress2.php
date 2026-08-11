@@ -33,12 +33,12 @@ class BbPress2 extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'postmeta' => array(),
-        'posts' => array(),
-        'usermeta' => array(),
-        'users' => array('ID', 'user_login', 'user_pass', 'user_email', 'user_registered'),
-    );
+    public array $sourceTables = [
+        'postmeta' => [],
+        'posts' => [],
+        'usermeta' => [],
+        'users' => ['ID', 'user_login', 'user_pass', 'user_email', 'user_registered'],
+    ];
 
     /**
      * Forum-specific export format.
@@ -110,14 +110,14 @@ class BbPress2 extends Source
                 user_registered
             ) $guestUserQuery");
 
-        $user_Map = array(
+        $user_Map = [
             'ID' => 'UserID',
             'user_login' => 'Name',
             'user_pass' => 'Password',
             'hash_method' => 'HashMethod',
             'user_email' => 'Email',
             'user_registered' => 'DateInserted',
-        );
+        ];
         $this->export('User', "select * from z_user;", $user_Map);
     }
 
@@ -138,9 +138,9 @@ class BbPress2 extends Source
         );
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'user_id' => 'UserID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select distinct(user_id) as user_id,
@@ -167,13 +167,13 @@ class BbPress2 extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'ID' => 'CategoryID',
             'post_title' => 'Name',
             'post_content' => 'Description',
             'post_name' => 'UrlCode',
             'menu_order' => 'Sort',
-        );
+        ];
         $this->export(
             'Category',
             "select *,
@@ -189,7 +189,7 @@ class BbPress2 extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'ID' => 'DiscussionID',
             'post_parent' => 'CategoryID',
             'post_author' => 'InsertUserID',
@@ -197,7 +197,7 @@ class BbPress2 extends Source
             'Format' => 'Format',
             'post_date' => 'DateInserted',
             'menu_order' => 'Announce',
-        );
+        ];
         $this->export(
             'Discussion',
             "select p.*,
@@ -217,14 +217,14 @@ class BbPress2 extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'ID' => 'CommentID',
             'post_parent_id' => 'DiscussionID',
             'post_content' => 'Body',//array('Column'=>'Body', 'Filter'=>'bbPressTrim'),
             'Format' => 'Format',
             'post_author' => 'InsertUserID',
             'post_date' => 'DateInserted',
-        );
+        ];
         $this->export(
             'Comment',
             "select p.*,

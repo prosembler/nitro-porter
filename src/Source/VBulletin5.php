@@ -39,11 +39,11 @@ class VBulletin5 extends VBulletin
     /**
      * @var array Required tables => columns.
      */
-    public array $sourceTables = array(
-        'contenttype' => array('contenttypeid', 'class'),
-        'node' => array('nodeid', 'description', 'title', 'description', 'userid', 'publishdate'),
-        'text' => array('nodeid', 'rawtext'),
-        'user' => array(
+    public array $sourceTables = [
+        'contenttype' => ['contenttypeid', 'class'],
+        'node' => ['nodeid', 'description', 'title', 'description', 'userid', 'publishdate'],
+        'text' => ['nodeid', 'rawtext'],
+        'user' => [
             'userid',
             'username',
             'email',
@@ -58,11 +58,11 @@ class VBulletin5 extends VBulletin
             'usergroupid',
             'usertitle',
             'avatarid',
-        ),
-        'userfield' => array('userid'),
-        'usergroup' => array('usergroupid', 'title', 'description'),
-        'usertitle' => array(),
-    );
+        ],
+        'userfield' => ['userid'],
+        'usergroup' => ['usergroupid', 'title', 'description'],
+        'usertitle' => [],
+    ];
 
     /**
      *
@@ -83,7 +83,7 @@ class VBulletin5 extends VBulletin
         list($categoryIDs, $privateMessagesID) = $this->categoryV5();
 
         // Discussion.
-        $discussion_Map = array(
+        $discussion_Map = [
             'nodeid' => 'DiscussionID',
             'type' => 'Type',
             'title' => 'Name',
@@ -96,7 +96,7 @@ class VBulletin5 extends VBulletin
             // infraction
             // attach
             // reportnodeid
-        );
+        ];
         $discussionQuery = "select
                 n.nodeid,
                 null as type,
@@ -179,10 +179,10 @@ class VBulletin5 extends VBulletin
         }
 
         // UserDiscussion
-        $userDiscussion_Map = array(
+        $userDiscussion_Map = [
             'discussionid' => 'DiscussionID',
             'userid' => 'InsertUserID',
-        );
+        ];
         // Should be able to inner join `discussionread` for DateLastViewed
         // but it's blank in my sample data so I don't trust it.
         $this->export(
@@ -280,14 +280,14 @@ class VBulletin5 extends VBulletin
     {
         //$fp = $ex->file;
 
-        $poll_Map = array(
+        $poll_Map = [
             'nodeid' => 'PollID',
             'title' => 'Name',
             'discussionid' => 'DiscussionID',
             'anonymous' => 'Anonymous',
-            'created' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'userid' => 'InsertUserId',
-        );
+        ];
         $this->export(
             'Poll',
             "select
@@ -306,15 +306,15 @@ class VBulletin5 extends VBulletin
             $poll_Map
         );
 
-        $pollOption_Map = array(
+        $pollOption_Map = [
             'polloptionid' => 'PollOptionID',
             'nodeid' => 'PollID',
             'title' => 'Body',
             'format' => 'Format',
             'sort' => 'Sort',
-            'created' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'userid' => 'InsertUserID',
-        );
+        ];
         $sql = "select
                 po.polloptionid,
                 po.nodeid,
@@ -352,11 +352,11 @@ class VBulletin5 extends VBulletin
         //$ex->writeEndTable($fp);
         Log::comment("Exported Table: PollOption (" . $pollCount . " rows)");
 
-        $pollVote_Map = array(
+        $pollVote_Map = [
             'userid' => 'UserID',
             'polloptionid' => 'PollOptionID',
-            'votedate' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate')
-        );
+            'votedate' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate']
+        ];
         $this->export(
             'PollVote',
             "select
@@ -374,7 +374,7 @@ class VBulletin5 extends VBulletin
     public function usersV5(mixed $ranks): void
     {
         $cdn = '';
-        $user_Map = array(
+        $user_Map = [
             'userid' => 'UserID',
             'username' => 'Name',
             'password2' => 'Password',
@@ -384,7 +384,7 @@ class VBulletin5 extends VBulletin
             'ipaddress' => 'LastIPAddress',
             'ipaddress2' => 'InsertIPAddress',
             'usertitle' => 'Title',
-            'posts' => array(
+            'posts' => [
                 'Column' => 'RankID',
                 'Filter' => function ($value) use ($ranks) {
                     // Look  up the posts in the ranks table.
@@ -395,8 +395,8 @@ class VBulletin5 extends VBulletin
                     }
                     return null;
                 }
-            )
-        );
+            ]
+        ];
 
         // Use file avatar or the result of our blob export?
         if ($this->getConfig('usefileavatar')) {
@@ -448,18 +448,18 @@ class VBulletin5 extends VBulletin
      */
     public function rolesV5(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'usergroupid' => 'RoleID',
             'title' => 'Name',
             'description' => 'Description'
-        );
+        ];
         $this->export('Role', 'select * from :_usergroup', $role_Map);
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'userid' => 'UserID',
             'usergroupid' => 'RoleID'
-        );
+        ];
         $this->query("drop table if exists VbulletinRoles");
         $this->query("CREATE TABLE VbulletinRoles (userid INT UNSIGNED not null, usergroupid INT UNSIGNED not null)");
         // Put primary groups into tmp table
@@ -488,31 +488,31 @@ class VBulletin5 extends VBulletin
      */
     public function ranksV5(): void
     {
-        $rank_Map = array(
+        $rank_Map = [
             'usertitleid' => 'RankID',
             'title' => 'Name',
             'title2' => 'Label',
-            'minposts' => array(
+            'minposts' => [
                 'Column' => 'Attributes',
                 'Filter' => function ($value) {
-                    $result = array(
-                        'Criteria' => array(
+                    $result = [
+                        'Criteria' => [
                             'CountPosts' => $value
-                        )
-                    );
+                        ]
+                    ];
 
                     return serialize($result);
                 }
-            ),
-            'level' => array(
+            ],
+            'level' => [
                 'Column' => 'Level',
                 'Filter' => function ($value) {
                     static $level = 1;
 
                     return $level++;
                 }
-            )
-        );
+            ]
+        ];
         $this->export(
             'Rank',
             "select ut.*,
@@ -529,8 +529,8 @@ class VBulletin5 extends VBulletin
      */
     public function categoryV5()
     {
-        $channels = array();
-        $categoryIDs = array();
+        $channels = [];
+        $categoryIDs = [];
         $homeID = 0;
         $privateMessagesID = 0;
 
@@ -573,18 +573,18 @@ class VBulletin5 extends VBulletin
             unset($categoryIDs[$key]);
         }
 
-        $category_Map = array(
+        $category_Map = [
             'nodeid' => 'CategoryID',
             'title' => 'Name',
             'description' => 'Description',
             'userid' => 'InsertUserID',
             'parentid' => 'ParentCategoryID',
             'urlident' => 'UrlCode',
-            'displayorder' => array('Column' => 'Sort', 'Type' => 'int'),
+            'displayorder' => ['Column' => 'Sort', 'Type' => 'int'],
             'lastcontentid' => 'LastDiscussionID',
             'textcount' => 'CountComments', // ???
             'totalcount' => 'CountDiscussions', // ???
-        );
+        ];
 
         // Categories are Channels that were found in the Forum tree
         // If parent was 'Forum' set the parent to Root instead (-1)
@@ -597,7 +597,7 @@ class VBulletin5 extends VBulletin
                 where nodeid in (" . implode(',', $categoryIDs) . ");",
             $category_Map
         );
-        return array($categoryIDs, $privateMessagesID);
+        return [$categoryIDs, $privateMessagesID];
     }
 
     /**
@@ -651,12 +651,12 @@ class VBulletin5 extends VBulletin
             ";
         }
 
-        $comment_Map = array(
+        $comment_Map = [
             'nodeid' => 'CommentID',
             'rawtext' => 'Body',
             'userid' => 'InsertUserID',
             'parentid' => 'DiscussionID',
-        );
+        ];
 
         $this->export(
             'Comment',
@@ -688,11 +688,11 @@ class VBulletin5 extends VBulletin
     public function attachmentsV5($categoryIDs): void
     {
         $instance = $this;
-        $media_Map = array(
+        $media_Map = [
             'nodeid' => 'MediaID',
             'filename' => 'Name',
-            'Path2' => array('Column' => 'Path', 'Filter' => array($this, 'buildMediaPath')),
-            'ThumbPath2' => array(
+            'Path2' => ['Column' => 'Path', 'Filter' => [$this, 'buildMediaPath']],
+            'ThumbPath2' => [
                 'Column' => 'ThumbPath',
                 'Filter' => function ($value, $field, $row) use ($instance) {
                     $filteredData = $this->filterThumbnailData($value, $field, $row);
@@ -703,12 +703,12 @@ class VBulletin5 extends VBulletin
                         return null;
                     }
                 }
-            ),
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
+            ],
+            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
             'width' => 'ImageWidth',
             'height' => 'ImageHeight',
             'filesize' => 'Size',
-        );
+        ];
         $filters = [
             'extension' => 'mimeTypeFromExtension',
         ];
@@ -743,12 +743,12 @@ class VBulletin5 extends VBulletin
      */
     public function conversationsV5($privateMessagesID): void
     {
-        $conversation_Map = array(
+        $conversation_Map = [
             'nodeid' => 'ConversationID',
             'userid' => 'InsertUserID',
             'totalcount' => 'CountMessages',
             'title' => 'Subject',
-        );
+        ];
         $this->export(
             'Conversation',
             "select n.*,
@@ -762,11 +762,11 @@ class VBulletin5 extends VBulletin
         );
 
         // Conversation Messages.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'nodeid' => 'MessageID',
             'rawtext' => 'Body',
             'userid' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select n.*,
@@ -783,11 +783,11 @@ class VBulletin5 extends VBulletin
         );
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'userid' => 'UserID',
             'nodeid' => 'ConversationID',
             'deleted' => 'Deleted'
-        );
+        ];
         // would be nicer to do an intermediary table to sum s.msgread for uc.CountReadMessages
         $this->export(
             'UserConversation',

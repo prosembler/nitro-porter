@@ -35,11 +35,11 @@ class Vanilla1 extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'User' => array('UserID', 'Name', 'Password', 'Email', 'CountComments'),
-        'Role' => array('RoleID', 'Name', 'Description'),
-        'Category' => array('CategoryID', 'Name', 'Description'),
-        'Discussion' => array(
+    public array $sourceTables = [
+        'User' => ['UserID', 'Name', 'Password', 'Email', 'CountComments'],
+        'Role' => ['RoleID', 'Name', 'Description'],
+        'Category' => ['CategoryID', 'Name', 'Description'],
+        'Discussion' => [
             'DiscussionID',
             'Name',
             'CategoryID',
@@ -51,8 +51,8 @@ class Vanilla1 extends Source
             'CountComments',
             'Sink',
             'LastUserID'
-        ),
-        'Comment' => array(
+        ],
+        'Comment' => [
             'CommentID',
             'DiscussionID',
             'AuthUserID',
@@ -61,8 +61,8 @@ class Vanilla1 extends Source
             'DateEdited',
             'Body',
             'Deleted'
-        )
-    );
+        ]
+    ];
 
     /**
      * Forum-specific export format
@@ -109,7 +109,7 @@ class Vanilla1 extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'UserID' => 'UserID',
             'Name' => 'Name',
             'Password' => 'Password',
@@ -117,7 +117,7 @@ class Vanilla1 extends Source
             'Icon' => 'Photo',
             'CountComments' => 'CountComments',
             'Discovery' => 'DiscoveryText'
-        );
+        ];
         $this->export('User', "SELECT * FROM :_User", $user_Map);  // ":_" will be replaced by database prefix
     }
 
@@ -135,11 +135,11 @@ class Vanilla1 extends Source
         }
         $zeroRoleID++;
 
-        $role_Map = array(
+        $role_Map = [
             'RoleID' => 'RoleID',
             'Name' => 'Name',
             'Description' => 'Description'
-        );
+        ];
         $this->export(
             'Role',
             "select RoleID, Name, Description
@@ -150,10 +150,10 @@ class Vanilla1 extends Source
         );
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'UserID' => 'UserID',
             'RoleID' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select UserID, case RoleID when 0 then $zeroRoleID else RoleID end as RoleID from :_User",
@@ -165,11 +165,11 @@ class Vanilla1 extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'CategoryID' => 'CategoryID',
             'Name' => 'Name',
             'Description' => 'Description'
-        );
+        ];
         $this->export('Category', "select CategoryID, Name, Description from :_Category", $category_Map);
     }
 
@@ -177,7 +177,7 @@ class Vanilla1 extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'DiscussionID' => 'DiscussionID',
             'Name' => 'Name',
             'CategoryID' => 'CategoryID',
@@ -191,7 +191,7 @@ class Vanilla1 extends Source
             'CountComments' => 'CountComments',
             'Sink' => 'Sink',
             'LastUserID' => 'LastCommentUserID'
-        );
+        ];
         $this->export(
             'Discussion',
             "SELECT d.*,
@@ -224,7 +224,7 @@ class Vanilla1 extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'CommentID' => 'CommentID',
             'DiscussionID' => 'DiscussionID',
             'AuthUserID' => 'InsertUserID',
@@ -233,7 +233,7 @@ class Vanilla1 extends Source
             'DateEdited' => 'DateUpdated',
             'Body' => 'Body',
             'FormatType' => 'Format'
-        );
+        ];
         $this->export(
             'Comment',
             "SELECT c.*
@@ -371,13 +371,13 @@ class Vanilla1 extends Source
                 set pm.GroupID = g.GroupID"
         );
 
-        $conversation_Map = array(
+        $conversation_Map = [
             'AuthUserID' => 'InsertUserID',
             'DateCreated' => 'DateInserted',
-            'DiscussionID' => array('Column' => 'DiscussionID', 'Type' => 'int'),
+            'DiscussionID' => ['Column' => 'DiscussionID', 'Type' => 'int'],
             'CommentID' => 'ConversationID',
-            'Name' => array('Column' => 'Subject', 'Type' => 'varchar(255)')
-        );
+            'Name' => ['Column' => 'Subject', 'Type' => 'varchar(255)']
+        ];
         $this->export(
             'Conversation',
             "select c.*, d.Name
@@ -390,14 +390,14 @@ class Vanilla1 extends Source
         );
 
         // ConversationMessage.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'CommentID' => 'MessageID',
             'GroupID' => 'ConversationID',
             'Body' => 'Body',
             'FormatType' => 'Format',
             'AuthUserID' => 'InsertUserID',
             'DateCreated' => 'DateInserted'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select c.*, pm.GroupID
@@ -408,10 +408,10 @@ class Vanilla1 extends Source
         );
 
         // UserConversation
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'UserID' => 'UserID',
             'GroupID' => 'ConversationID'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select distinct
@@ -434,17 +434,17 @@ class Vanilla1 extends Source
     protected function attachments(): void
     {
         if ($this->hasInputSchema('Attachment')) {
-            $media_Map = array(
+            $media_Map = [
                 'AttachmentID' => 'MediaID',
                 'Name' => 'Name',
                 'MimeType' => 'Type',
                 'Size' => 'Size',
-                'Path' => array('Column' => 'Path', 'Filter' => array($this, 'stripMediaPath')),
+                'Path' => ['Column' => 'Path', 'Filter' => [$this, 'stripMediaPath']],
                 'UserID' => 'InsertUserID',
                 'DateCreated' => 'DateInserted',
                 'CommentID' => 'ForeignID'
                 //'ForeignTable'
-            );
+            ];
             $this->export(
                 'Media',
                 "select a.*, 'comment' as ForeignTable from :_Attachment a",

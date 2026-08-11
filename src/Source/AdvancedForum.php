@@ -116,9 +116,9 @@ class AdvancedForum extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
-            'body_format' => array('Column' => 'Format', 'Filter' => array(__CLASS__, 'translateFormatType'))
-        );
+        $discussion_Map = [
+            'body_format' => ['Column' => 'Format', 'Filter' => [__CLASS__, 'translateFormatType']]
+        ];
         $this->export(
             'Discussion',
             "
@@ -139,9 +139,9 @@ class AdvancedForum extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
-            'comment_body_format' => array('Column' => 'Format', 'Filter' => array(__CLASS__, 'translateFormatType'))
-        );
+        $comment_Map = [
+            'comment_body_format' => ['Column' => 'Format', 'Filter' => [__CLASS__, 'translateFormatType']]
+        ];
         $this->export(
             'Comment',
             "SELECT `c`.`cid` AS `CommentID`, `c`.`nid` AS `DiscussionID`, `c`.`uid` AS `InsertUserID`,

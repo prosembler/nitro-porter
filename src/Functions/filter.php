@@ -91,7 +91,7 @@ function forceIP4(?string $ip): ?string
  */
 function formatUrl(?string $str): string
 {
-    $urlTranslations = array(
+    $urlTranslations = [
         '–' => '-',
         '—' => '-',
         'À' => 'A',
@@ -344,7 +344,7 @@ function formatUrl(?string $str): string
         'э' => 'e',
         'ю' => 'yu',
         'я' => 'ya'
-    );
+    ];
 
     // Preliminary decoding
     $str = strip_tags(html_entity_decode($str, ENT_COMPAT, 'UTF-8'));
@@ -474,7 +474,7 @@ function mimeTypeFromExtension(?string $value): string
 function cleanBodyBrackets(mixed $value): mixed
 {
     if (strpos($value, '[') !== false) {
-        $result = str_replace(array('<', '>'), array('[', ']'), $value);
+        $result = str_replace(['<', '>'], ['[', ']'], $value);
         return $result;
     }
     return $value;
@@ -495,7 +495,7 @@ function bbPressTrim(?string $text): string
 function bb_Code_Trick_Reverse(?string $text): string
 {
     $text = preg_replace_callback("!(<pre><code>|<code>)(.*?)(</code></pre>|</code>)!s", 'bb_decodeit', $text);
-    $text = str_replace(array('<p>', '<br />'), '', $text);
+    $text = str_replace(['<p>', '<br />'], '', $text);
     $text = str_replace('</p>', "\n", $text);
     $text = str_replace('<coded_br />', '<br />', $text);
     $text = str_replace('<coded_p>', '<p>', $text);
@@ -516,7 +516,7 @@ function bb_Decodeit(array $matches): string
     $text = str_replace('<br />', '<coded_br />', $text);
     $text = str_replace('<p>', '<coded_p>', $text);
     $text = str_replace('</p>', '</coded_p>', $text);
-    $text = str_replace(array('&#38;', '&amp;'), '&', $text);
+    $text = str_replace(['&#38;', '&amp;'], '&', $text);
     $text = str_replace('&#39;', "'", $text);
     if ('<pre><code>' == $matches[1]) {
         $text = "\n$text\n";

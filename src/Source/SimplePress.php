@@ -35,12 +35,12 @@ class SimplePress extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'sfforums' => array(),
-        'sfposts' => array(),
-        'sftopics' => array(),
-        'users' => array('ID', 'user_nicename', 'user_pass', 'user_email', 'user_registered'),
-    );
+    public array $sourceTables = [
+        'sfforums' => [],
+        'sfposts' => [],
+        'sftopics' => [],
+        'users' => ['ID', 'user_nicename', 'user_pass', 'user_email', 'user_registered'],
+    ];
 
     /**
      * Forum-specific export format.
@@ -61,14 +61,14 @@ class SimplePress extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'user_id' => 'UserID',
             'display_name' => 'Name',
             'user_pass' => 'Password',
             'user_email' => 'Email',
             'user_registered' => 'DateInserted',
             'lastvisit' => 'DateLastActive'
-        );
+        ];
         $this->export(
             'User',
             "select m.*, u.user_pass, u.user_email, u.user_registered
@@ -83,11 +83,11 @@ class SimplePress extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'usergroup_id' => 'RoleID',
             'usergroup_name' => 'Name',
             'usergroup_desc' => 'Description'
-        );
+        ];
         $this->export(
             'Role',
             "select
@@ -104,10 +104,10 @@ class SimplePress extends Source
         );
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'user_id' => 'UserID',
             'usergroup_id' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select
@@ -129,14 +129,14 @@ class SimplePress extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'forum_id' => 'CategoryID',
-            'forum_name' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'forum_name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'forum_desc' => 'Description',
             'forum_seq' => 'Sort',
             'form_slug' => 'UrlCode',
             'parent_id' => 'ParentCategoryID'
-        );
+        ];
         $this->export(
             'Category',
             "select
@@ -166,17 +166,17 @@ class SimplePress extends Source
     {
         if ($this->hasInputSchema('sftags')) {
             // Tags
-            $tag_Map = array(
+            $tag_Map = [
                 'tag_id' => 'TagID',
                 'tag_name' => 'Name'
-            );
+            ];
             $this->export('Tag', "select * from :_sftags", $tag_Map);
 
             if ($this->hasInputSchema('sftagmeta')) {
-                $tagDiscussion_Map = array(
+                $tagDiscussion_Map = [
                     'tag_id' => 'TagID',
                     'topic_id' => 'DiscussionID'
-                );
+                ];
                 $this->export('TagDiscussion', "select * from :_sftagmeta", $tagDiscussion_Map);
             }
         }
@@ -186,7 +186,7 @@ class SimplePress extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'user_id' => 'InsertUserID',
@@ -194,8 +194,8 @@ class SimplePress extends Source
             'Format' => 'Format',
             'topic_date' => 'DateInserted',
             'topic_pinned' => 'Announce',
-            'topic_slug' => array('Column' => 'Slug', 'Type' => 'varchar(200)')
-        );
+            'topic_slug' => ['Column' => 'Slug', 'Type' => 'varchar(200)']
+        ];
         $this->export(
             'Discussion',
             "select t.*, 'Html' as Format from :_sftopics t",
@@ -207,7 +207,7 @@ class SimplePress extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
             'post_content' => 'Body',
@@ -215,7 +215,7 @@ class SimplePress extends Source
             'user_id' => 'InsertUserID',
             'post_date' => 'DateInserted',
             'poster_ip' => 'InsertIPAddress'
-        );
+        ];
         $this->export(
             'Comment',
             "select p.*, 'Html' as Format from :_sfposts p",
@@ -227,11 +227,11 @@ class SimplePress extends Source
      */
     protected function conversations(): void
     {
-        $conv_Map = array(
+        $conv_Map = [
             'message_id' => 'ConversationID',
             'from_id' => 'InsertUserID',
             'sent_date' => 'DateInserted'
-        );
+        ];
         $this->export(
             'Conversation',
             "select * from :_sfmessages where is_reply = 0",
@@ -239,11 +239,11 @@ class SimplePress extends Source
         );
 
         // ConversationMessage.
-        $convMessage_Map = array(
+        $convMessage_Map = [
             'message_id' => 'MessageID',
             'from_id' => 'InsertUserID',
-            'message' => array('Column' => 'Body')
-        );
+            'message' => ['Column' => 'Body']
+        ];
         $this->export(
             'ConversationMessage',
             'select c.message_id as ConversationID, m.*
@@ -256,10 +256,10 @@ class SimplePress extends Source
         );
 
         // UserConversation
-        $userConv_Map = array(
+        $userConv_Map = [
             'message_id' => 'ConversationID',
             'from_id' => 'UserID'
-        );
+        ];
         $this->export(
             'UserConversation',
             'select message_id, from_id

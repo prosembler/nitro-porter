@@ -59,7 +59,7 @@ class IpBoard3 extends Source
         }
 
         // Set up a target folder
-        $targetFolder = self::combinePaths(array($sourceFolder, 'ipb'));
+        $targetFolder = self::combinePaths([$sourceFolder, 'ipb']);
         if (!is_dir($sourceFolder)) {
             @$made = mkdir($targetFolder, 0777, true);
             if (!$made) {
@@ -99,7 +99,7 @@ class IpBoard3 extends Source
         $processed = 0;
         $skipped = 0;
         $completed = 0;
-        $errors = array();
+        $errors = [];
         while ($row = $userList->nextResultRow()) {
             $processed++;
             $error = false;
@@ -115,10 +115,10 @@ class IpBoard3 extends Source
 
             $photoFileName = basename($photo);
             $photoPath = dirname($photo);
-            $photoFolder = self::combinePaths(array($targetFolder, $photoPath));
+            $photoFolder = self::combinePaths([$targetFolder, $photoPath]);
             @mkdir($photoFolder, 0777, true);
 
-            $photoSrc = self::combinePaths(array($sourceFolder, $photo));
+            $photoSrc = self::combinePaths([$sourceFolder, $photo]);
             if (!file_exists($photoSrc)) {
                 $errors[] = "Missing file: {$photoSrc}";
                 continue;
@@ -131,16 +131,16 @@ class IpBoard3 extends Source
             if (!$mainPhoto) {
                 $mainPhoto = $photo;
             }
-            $mainSrc = self::combinePaths(array($sourceFolder, $mainPhoto));
-            $mainDest = self::combinePaths(array($photoFolder, "p" . $photoFileName));
+            $mainSrc = self::combinePaths([$sourceFolder, $mainPhoto]);
+            $mainDest = self::combinePaths([$photoFolder, "p" . $photoFileName]);
             $copied = @copy($mainSrc, $mainDest);
             if (!$copied) {
                 $error |= true;
                 $errors[] = "! failed to copy main photo '{$mainSrc}' for user {$userID} (-> {$mainDest}).";
             }
 
-            $thumbSrc = self::combinePaths(array($sourceFolder, $mainPhoto));
-            $thumbDest = self::combinePaths(array($photoFolder, "n" . $photoFileName));
+            $thumbSrc = self::combinePaths([$sourceFolder, $mainPhoto]);
+            $thumbDest = self::combinePaths([$photoFolder, "n" . $photoFileName]);
             $copied = @copy($thumbSrc, $thumbDest);
             if (!$copied) {
                 $error |= true;
@@ -336,12 +336,12 @@ EOT;
         $this->dbInput()->unprepared($sql);
 
         // Conversations.
-        $conversation_Map = array(
+        $conversation_Map = [
             'groupid' => 'ConversationID',
             'title2' => 'Subject',
-            'mt_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'mt_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'mt_from_id' => 'InsertUserID'
-        );
+        ];
         $sql = "select mt.*,
                 tc.title2,
                 tc.groupid
@@ -352,15 +352,15 @@ EOT;
         $this->export('Conversation', $sql, $conversation_Map);
 
         // Conversation Message.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'msg_id' => 'MessageID',
             'groupid' => 'ConversationID',
-            'msg_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'msg_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'msg_post' => 'Body',
             'Format' => 'Format',
             'msg_author_id' => 'InsertUserID',
             'msg_ip_address' => 'InsertIPAddress'
-        );
+        ];
         $sql = "select tx.*,
                 tc.title2,
                 tc.groupid,
@@ -374,10 +374,10 @@ EOT;
         $this->export('ConversationMessage', $sql, $conversationMessage_Map);
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'userid' => 'UserID',
             'groupid' => 'ConversationID'
-        );
+        ];
         $sql = "select distinct
                 g.groupid,
                 t.userid
@@ -399,36 +399,36 @@ EOT;
     protected function conversations(): void
     {
         // Conversations.
-        $conversation_Map = array(
+        $conversation_Map = [
             'mt_id' => 'ConversationID',
-            'mt_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'mt_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'mt_title' => 'Subject',
             'mt_starter_id' => 'InsertUserID'
-        );
+        ];
         $sql = "select * from :_message_topics where mt_is_deleted = 0";
         $this->clearFilters('Conversation', $conversation_Map, $sql);
         $this->export('Conversation', $sql, $conversation_Map);
 
         // Conversation Message.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'msg_id' => 'MessageID',
             'msg_topic_id' => 'ConversationID',
-            'msg_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'msg_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'msg_post' => 'Body',
             'Format' => 'Format',
             'msg_author_id' => 'InsertUserID',
             'msg_ip_address' => 'InsertIPAddress'
-        );
+        ];
         $sql = "select m.*, 'IPB' as Format from :_message_posts m";
         $this->clearFilters('ConversationMessage', $conversationMessage_Map, $sql);
         $this->export('ConversationMessage', $sql, $conversationMessage_Map);
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'map_user_id' => 'UserID',
             'map_topic_id' => 'ConversationID',
             'Deleted' => 'Deleted'
-        );
+        ];
         $sql = "select t.*,
             !map_user_active as Deleted
             from :_message_topic_user_map t";
@@ -443,7 +443,7 @@ EOT;
     public function clearFilters($table, &$map, &$sql): void
     {
         $PK = false;
-        $selects = array();
+        $selects = [];
 
         foreach ($map as $column => $info) {
             if (!$PK) {
@@ -508,24 +508,24 @@ EOT;
      */
     protected function users(string $memberID): void
     {
-        $user_Map = array(
+        $user_Map = [
             $memberID => 'UserID',
-            'members_display_name' => array('Column' => 'Name', 'Filter' => 'HtmlDecoder'),
+            'members_display_name' => ['Column' => 'Name', 'Filter' => 'HtmlDecoder'],
             'email' => 'Email',
-            'joined' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'firstvisit' => array(
+            'joined' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'firstvisit' => [
                 'Column' => 'DateFirstVisit',
                 'SourceColumn' => 'joined',
                 'Filter' => 'timestampToDate'
-            ),
+            ],
             'ip_address' => 'InsertIPAddress',
             'time_offset' => 'HourOffset',
-            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => 'timestampToDate'),
+            'last_activity' => ['Column' => 'DateLastActive', 'Filter' => 'timestampToDate'],
             'member_banned' => 'Banned',
             'Photo' => 'Photo',
             'title' => 'Title',
             'location' => 'Location'
-        );
+        ];
 
         $from = '';
         if ($this->hasInputSchema('members', 'members_pass_hash') === true) {
@@ -587,10 +587,10 @@ EOT;
      */
     protected function roles(string $memberID): void
     {
-        $role_Map = array(
+        $role_Map = [
             'g_id' => 'RoleID',
             'g_title' => 'Name'
-        );
+        ];
         $this->export('Role', "select * from :_groups", $role_Map);
 
         // User Role.
@@ -600,10 +600,10 @@ EOT;
             $groupID = 'mgroup';
         }
 
-        $userRole_Map = array(
+        $userRole_Map = [
             $memberID => 'UserID',
             $groupID => 'RoleID'
-        );
+        ];
 
         $sql = "
          select
@@ -626,11 +626,11 @@ EOT;
      */
     protected function userMeta(): void
     {
-        $userMeta_Map = array(
+        $userMeta_Map = [
             'UserID' => 'UserID',
             'Name' => 'Name',
             'Value' => 'Value'
-        );
+        ];
 
         if ($this->hasInputSchema('profile_portal', 'signature') === true) {
             $sql = "
@@ -648,7 +648,7 @@ EOT;
          from :_profile_portal
          where length(signature) > 1
                ";
-        } elseif ($this->hasInputSchema('member_extra', array('id', 'signature')) === true) {
+        } elseif ($this->hasInputSchema('member_extra', ['id', 'signature']) === true) {
             $sql = "
          select
             id as UserID,
@@ -675,14 +675,14 @@ EOT;
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'id' => 'CategoryID',
-            'name' => array('Column' => 'Name', 'Filter' => 'HtmlDecoder'),
+            'name' => ['Column' => 'Name', 'Filter' => 'HtmlDecoder'],
             'name_seo' => 'UrlCode',
             'description' => 'Description',
             'parent_id' => 'ParentCategoryID',
             'position' => 'Sort'
-        );
+        ];
         $this->export('Category', "select * from :_forums", $category_Map);
     }
 
@@ -691,8 +691,8 @@ EOT;
     protected function discussions(): void
     {
         $descriptionSQL = 'p.post';
-        $hasTopicDescription = ($this->hasInputSchema('topics', array('description')) === true);
-        if ($hasTopicDescription || $this->hasInputSchema('posts', array('description')) === true) {
+        $hasTopicDescription = ($this->hasInputSchema('topics', ['description']) === true);
+        if ($hasTopicDescription || $this->hasInputSchema('posts', ['description']) === true) {
             $description = ($hasTopicDescription) ? 't.description' : 'p.description';
             $descriptionSQL = "case
                 when $description <> '' and p.post is not null
@@ -701,22 +701,22 @@ EOT;
                 else p.post
             end";
         }
-        $discussion_Map = array(
+        $discussion_Map = [
             'tid' => 'DiscussionID',
             'title' => 'Name',
-            'description' => array('Column' => 'SubName', 'Type' => 'varchar(255)'),
+            'description' => ['Column' => 'SubName', 'Type' => 'varchar(255)'],
             'forum_id' => 'CategoryID',
             'starter_id' => 'InsertUserID',
-            'start_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'start_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'ip_address' => 'InsertIPAddress',
-            'edit_time' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
+            'edit_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
             //          'last_post' => array('Column' => 'DateLastPost', 'Filter' => array($ex, 'timestampToDate')),
             'posts' => 'CountComments',
             'views' => 'CountViews',
             'pinned' => 'Announce',
             'post' => 'Body',
             'closed' => 'Closed'
-        );
+        ];
         $sql = "select t.*,
             $descriptionSQL as post,
             case when t.state = 'closed' then 1 else 0 end as closed,
@@ -745,19 +745,19 @@ EOT;
         );
         $this->query("insert into z_tag (FullName) (select distinct t.tag_text as FullName from :_core_tags t)");
 
-        $tagDiscussion_Map = array(
-            'tag_added' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-        );
+        $tagDiscussion_Map = [
+            'tag_added' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+        ];
         $sql = "select TagID, '0' as CategoryID, tag_meta_id as DiscussionID, t.tag_added
             from :_core_tags t
             left join z_tag zt
                 on t.tag_text = zt.FullName";
         $this->export('TagDiscussion', $sql, $tagDiscussion_Map);
 
-        $tag_Map = array(
+        $tag_Map = [
             'FullName' => 'FullName',
-            'FullNameToName' => array('Column' => 'Name', 'Filter' => 'formatUrl')
-        );
+            'FullNameToName' => ['Column' => 'Name', 'Filter' => 'formatUrl']
+        ];
         $sql = "select TagID, FullName, FullName as FullNameToName from z_tag zt";
         $this->export('Tag', $sql, $tag_Map);
     }
@@ -766,15 +766,15 @@ EOT;
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'pid' => 'CommentID',
             'topic_id' => 'DiscussionID',
             'author_id' => 'InsertUserID',
             'ip_address' => 'InsertIPAddress',
-            'post_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'edit_time' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'edit_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
             'post' => 'Body'
-        );
+        ];
         $sql = "select p.*,
                 'BBCode' as Format
             from :_posts p
@@ -790,21 +790,21 @@ EOT;
      */
     protected function attachments(): void
     {
-        $media_Map = array(
+        $media_Map = [
             'attach_id' => 'MediaID',
             'atype_mimetype' => 'Type',
             'attach_file' => 'Name',
             'attach_path' => 'Path',
-            'attach_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
+            'attach_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
+            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
             'attach_member_id' => 'InsertUserID',
             'attach_filesize' => 'Size',
             'ForeignID' => 'ForeignID',
             'ForeignTable' => 'ForeignTable',
             'img_width' => 'ImageWidth',
             'img_height' => 'ImageHeight'
-        );
+        ];
         $sql = "select a.*,
                concat('~cf/ipb/', a.attach_location) as attach_path,
                concat('~cf/ipb/', a.attach_location) as thumb_path,
@@ -837,12 +837,12 @@ EOT;
         if (is_array($paths)) {
             $mungedPath = implode($delimiter, $paths);
             $mungedPath = str_replace(
-                array($delimiter . $delimiter . $delimiter, $delimiter . $delimiter),
-                array($delimiter, $delimiter),
+                [$delimiter . $delimiter . $delimiter, $delimiter . $delimiter],
+                [$delimiter, $delimiter],
                 $mungedPath
             );
 
-            return str_replace(array('http:/', 'https:/'), array('http://', 'https://'), $mungedPath);
+            return str_replace(['http:/', 'https:/'], ['http://', 'https://'], $mungedPath);
         } else {
             return $paths;
         }

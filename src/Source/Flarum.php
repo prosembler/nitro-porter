@@ -73,7 +73,7 @@ class Flarum extends Source
     {
         $user_Map = [
             'id' => 'UserID',
-            'username' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'email' => 'Email',
             'password' => 'Password',
             'joined_at' => 'DateInserted',
@@ -93,10 +93,10 @@ class Flarum extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'id' => 'RoleID',
             'name_singular' => 'Name',
-        );
+        ];
         $this->export(
             'Role',
             "select * from `:_groups`",
@@ -139,13 +139,13 @@ class Flarum extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'id' => 'DiscussionID',
             'user_id' => 'InsertUserID',
-            'title' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'is_sticky' => 'Announce', // flarum/sticky — optional field
             'is_locked' => 'Closed', // flarum/lock — optional field
-        );
+        ];
 
         $getBody = '';
         $joinPosts = '';

@@ -52,12 +52,12 @@ class WebWiz extends Source
         $this->exportConversationTemps();
 
         // Conversation.
-        $conversation_Map = array(
+        $conversation_Map = [
             'PM_ID' => 'ConversationID',
-            'Title' => array('Column' => 'Subject', 'Type' => 'varchar(255)'),
+            'Title' => ['Column' => 'Subject', 'Type' => 'varchar(255)'],
             'Author_ID' => 'InsertUserID',
-            'PM_Message_Date' => array('Column' => 'DateInserted')
-        );
+            'PM_Message_Date' => ['Column' => 'DateInserted']
+        ];
         $this->export(
             'Conversation',
             "select pm.*,
@@ -69,10 +69,10 @@ class WebWiz extends Source
         );
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'Group_ID' => 'ConversationID',
             'User_ID' => 'UserID'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select
@@ -85,14 +85,14 @@ class WebWiz extends Source
         );
 
         // Conversation Message.
-        $message_Map = array(
+        $message_Map = [
             'Group_ID' => 'ConversationID',
             'PM_ID' => 'MessageID',
             'PM_Message' => 'Body',
             'Format' => 'Format',
-            'PM_Message_Date' => array('Column' => 'DateInserted'),
+            'PM_Message_Date' => ['Column' => 'DateInserted'],
             'Author_ID' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select pm.*,
@@ -215,22 +215,22 @@ class WebWiz extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'Author_ID' => 'UserID',
-            'Username' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
-            'Real_name' => array('Column' => 'FullName', 'Type' => 'varchar(50)', 'Filter' => 'HTMLDecoder'),
+            'Username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'Real_name' => ['Column' => 'FullName', 'Type' => 'varchar(50)', 'Filter' => 'HTMLDecoder'],
             'Password2' => 'Password',
             'Gender2' => 'Gender',
             'Author_email' => 'Email',
-            'Photo2' => array('Column' => 'Photo', 'Filter' => 'HTMLDecoder'),
+            'Photo2' => ['Column' => 'Photo', 'Filter' => 'HTMLDecoder'],
             'Login_IP' => 'LastIPAddress',
             'Banned' => 'Banned',
-            'Join_date' => array('Column' => 'DateInserted'),
-            'Last_visit' => array('Column' => 'DateLastActive'),
-            'Location' => array('Column' => 'Location', 'Filter' => 'HTMLDecoder'),
+            'Join_date' => ['Column' => 'DateInserted'],
+            'Last_visit' => ['Column' => 'DateLastActive'],
+            'Location' => ['Column' => 'Location', 'Filter' => 'HTMLDecoder'],
             'DOB' => 'DateOfBirth',
             'Show_email' => 'ShowEmail'
-        );
+        ];
         $this->export(
             'User',
             "select
@@ -249,10 +249,10 @@ class WebWiz extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'Group_ID' => 'RoleID',
             'Name' => 'Name'
-        );
+        ];
         $this->export(
             'Role',
             "select * from :_Group",
@@ -260,10 +260,10 @@ class WebWiz extends Source
         );
 
         // User Role.
-        $userRole_Map = array(
+        $userRole_Map = [
             'Author_ID' => 'UserID',
             'Group_ID' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select u.* from :_Author u",
@@ -290,13 +290,13 @@ class WebWiz extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'Forum_ID' => 'CategoryID',
             'Forum_name' => 'Name',
             'Forum_description' => 'Description',
             'Parent_ID' => 'ParentCategoryID',
             'Forum_order' => 'Sort'
-        );
+        ];
         $this->export(
             'Category',
             "select
@@ -322,19 +322,19 @@ class WebWiz extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'Topic_ID' => 'DiscussionID',
             'Forum_ID' => 'CategoryID',
             'Author_ID' => 'InsertUserID',
-            'Subject' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'Subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'IP_addr' => 'InsertIPAddress',
-            'Message' => array('Column' => 'Body'),
+            'Message' => ['Column' => 'Body'],
             'Format' => 'Format',
-            'Message_date' => array('Column' => 'DateInserted'),
+            'Message_date' => ['Column' => 'DateInserted'],
             'No_of_views' => 'CountViews',
             'Locked' => 'Closed',
 
-        );
+        ];
         $this->export(
             'Discussion',
             "select
@@ -355,15 +355,15 @@ class WebWiz extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'Thread_ID' => 'CommentID',
             'Topic_ID' => 'DiscussionID',
             'Author_ID' => 'InsertUserID',
             'IP_addr' => 'InsertIPAddress',
-            'Message' => array('Column' => 'Body'),
+            'Message' => ['Column' => 'Body'],
             'Format' => 'Format',
-            'Message_date' => array('Column' => 'DateInserted')
-        );
+            'Message_date' => ['Column' => 'DateInserted']
+        ];
         $this->export(
             'Comment',
             "select th.*, 'Html' as Format

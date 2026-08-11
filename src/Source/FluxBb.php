@@ -46,7 +46,7 @@ class FluxBb extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array();
+    public array $sourceTables = [];
 
     /**
      * Forum-specific export format
@@ -134,9 +134,9 @@ class FluxBb extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
-            'AvatarID' => array('Column' => 'Photo', 'Filter' => array($this, 'getAvatarByID')),
-        );
+        $user_Map = [
+            'AvatarID' => ['Column' => 'Photo', 'Filter' => [$this, 'getAvatarByID']],
+        ];
         $this->export(
             'User',
             "select
@@ -277,11 +277,11 @@ class FluxBb extends Source
     protected function attachments(): void
     {
         if ($this->hasInputSchema('attach_files')) {
-            $media_Map = array(
+            $media_Map = [
                 'owner_id' => 'InsertUserID',
-                'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
-                'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
-            );
+                'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
+                'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+            ];
             $this->export(
                 'Media',
                 "select f.*,

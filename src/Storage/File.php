@@ -140,7 +140,7 @@ class File extends Storage
     public function writeRow($fp, array $row, array $structure, ?StorageInfo $info = null): StorageInfo
     {
         // Loop through the columns in the export structure and grab their values from the row.
-        $exRow = array();
+        $exRow = [];
         foreach ($structure as $field => $dest) {
             // Get the value of the export.
             $value = $row[$field] ?? null;
@@ -250,7 +250,7 @@ class File extends Storage
             return $value;
         } elseif (is_string($value) || is_numeric($value)) {
             // Fix carriage returns for file storage.
-            $value = str_replace(array("\r\n", "\r"), array(self::NEWLINE, self::NEWLINE), $value);
+            $value = str_replace(["\r\n", "\r"], [self::NEWLINE, self::NEWLINE], $value);
             // Fix special chars in our file storage format.
             $value = $this->escapedValue($value);
         } elseif (is_bool($value)) {

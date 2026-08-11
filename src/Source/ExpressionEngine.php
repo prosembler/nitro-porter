@@ -55,12 +55,12 @@ class ExpressionEngine extends Source
         $this->exportConversationTemps();
 
         // Conversation.
-        $conversation_Map = array(
+        $conversation_Map = [
             'message_id' => 'ConversationID',
-            'title2' => array('Column' => 'Subject', 'Type' => 'varchar(255)'),
+            'title2' => ['Column' => 'Subject', 'Type' => 'varchar(255)'],
             'sender_id' => 'InsertUserID',
-            'message_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-        );
+            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+        ];
         $this->export(
             'Conversation',
             "SELECT pm.*, g.title AS title2
@@ -71,10 +71,10 @@ class ExpressionEngine extends Source
         );
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'group_id' => 'ConversationID',
             'userid' => 'UserID'
-        );
+        ];
         $this->export(
             'UserConversation',
             "SELECT g.group_id, t.userid
@@ -85,13 +85,13 @@ class ExpressionEngine extends Source
         );
 
         // Conversation Message.
-        $message_Map = array(
+        $message_Map = [
             'group_id' => 'ConversationID',
             'message_id' => 'MessageID',
             'message_body' => 'Body',
-            'message_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'sender_id' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "SELECT pm.*, pm2.group_id,
@@ -289,18 +289,18 @@ class ExpressionEngine extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'member_id' => 'UserID',
-            'username' => array('Column' => 'Username', 'Type' => 'varchar(50)'),
-            'screen_name' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'username' => ['Column' => 'Username', 'Type' => 'varchar(50)'],
+            'screen_name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'Password2' => 'Password',
             'email' => 'Email',
             'ipaddress' => 'InsertIPAddress',
-            'join_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'last_activity' => array('Column' => 'DateLastActive', 'Filter' => 'timestampToDate'),
+            'join_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'last_activity' => ['Column' => 'DateLastActive', 'Filter' => 'timestampToDate'],
             //'timezone' => 'HourOffset',
             'location' => 'Location'
-        );
+        ];
         $this->export(
             'User',
             "SELECT u.*,
@@ -319,11 +319,11 @@ class ExpressionEngine extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'group_id' => 'RoleID',
             'group_title' => 'Name',
             'group_description' => 'Description'
-        );
+        ];
         $this->export(
             'Role',
             "SELECT * FROM forum_member_groups",
@@ -331,10 +331,10 @@ class ExpressionEngine extends Source
         );
 
         // User Role.
-        $userRole_Map = array(
+        $userRole_Map = [
             'member_id' => 'UserID',
             'group_id' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             "SELECT * FROM forum_members u",
@@ -361,13 +361,13 @@ class ExpressionEngine extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'forum_id' => 'CategoryID',
             'forum_name' => 'Name',
             'forum_description' => 'Description',
             'forum_parent' => 'ParentCategoryID',
             'forum_order' => 'Sort'
-        );
+        ];
         $this->export(
             'Category',
             "SELECT * FROM forum_forums",
@@ -379,18 +379,18 @@ class ExpressionEngine extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'author_id' => 'InsertUserID',
-            'title' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'ip_address' => 'InsertIPAddress',
-            'body' => array('Column' => 'Body', 'Filter' => 'cleanBodyBrackets'),
-            'body2' => array('Column' => 'Format', 'Filter' => 'guessFormat'),
-            'topic_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'topic_edit_date' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
+            'body' => ['Column' => 'Body', 'Filter' => 'cleanBodyBrackets'],
+            'body2' => ['Column' => 'Format', 'Filter' => 'guessFormat'],
+            'topic_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'topic_edit_date' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
             'topic_edit_author' => 'UpdateUserID'
-        );
+        ];
         $this->export(
             'Discussion',
             "SELECT t.*,
@@ -406,17 +406,17 @@ class ExpressionEngine extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
             'author_id' => 'InsertUserID',
             'ip_address' => 'InsertIPAddress',
-            'body' => array('Column' => 'Body', 'Filter' => 'cleanBodyBrackets'),
-            'body2' => array('Column' => 'Format', 'Filter' => 'guessFormat'),
-            'post_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'post_edit_date' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
+            'body' => ['Column' => 'Body', 'Filter' => 'cleanBodyBrackets'],
+            'body2' => ['Column' => 'Format', 'Filter' => 'guessFormat'],
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'post_edit_date' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
             'post_edit_author' => 'UpdateUserID'
-        );
+        ];
         $this->export(
             'Comment',
             "SELECT p.*,
@@ -431,16 +431,16 @@ class ExpressionEngine extends Source
      */
     protected function attachments(): void
     {
-        $media_Map = array(
+        $media_Map = [
             'filename' => 'Name',
-            'extension' => array('Column' => 'Type', 'Filter' => 'mimeTypeFromExtension'),
-            'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
+            'extension' => ['Column' => 'Type', 'Filter' => 'mimeTypeFromExtension'],
+            'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
+            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
             'filesize' => 'Size',
             'member_id' => 'InsertUserID',
-            'attachment_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'filehash' => array('Column' => 'FileHash', 'Type' => 'varchar(100)')
-        );
+            'attachment_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'filehash' => ['Column' => 'FileHash', 'Type' => 'varchar(100)']
+        ];
         $this->export(
             'Media',
             "SELECT a.*,

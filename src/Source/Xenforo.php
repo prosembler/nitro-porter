@@ -136,10 +136,10 @@ class Xenforo extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'user_group_id' => 'RoleID',
             'title' => 'Name'
-        );
+        ];
         $this->export(
             'Role',
             "select * from :_user_group",
@@ -147,10 +147,10 @@ class Xenforo extends Source
         );
 
         // User Roles.
-        $userRole_Map = array(
+        $userRole_Map = [
             'user_id' => 'UserID',
             'user_group_id' => 'RoleID'
-        );
+        ];
 
         $this->export(
             'UserRole',
@@ -169,19 +169,19 @@ class Xenforo extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'node_id' => 'CategoryID',
             'title' => 'Name',
             'description' => 'Description',
-            'parent_node_id' => array(
+            'parent_node_id' => [
                 'Column' => 'ParentCategoryID',
                 'Filter' => function ($value) {
                     return $value ? $value : null;
                 }
-            ),
+            ],
             'display_order' => 'Sort',
-            'display_in_list' => array('Column' => 'HideAllDiscussions', 'Filter' => 'NotFilter')
-        );
+            'display_in_list' => ['Column' => 'HideAllDiscussions', 'Filter' => 'NotFilter']
+        ];
         $this->export(
             'Category',
             "select n.* from :_node n",
@@ -193,21 +193,21 @@ class Xenforo extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'thread_id' => 'DiscussionID',
             'node_id' => 'CategoryID',
             'title' => 'Name',
             'reply_count' => 'CountComments',
             'view_count' => 'CountViews',
             'user_id' => 'InsertUserID',
-            'post_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'sticky' => 'Announce',
-            'discussion_open' => array('Column' => 'Closed', 'Filter' => 'NotFilter'),
-            'last_post_date' => array('Column' => 'DateLastComment', 'Filter' => 'timestampToDate'),
+            'discussion_open' => ['Column' => 'Closed', 'Filter' => 'NotFilter'],
+            'last_post_date' => ['Column' => 'DateLastComment', 'Filter' => 'timestampToDate'],
             'message' => 'Body',
             'format' => 'Format',
-            'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
-        );
+            'ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'long2ipf']
+        ];
         $this->export(
             'Discussion',
             "select t.*,
@@ -227,15 +227,15 @@ class Xenforo extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'post_id' => 'CommentID',
             'thread_id' => 'DiscussionID',
             'user_id' => 'InsertUserID',
-            'post_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'message' => 'Body',
             'format' => 'Format',
-            'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
-        );
+            'ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'long2ipf']
+        ];
         $this->export(
             'Comment',
             "select p.*,
@@ -330,27 +330,27 @@ class Xenforo extends Source
      */
     protected function conversations(): void
     {
-        $conversation_Map = array(
+        $conversation_Map = [
             'conversation_id' => 'ConversationID',
             'title' => 'Subject',
             'user_id' => 'InsertUserID',
-            'start_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate')
-        );
+            'start_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate']
+        ];
         $this->export(
             'Conversation',
             "select *, substring(title, 1, 200) as title from :_conversation_master",
             $conversation_Map
         );
 
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'message_id' => 'MessageID',
             'conversation_id' => 'ConversationID',
-            'message_date' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'user_id' => 'InsertUserID',
             'message' => 'Body',
             'format' => 'Format',
-            'ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'long2ipf')
-        );
+            'ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'long2ipf']
+        ];
         $this->export(
             'ConversationMessage',
             "select m.*,
@@ -362,11 +362,11 @@ class Xenforo extends Source
             $conversationMessage_Map
         );
 
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'conversation_id' => 'ConversationID',
             'user_id' => 'UserID',
             'Deleted' => 'Deleted'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select

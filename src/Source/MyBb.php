@@ -39,12 +39,12 @@ class MyBb extends Source
      *
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'forums' => array(),
-        'posts' => array(),
-        'threads' => array(),
-        'users' => array(),
-    );
+    public array $sourceTables = [
+        'forums' => [],
+        'posts' => [],
+        'threads' => [],
+        'users' => [],
+    ];
 
     /**
      * Main export process.
@@ -65,14 +65,14 @@ class MyBb extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'uid' => 'UserID',
-            'username' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'avatar' => 'Photo',
             'regdate2' => 'DateInserted',
             'regdate3' => 'DateFirstVisit',
             'email' => 'Email',
-        );
+        ];
         $this->export(
             'User',
             "select u.*,
@@ -90,11 +90,11 @@ class MyBb extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'gid' => 'RoleID',
             'title' => 'Name',
             'description' => 'Description',
-        );
+        ];
         $this->export(
             'Role',
             "select * from :_usergroups",
@@ -102,10 +102,10 @@ class MyBb extends Source
         );
 
         // User Role.
-        $userRole_Map = array(
+        $userRole_Map = [
             'uid' => 'UserID',
             'usergroup' => 'RoleID',
-        );
+        ];
         $this->export(
             'UserRole',
             "select u.uid, u.usergroup from :_users u",
@@ -117,13 +117,13 @@ class MyBb extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'fid' => 'CategoryID',
             'pid' => 'ParentCategoryID',
             'disporder' => 'Sort',
             'name' => 'Name',
             'description' => 'Description',
-        );
+        ];
         $this->export(
             'Category',
             "select * from :_forums f",
@@ -135,14 +135,14 @@ class MyBb extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'tid' => 'DiscussionID',
             'fid' => 'CategoryID',
             'uid' => 'InsertUserID',
-            'subject' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'views' => 'CountViews',
             'replies' => 'CountComments',
-        );
+        ];
         $this->export(
             'Discussion',
             "select *,
@@ -157,12 +157,12 @@ class MyBb extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'pid' => 'CommentID',
             'tid' => 'DiscussionID',
             'uid' => 'InsertUserID',
-            'message' => array('Column' => 'Body'),
-        );
+            'message' => ['Column' => 'Body'],
+        ];
         $this->export(
             'Comment',
             "select p.*,
@@ -177,7 +177,7 @@ class MyBb extends Source
      */
     protected function attachments(): void
     {
-        $media_Map = array(
+        $media_Map = [
             'aid' => 'MediaID',
             'pid' => 'ForeignID',
             'uid' => 'InsertUserId',
@@ -186,8 +186,8 @@ class MyBb extends Source
             'height' => 'ImageHeight',
             'width' => 'ImageWidth',
             'filetype' => 'Type',
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
-        );
+            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+        ];
         $this->export(
             'Media',
             "select a.*,
@@ -205,10 +205,10 @@ class MyBb extends Source
      */
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = array(
+        $userDiscussion_Map = [
             'tid' => 'DiscussionID',
             'uid' => 'UserID',
-        );
+        ];
         $this->export(
             'UserDiscussion',
             "select *,

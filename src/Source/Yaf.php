@@ -35,7 +35,7 @@ class Yaf extends Source
         ]
     ];
 
-    public static array $passwordFormats = array(0 => 'md5', 1 => 'sha1', 2 => 'sha256', 3 => 'sha384', 4 => 'sha512');
+    public static array $passwordFormats = [0 => 'md5', 1 => 'sha1', 2 => 'sha256', 3 => 'sha384', 4 => 'sha512'];
 
     /**
      * Main export method.
@@ -196,20 +196,20 @@ class Yaf extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'UserID' => 'UserID',
             'Name' => 'Name',
             'Email' => 'Email',
             'Joined' => 'DateInserted',
-            'LastVisit' => array('Column' => 'DateLastVisit', 'Type' => 'datetime'),
+            'LastVisit' => ['Column' => 'DateLastVisit', 'Type' => 'datetime'],
             'IP' => 'InsertIPAddress',
             'Avatar' => 'Photo',
-            'RankID' => array('Column' => 'RankID', 'Type' => 'int'),
-            'Points' => array('Column' => 'Points', 'Type' => 'int'),
+            'RankID' => ['Column' => 'RankID', 'Type' => 'int'],
+            'Points' => ['Column' => 'Points', 'Type' => 'int'],
             'LastActivity' => 'DateLastActive',
-            'Password2' => array('Column' => 'Password', 'Filter' => array($this, 'convertPassword')),
+            'Password2' => ['Column' => 'Password', 'Filter' => [$this, 'convertPassword']],
             'HashMethod' => 'HashMethod'
-        );
+        ];
         $this->export(
             'User',
             "select u.*,
@@ -229,10 +229,10 @@ class Yaf extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'GroupID' => 'RoleID',
             'Name' => 'Name'
-        );
+        ];
         $this->export(
             'Role',
             "select * from :_Group;",
@@ -240,10 +240,10 @@ class Yaf extends Source
         );
 
         // UserRole.
-        $userRole_Map = array(
+        $userRole_Map = [
             'UserID' => 'UserID',
             'GroupID' => 'RoleID'
-        );
+        ];
         $this->export('UserRole', 'select * from :_UserGroup', $userRole_Map);
     }
 
@@ -251,12 +251,12 @@ class Yaf extends Source
      */
     protected function ranks(): void
     {
-        $rank_Map = array(
+        $rank_Map = [
             'RankID' => 'RankID',
             'Level' => 'Level',
             'Name' => 'Name',
             'Label' => 'Label'
-        );
+        ];
         $this->export(
             'Rank',
             "select r.*,
@@ -293,13 +293,13 @@ class Yaf extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'ForumID' => 'CategoryID',
             'ParentID' => 'ParentCategoryID',
             'Name' => 'Name',
             'Description' => 'Description',
             'SortOrder' => 'Sort'
-        );
+        ];
 
         $this->export(
             'Category',
@@ -326,7 +326,7 @@ class Yaf extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'TopicID' => 'DiscussionID',
             'ForumID' => 'CategoryID',
             'UserID' => 'InsertUserID',
@@ -334,7 +334,7 @@ class Yaf extends Source
             'Topic' => 'Name',
             'Views' => 'CountViews',
             'Announce' => 'Announce'
-        );
+        ];
         $this->export(
             'Discussion',
             "select
@@ -351,18 +351,18 @@ class Yaf extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'MessageID' => 'CommentID',
             'TopicID' => 'DiscussionID',
-            'ReplyTo' => array('Column' => 'ReplyToCommentID', 'Type' => 'int'),
+            'ReplyTo' => ['Column' => 'ReplyToCommentID', 'Type' => 'int'],
             'UserID' => 'InsertUserID',
             'Posted' => 'DateInserted',
             'Message' => 'Body',
             'Format' => 'Format',
             'IP' => 'InsertIPAddress',
-            'Edited' => array('Column' => 'DateUpdated', 'Filter' => array($this, 'cleanDate')),
+            'Edited' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'cleanDate']],
             'EditedBy' => 'UpdateUserID'
-        );
+        ];
         $this->export(
             'Comment',
             "select m.*,
@@ -379,12 +379,12 @@ class Yaf extends Source
     {
         $this->exportConversationTemps();
 
-        $conversation_Map = array(
+        $conversation_Map = [
             'PMessageID' => 'ConversationID',
             'FromUserID' => 'InsertUserID',
             'Created' => 'DateInserted',
-            'Title' => array('Column' => 'Subject', 'Type' => 'varchar(512)')
-        );
+            'Title' => ['Column' => 'Subject', 'Type' => 'varchar(512)']
+        ];
         $this->export(
             'Conversation',
             "select pm.*, g.Title
@@ -395,11 +395,11 @@ class Yaf extends Source
         );
 
         // UserConversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'PM_ID' => 'ConversationID',
             'User_ID' => 'UserID',
             'Deleted' => 'Deleted'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select pto.*
@@ -410,14 +410,14 @@ class Yaf extends Source
         );
 
         // ConversationMessage.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'PMessageID' => 'MessageID',
             'Group_ID' => 'ConversationID',
             'FromUserID' => 'InsertUserID',
             'Created' => 'DateInserted',
             'Body' => 'Body',
             'Format' => 'Format'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select pm.*,

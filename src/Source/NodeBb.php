@@ -195,20 +195,20 @@ class NodeBb extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'uid' => 'UserID',
             'username' => 'Name',
             'password' => 'Password',
             'email' => 'Email',
             'confirmed' => 'Confirmed',
             'showemail' => 'ShowEmail',
-            'joindate' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate')),
-            'lastonline' => array('Column' => 'DateLastActive', 'Filter' => array($this, 'tsToDate')),
-            'lastposttime' => array('Column' => 'DateUpdated', 'Filter' => array($this, 'tsToDate')),
+            'joindate' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
+            'lastonline' => ['Column' => 'DateLastActive', 'Filter' => [$this, 'tsToDate']],
+            'lastposttime' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'tsToDate']],
             'banned' => 'Banned',
             'admin' => 'Admin',
             'hm' => 'HashMethod'
-        );
+        ];
         $this->export(
             'User',
             "select uid, username, password, email, `email:confirmed` as confirmed,
@@ -222,11 +222,11 @@ class NodeBb extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             '_num' => 'RoleID',
-            '_key' => array('Column' => 'Name', 'Filter' => array($this, 'roleNameFromKey')),
+            '_key' => ['Column' => 'Name', 'Filter' => [$this, 'roleNameFromKey']],
             'description' => 'Description'
-        );
+        ];
         $this->export(
             'Role',
             "select gm._key as _key, gm._num as _num, g.description as description
@@ -235,10 +235,10 @@ class NodeBb extends Source
             $role_Map
         );
 
-        $userRole_Map = array(
+        $userRole_Map = [
             'id' => 'RoleID',
             'members' => 'UserID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select *, g._num as id
@@ -252,11 +252,11 @@ class NodeBb extends Source
      */
     protected function signatures(): void
     {
-        $userMeta_Map = array(
+        $userMeta_Map = [
             'uid' => 'UserID',
             'name' => 'Name',
             'signature' => 'Value'
-        );
+        ];
         $this->export(
             'UserMeta',
             "select uid, 'Plugin.Signatures.Sig' as name, signature
@@ -282,16 +282,16 @@ class NodeBb extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'cid' => 'CategoryID',
-            'name' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'description' => 'Description',
             'order' => 'Sort',
             'parentCid' => 'ParentCategoryID',
-            'slug' => array('Column' => 'UrlCode', 'Filter' => array($this, 'removeNumId')),
+            'slug' => ['Column' => 'UrlCode', 'Filter' => [$this, 'removeNumId']],
             'image' => 'Photo',
             'disabled' => 'Archived'
-        );
+        ];
         $this->export(
             'Category',
             "select * from :_category",
@@ -393,7 +393,7 @@ class NodeBb extends Source
         );
 
         //Discussions
-        $discussion_Map = array(
+        $discussion_Map = [
             'tid' => 'DiscussionID',
             'cid' => 'CategoryID',
             'title' => 'Name',
@@ -401,15 +401,15 @@ class NodeBb extends Source
             'uid' => 'InsertUserID',
             'locked' => 'Closed',
             'pinned' => 'Announce',
-            'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate')),
-            'edited' => array('Column' => 'DateUpdated', 'Filter' => array($this, 'tsToDate')),
+            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
+            'edited' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'tsToDate']],
             'editor' => 'UpdateUserID',
             'viewcount' => 'CountViews',
             'format' => 'Format',
             'votes' => 'Score',
-            'attributes' => array('Column' => 'Attributes', 'Filter' => array($this, 'serializeReactions')),
-            'poll' => array('Column' => 'Type', 'Filter' => array($this, 'isPoll'))
-        );
+            'attributes' => ['Column' => 'Attributes', 'Filter' => [$this, 'serializeReactions']],
+            'poll' => ['Column' => 'Type', 'Filter' => [$this, 'isPoll']]
+        ];
 
         $this->export(
             'Discussion',
@@ -477,17 +477,17 @@ class NodeBb extends Source
         );
 
         // Comments
-        $comment_Map = array(
+        $comment_Map = [
             'content' => 'Body',
             'uid' => 'InsertUserID',
             'tid' => 'DiscussionID',
-            'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate')),
-            'edited' => array('Column' => 'DateUpdated', 'Filter' => array($this, 'tsToDate')),
+            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
+            'edited' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'tsToDate']],
             'editor' => 'UpdateUserID',
             'votes' => 'Score',
             'format' => 'Format',
-            'attributes' => array('Column' => 'Attributes', 'Filter' => array($this, 'serializeReactions'))
-        );
+            'attributes' => ['Column' => 'Attributes', 'Filter' => [$this, 'serializeReactions']]
+        ];
 
         $this->export(
             'Comment',
@@ -502,14 +502,14 @@ class NodeBb extends Source
      */
     protected function polls(): void
     {
-        $poll_Map = array(
+        $poll_Map = [
             'pollid' => 'PollID',
             'title' => 'Name',
             'tid' => 'DiscussionID',
             'votecount' => 'CountVotes',
             'uid' => 'InsertUserID',
-            'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate'))
-        );
+            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']]
+        ];
         $this->export(
             'Poll',
             "select *
@@ -518,14 +518,14 @@ class NodeBb extends Source
             $poll_Map
         );
 
-        $pollOption_Map = array(
+        $pollOption_Map = [
             '_num' => 'PollOptionID',
-            '_key' => array('Column' => 'PollID', 'Filter' => array($this, 'idFromKey')),
+            '_key' => ['Column' => 'PollID', 'Filter' => [$this, 'idFromKey']],
             'title' => 'Body',
             'sort' => 'Sort',
-            'votecount' => array('Column' => 'CountVotes', 'Filter' => array($this, 'makeNullZero')),
+            'votecount' => ['Column' => 'CountVotes', 'Filter' => [$this, 'makeNullZero']],
             'format' => 'Format'
-        );
+        ];
         $this->export(
             'PollOption',
             "select _num, _key, title, id+1 as sort, votecount, 'Html' as format
@@ -534,10 +534,10 @@ class NodeBb extends Source
             $pollOption_Map
         );
 
-        $pollVote_Map = array(
+        $pollVote_Map = [
             'userid' => 'UserID',
             'poll_option_id' => 'PollOptionID'
-        );
+        ];
         $this->export(
             'PollVote',
             "select povm.members as userid, po._num as poll_option_id
@@ -559,16 +559,16 @@ class NodeBb extends Source
             $this->query("create index z_idx_topic_key on :_topic (_key);");
         }
 
-        $tag_Map = array(
-            'slug' => array('Column' => 'Name', 'Filter' => array($this, 'nameToSlug')),
+        $tag_Map = [
+            'slug' => ['Column' => 'Name', 'Filter' => [$this, 'nameToSlug']],
             'fullname' => 'FullName',
             'count' => 'CountDiscussions',
             'tagid' => 'TagID',
             'cid' => 'CategoryID',
             'type' => 'Type',
-            'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate')),
+            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
             'uid' => 'InsertUserID'
-        );
+        ];
 
         $this->query("set @rownr=1000;");
 
@@ -588,12 +588,12 @@ class NodeBb extends Source
             $tag_Map
         );
 
-        $tagDiscussion_Map = array(
+        $tagDiscussion_Map = [
             'tagid' => 'TagID',
             'tid' => 'DiscussionID',
             'cid' => 'CategoryID',
-            'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate'))
-        );
+            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']]
+        ];
 
         $this->query("set @rownr=1000;");
 
@@ -705,13 +705,13 @@ class NodeBb extends Source
         $this->query("create index z_idx_pmto_cid on z_pmto(groupid);");
         $this->query("create index z_idx_pmgroup_cid on z_pmgroup(firstmessageid);");
 
-        $conversation_Map = array(
+        $conversation_Map = [
             'conversationid' => 'ConversationID',
             'firstmessageid' => 'FirstMessageID',
             'lastmessageid' => 'LastMessageID',
             'countparticipants' => 'CountParticipants',
             'countmessages' => 'CountMessages'
-        );
+        ];
         $this->export(
             'Conversation',
             "select *, firstmessageid as conversationid, 2 as countparticipants
@@ -721,14 +721,14 @@ class NodeBb extends Source
             $conversation_Map
         );
 
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'messageid' => 'MessageID',
             'conversationid' => 'ConversationID',
             'content' => 'Body',
             'format' => 'Format',
             'fromuid' => 'InsertUserID',
-            'timestamp' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate'))
-        );
+            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']]
+        ];
         $this->export(
             'ConversationMessage',
             "select groupid as conversationid, pmid as messageid, content, 'Text' as format, fromuid, timestamp
@@ -738,11 +738,11 @@ class NodeBb extends Source
             $conversationMessage_Map
         );
 
-        $userConversationMap = array(
+        $userConversationMap = [
             'conversationid' => 'ConversationID',
             'userid' => 'UserID',
             'lastmessageid' => 'LastMessageID'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select p.groupid as conversationid, userid, lastmessageid
@@ -757,11 +757,11 @@ class NodeBb extends Source
      */
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = array(
+        $userDiscussion_Map = [
             'members' => 'UserID',
-            '_key' => array('Column' => 'DiscussionID', 'Filter' => array($this, 'idFromKey')),
+            '_key' => ['Column' => 'DiscussionID', 'Filter' => [$this, 'idFromKey']],
             'bookmarked' => 'Bookmarked'
-        );
+        ];
 
         $this->export(
             'UserDiscussion',
@@ -787,14 +787,14 @@ class NodeBb extends Source
             $this->query("create index z_idx_uid_upvote on :_uid_upvote(value);");
         }
 
-        $userTag_Map = array(
+        $userTag_Map = [
             'tagid' => 'TagID',
             'recordtype' => 'RecordType',
-            '_key' => array('Column' => 'UserID', 'Filter' => array($this, 'idFromKey')),
+            '_key' => ['Column' => 'UserID', 'Filter' => [$this, 'idFromKey']],
             'value' => 'RecordID',
-            'score' => array('Column' => 'DateInserted', 'Filter' => array($this, 'tsToDate')),
+            'score' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
             'total' => 'Total'
-        );
+        ];
         $this->export(
             'UserTag',
             "select 11 as tagid, 'Discussion' as recordtype, u._key, u.value, score, total

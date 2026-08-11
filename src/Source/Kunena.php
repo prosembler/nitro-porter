@@ -67,7 +67,7 @@ class Kunena extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'id' => 'UserID',
             'name' => 'Name',
             'email' => 'Email',
@@ -78,9 +78,9 @@ class Kunena extends Source
             'birthdate' => 'DateOfBirth',
             'banned' => 'Banned',
             //         'DELETED'=>'Deleted',
-            'admin' => array('Column' => 'Admin', 'Type' => 'tinyint(1)'),
+            'admin' => ['Column' => 'Admin', 'Type' => 'tinyint(1)'],
             'Photo' => 'Photo'
-        );
+        ];
         $this->export(
             'User',
             "SELECT
@@ -101,17 +101,17 @@ class Kunena extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'rank_id' => 'RoleID',
             'rank_title' => 'Name',
-        );
+        ];
         $this->export('Role', "select * from :_kunena_ranks", $role_Map);
 
         // UserRole.
-        $userRole_Map = array(
+        $userRole_Map = [
             'id' => 'UserID',
             'rank' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select * from :_users u",
@@ -123,14 +123,14 @@ class Kunena extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'id' => 'CategoryID',
             'parent' => 'ParentCategoryID',
             'name' => 'Name',
             'ordering' => 'Sort',
             'description' => 'Description',
 
-        );
+        ];
         $this->export(
             'Category',
             "select * from :_kunena_categories",
@@ -142,20 +142,20 @@ class Kunena extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'id' => 'DiscussionID',
             'catid' => 'CategoryID',
             'userid' => 'InsertUserID',
-            'subject' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
-            'time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'ip' => 'InsertIPAddress',
             'locked' => 'Closed',
             'hits' => 'CountViews',
             'modified_by' => 'UpdateUserID',
-            'modified_time' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
+            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
             'message' => 'Body',
             'Format' => 'Format'
-        );
+        ];
         $this->export(
             'Discussion',
             "select t.*,
@@ -173,17 +173,17 @@ class Kunena extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'id' => 'CommentID',
             'thread' => 'DiscussionID',
             'userid' => 'InsertUserID',
-            'time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'ip' => 'InsertIPAddress',
             'modified_by' => 'UpdateUserID',
-            'modified_time' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
+            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
             'message' => 'Body',
             'Format' => 'Format'
-        );
+        ];
         $this->export(
             'Comment',
             "select t.*,
@@ -201,10 +201,10 @@ class Kunena extends Source
      */
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = array(
+        $userDiscussion_Map = [
             'thread' => 'DiscussionID',
             'userid' => 'UserID'
-        );
+        ];
         $this->export(
             'UserDiscussion',
             "select t.*, 1 as Bookmarked from :_kunena_user_topics t",
@@ -216,18 +216,18 @@ class Kunena extends Source
      */
     protected function attachments(): void
     {
-        $media_Map = array(
+        $media_Map = [
             'id' => 'MediaID',
             'mesid' => 'ForeignID',
             'userid' => 'InsertUserID',
             'size' => 'Size',
-            'path2' => array('Column' => 'Path', 'Filter' => 'urlDecoder'),
-            'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
+            'path2' => ['Column' => 'Path', 'Filter' => 'urlDecoder'],
+            'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
+            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
             'filetype' => 'Type',
-            'filename' => array('Column' => 'Name', 'Filter' => 'urlDecoder'),
-            'time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-        );
+            'filename' => ['Column' => 'Name', 'Filter' => 'urlDecoder'],
+            'time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+        ];
         $this->export(
             'Media',
             "select a.*,

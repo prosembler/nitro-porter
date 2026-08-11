@@ -45,7 +45,7 @@ class Vanilla extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array();
+    public array $sourceTables = [];
 
     /**
      */

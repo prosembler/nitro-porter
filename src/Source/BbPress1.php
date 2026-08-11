@@ -32,13 +32,13 @@ class BbPress1 extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'forums' => array(),
-        'posts' => array(),
-        'topics' => array(),
-        'users' => array('ID', 'user_login', 'user_pass', 'user_email', 'user_registered'),
-        'meta' => array()
-    );
+    public array $sourceTables = [
+        'forums' => [],
+        'posts' => [],
+        'topics' => [],
+        'users' => ['ID', 'user_login', 'user_pass', 'user_email', 'user_registered'],
+        'meta' => []
+    ];
 
     /**
      * Forum-specific export format.
@@ -58,13 +58,13 @@ class BbPress1 extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'ID' => 'UserID',
             'user_login' => 'Name',
             'user_pass' => 'Password',
             'user_email' => 'Email',
             'user_registered' => 'DateInserted'
-        );
+        ];
         $this->export('User', "select * from :_users", $user_Map);
     }
 
@@ -84,9 +84,9 @@ class BbPress1 extends Source
         );
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'user_id' => 'UserID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select distinct user_id,
@@ -107,13 +107,13 @@ class BbPress1 extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'forum_id' => 'CategoryID',
             'forum_name' => 'Name',
             'forum_desc' => 'Description',
             'forum_slug' => 'UrlCode',
             'left_order' => 'Sort'
-        );
+        ];
         $this->export(
             'Category',
             "select *,
@@ -128,7 +128,7 @@ class BbPress1 extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'topic_poster' => 'InsertUserID',
@@ -136,7 +136,7 @@ class BbPress1 extends Source
             'Format' => 'Format',
             'topic_start_time' => 'DateInserted',
             'topic_sticky' => 'Announce'
-        );
+        ];
         $this->export(
             'Discussion',
             "select t.*,
@@ -152,14 +152,14 @@ class BbPress1 extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
-            'post_text' => array('Column' => 'Body', 'Filter' => 'bbPressTrim'),
+            'post_text' => ['Column' => 'Body', 'Filter' => 'bbPressTrim'],
             'Format' => 'Format',
             'poster_id' => 'InsertUserID',
             'post_time' => 'DateInserted'
-        );
+        ];
         $this->export(
             'Comment',
             "select p.*,
@@ -181,16 +181,16 @@ class BbPress1 extends Source
         if ($PM === true) {
             // This is from an old version of the plugin.
             $conversationVersion = 'old';
-        } elseif ($this->hasInputSchema('bbpm', array('ID', 'pm_from', 'pm_text', 'sent_on', 'pm_thread'))) {
+        } elseif ($this->hasInputSchema('bbpm', ['ID', 'pm_from', 'pm_text', 'sent_on', 'pm_thread'])) {
             // This is from a newer version of the plugin.
             $conversationVersion = 'new';
         }
 
         if ($conversationVersion) {
-            $conv_Map = array(
+            $conv_Map = [
                 'pm_thread' => 'ConversationID',
                 'pm_from' => 'InsertUserID'
-            );
+            ];
             $this->export(
                 'Conversation',
                 "select *, from_unixtime(sent_on) as DateInserted
@@ -200,12 +200,12 @@ class BbPress1 extends Source
             );
 
             // ConversationMessage.
-            $convMessage_Map = array(
+            $convMessage_Map = [
                 'ID' => 'MessageID',
                 'pm_thread' => 'ConversationID',
                 'pm_from' => 'InsertUserID',
-                'pm_text' => array('Column' => 'Body', 'Filter' => 'bbPressTrim')
-            );
+                'pm_text' => ['Column' => 'Body', 'Filter' => 'bbPressTrim']
+            ];
             $this->export(
                 'ConversationMessage',
                 'select *, from_unixtime(sent_on) as DateInserted
@@ -238,10 +238,10 @@ class BbPress1 extends Source
                     $this->export('UserConversation', 'select * from bbpmto');
                 }
             } else {
-                $conUser_Map = array(
+                $conUser_Map = [
                     'pm_thread' => 'ConversationID',
                     'pm_from' => 'UserID'
-                );
+                ];
                 $this->export(
                     'UserConversation',
                     'select distinct

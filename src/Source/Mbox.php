@@ -41,9 +41,9 @@ class Mbox extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'mbox' => array('Subject', 'Sender', 'Date', 'Body', 'Folder')
-    );
+    public array $sourceTables = [
+        'mbox' => ['Subject', 'Sender', 'Date', 'Body', 'Folder']
+    ];
 
     /**
      * Forum-specific export format.
@@ -94,7 +94,7 @@ class Mbox extends Source
      */
     protected function users(): void
     {
-        $user_Map = array();
+        $user_Map = [];
         $this->export(
             'User',
             "select u.*,
@@ -109,7 +109,7 @@ class Mbox extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array();
+        $category_Map = [];
         $this->export(
             'Category',
             "select * from :_mbox_category",
@@ -121,9 +121,9 @@ class Mbox extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'PostID' => 'DiscussionID'
-        );
+        ];
         $this->export(
             'Discussion',
             "select p.PostID, p.DateInserted, p.Name, p.Body, p.InsertUserID, p.CategoryID, 'Html' as Format
@@ -136,9 +136,9 @@ class Mbox extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'PostID' => 'CommentID'
-        );
+        ];
         $this->export(
             'Comment',
             "select p.*, 'Html' as Format
@@ -158,7 +158,7 @@ class Mbox extends Source
         $result = $this->query('select Sender from :_mbox group by Sender');
 
         // Users, pt 1: Build ref array; Parse name & email out - strip quotes, <, >
-        $users = array();
+        $users = [];
         while ($row = $result->nextResultRow()) {
             // Most senders are "Name <Email>"
             $nameParts = explode('<', trim($row['Sender'], '"'));
@@ -202,7 +202,7 @@ class Mbox extends Source
         );
         $result = $this->query('select Folder from :_mbox group by Folder');
         // Parse name out & build ref array
-        $categories = array();
+        $categories = [];
         while ($row = $result->nextResultRow()) {
             $this->query(
                 'insert into :_mbox_category (Name)
@@ -245,7 +245,7 @@ class Mbox extends Source
         $result = $this->query(
             'select PostID from (select * from :_mbox_post order by DateInserted asc) x group by Name'
         );
-        $discussions = array();
+        $discussions = [];
         while ($row = $result->nextResultRow()) {
             $discussions[] = $row['PostID'];
         }

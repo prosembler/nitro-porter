@@ -50,13 +50,13 @@ class EsoTalk extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'memberId' => 'UserID',
             'username' => 'Name',
             'email' => 'Email',
             'confirmed' => 'Verified',
             'password' => 'Password',
-        );
+        ];
         $this->export(
             'User',
             "select u.*, 'crypt' as HashMethod,
@@ -72,10 +72,10 @@ class EsoTalk extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'groupId' => 'RoleID',
             'name' => 'Name',
-        );
+        ];
         $this->export(
             'Role',
             "select groupId, name
@@ -86,10 +86,10 @@ class EsoTalk extends Source
         );
 
         // User Role.
-        $userRole_Map = array(
+        $userRole_Map = [
             'memberId' => 'UserID',
             'groupId' => 'RoleID',
-        );
+        ];
         // Create fake 'member' and 'administrator' roles to account for them being set separately on member table.
         $this->export(
             'UserRole',
@@ -107,7 +107,7 @@ class EsoTalk extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'channelId' => 'CategoryID',
             'title' => 'Name',
             'slug' => 'UrlCode',
@@ -115,7 +115,7 @@ class EsoTalk extends Source
             'parentId' => 'ParentCategoryID',
             'countConversations' => 'CountDiscussions',
             //'countPosts' => 'CountComments',
-        );
+        ];
         $this->export(
             'Category',
             "select * from :_channel c",
@@ -127,9 +127,9 @@ class EsoTalk extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'conversationId' => 'DiscussionID',
-            'title' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'channelId' => 'CategoryID',
             'memberId' => 'InsertUserID',
             'sticky' => 'Announce',
@@ -137,7 +137,7 @@ class EsoTalk extends Source
             //'countPosts' => 'CountComments',
             'lastPostMemberId' => 'LastCommentUserID',
             'content' => 'Body',
-        );
+        ];
         // The body of the OP is in the post table.
         $this->export(
             'Discussion',
@@ -167,13 +167,13 @@ class EsoTalk extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'postId' => 'CommentID',
             'conversationId' => 'DiscussionID',
             'content' => 'Body',
             'memberId' => 'InsertUserID',
             'editMemberId' => 'UpdateUserID',
-        );
+        ];
         // Now we need to omit the comments we used as the OP.
         $this->export(
             'Comment',
@@ -198,10 +198,10 @@ class EsoTalk extends Source
      */
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = array(
+        $userDiscussion_Map = [
             'id' => 'UserID',
             'conversationId' => 'DiscussionID',
-        );
+        ];
         $this->export(
             'UserDiscussion',
             "select *
@@ -215,11 +215,11 @@ class EsoTalk extends Source
      */
     protected function conversations(): void
     {
-        $conversation_map = array(
+        $conversation_map = [
             'conversationId' => 'ConversationID',
             'countPosts' => 'CountMessages',
             'startMemberId' => 'InsertUserID',
-        );
+        ];
         $this->export(
             'Conversation',
             "select p.*,
@@ -232,11 +232,11 @@ class EsoTalk extends Source
             $conversation_map
         );
 
-        $userConversation_map = array(
+        $userConversation_map = [
             'conversationId' => 'ConversationID',
             'memberId' => 'UserID',
 
-        );
+        ];
         $this->export(
             'UserConversation',
             "select distinct a.fromMemberId as memberId, a.type, c.private, c.conversationId from :_activity a
@@ -249,13 +249,13 @@ class EsoTalk extends Source
             $userConversation_map
         );
 
-        $userConversationMessage_map = array(
+        $userConversationMessage_map = [
             'postId' => 'MessageID',
             'conversationId' => 'ConversationID',
             'content' => 'Body',
             'memberId' => 'InsertUserID',
 
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select p.*,

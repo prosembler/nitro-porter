@@ -138,11 +138,11 @@ class UserVoice extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
-            'LastActivity' => array('Column' => 'DateLastActive'),
-            'UserName' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
-            'CreateDate' => array('Column' => 'DateInserted'),
-        );
+        $user_Map = [
+            'LastActivity' => ['Column' => 'DateLastActive'],
+            'UserName' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'CreateDate' => ['Column' => 'DateInserted'],
+        ];
         $this->export(
             'User',
             "select u.*,
@@ -160,10 +160,10 @@ class UserVoice extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
-            'RoleId' => array('Column' => 'RoleID', 'Filter' => array($this, 'roleIDConverter')),
+        $role_Map = [
+            'RoleId' => ['Column' => 'RoleID', 'Filter' => [$this, 'roleIDConverter']],
             'RoleName' => 'Name'
-        );
+        ];
         $this->export(
             'Role',
             "select * from aspnet_Roles",
@@ -171,9 +171,9 @@ class UserVoice extends Source
         );
 
         // User Role.
-        $userRole_Map = array(
-            'RoleId' => array('Column' => 'RoleID', 'Filter' => array($this, 'roleIDConverter')),
-        );
+        $userRole_Map = [
+            'RoleId' => ['Column' => 'RoleID', 'Filter' => [$this, 'roleIDConverter']],
+        ];
         $this->export(
             'UserRole',
             "select u.UserID, ur.RoleId
@@ -187,12 +187,12 @@ class UserVoice extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'SectionID' => 'CategoryID',
             'ParentID' => 'ParentCategoryID',
             'SortOrder' => 'Sort',
             'DateCreated' => 'DateInserted'
-        );
+        ];
         $this->export(
             'Category',
             "select s.* from :_Sections s",
@@ -204,7 +204,7 @@ class UserVoice extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'ThreadID' => 'DiscussionID',
             'SectionID' => 'CategoryID',
             'UserID' => 'InsertUserID',
@@ -215,10 +215,10 @@ class UserVoice extends Source
             'IsLocked' => 'Closed',
             'MostRecentPostAuthorID' => 'LastCommentUserID',
             'MostRecentPostID' => 'LastCommentID',
-            'Subject' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
-            'Body' => array('Column' => 'Body', 'Filter' => 'HTMLDecoder'),
+            'Subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'Body' => ['Column' => 'Body', 'Filter' => 'HTMLDecoder'],
             'IPAddress' => 'InsertIPAddress'
-        );
+        ];
         $this->export(
             'Discussion',
             "select t.*,
@@ -238,14 +238,14 @@ class UserVoice extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'PostID' => 'CommentID',
             'ThreadID' => 'DiscussionID',
             'UserID' => 'InsertUserID',
             'IPAddress' => 'InsertIPAddress',
-            'Body' => array('Column' => 'Body', 'Filter' => 'HTMLDecoder'),
+            'Body' => ['Column' => 'Body', 'Filter' => 'HTMLDecoder'],
             'PostDate' => 'DateInserted'
-        );
+        ];
         $this->export(
             'Comment',
             "select p.* from :_Posts p where SortOrder > 1",
@@ -257,9 +257,9 @@ class UserVoice extends Source
      */
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = array(
+        $userDiscussion_Map = [
             'ThreadID' => 'DiscussionID'
-        );
+        ];
         $this->export(
             'UserDiscussion',
             "select t.*,

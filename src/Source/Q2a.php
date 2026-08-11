@@ -30,12 +30,12 @@ class Q2a extends Source
     ];
 
     /** @var array[] List of required tables. */
-    public array $sourceTables = array(
-        'blobs' => array(),
-        'categories' => array(),
-        'posts' => array(),
-        'users' => array(),
-    );
+    public array $sourceTables = [
+        'blobs' => [],
+        'categories' => [],
+        'posts' => [],
+        'users' => [],
+    ];
 
     /**
      * Main export process.
@@ -93,12 +93,12 @@ class Q2a extends Source
     protected function discussions(): void
     {
         $this->export('Category', "select 1 as CategoryID, 'Legacy' as Name");
-        $discussion_Map = array(
+        $discussion_Map = [
             'postid' => 'DiscussionID',
             'categoryid' => 'CategoryID',
             'userid' => 'InsertUserID',
-            'Subject' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
-        );
+            'Subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+        ];
         $this->export(
             'Discussion',
             "select

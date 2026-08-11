@@ -40,8 +40,8 @@ class PhpBb3 extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'users' => array(
+    public array $sourceTables = [
+        'users' => [
             'user_id',
             'username',
             'user_password',
@@ -51,11 +51,11 @@ class PhpBb3 extends Source
             'user_regdate',
             'user_lastvisit',
             'user_regdate'
-        ),
-        'groups' => array('group_id', 'group_name', 'group_desc'),
-        'user_group' => array('user_id', 'group_id'),
-        'forums' => array('forum_id', 'forum_name', 'forum_desc', 'left_id', 'parent_id'),
-        'topics' => array(
+        ],
+        'groups' => ['group_id', 'group_name', 'group_desc'],
+        'user_group' => ['user_id', 'group_id'],
+        'forums' => ['forum_id', 'forum_name', 'forum_desc', 'left_id', 'parent_id'],
+        'topics' => [
             'topic_id',
             'forum_id',
             'topic_poster',
@@ -67,8 +67,8 @@ class PhpBb3 extends Source
             'topic_time',
             'topic_last_post_time',
             'topic_last_post_time'
-        ),
-        'posts' => array(
+        ],
+        'posts' => [
             'post_id',
             'topic_id',
             'post_text',
@@ -76,20 +76,20 @@ class PhpBb3 extends Source
             'post_edit_user',
             'post_time',
             'post_edit_time'
-        ),
-        'bookmarks' => array('user_id', 'topic_id')
-    );
+        ],
+        'bookmarks' => ['user_id', 'topic_id']
+    ];
 
     protected function usernotes(): void
     {
         $corruptedRecords = [];
-        $userNote_Map = array(
-            'log_id' => array('Column' => 'UserNoteID', 'Type' => 'int'),
-            'user_id' => array('Column' => 'InsertUserID', 'Type' => 'int'),
-            'reportee_id' => array('Column' => 'UserID', 'Type' => 'int'),
-            'log_ip' => array('Column' => 'InsertIPAddress', 'Type' => 'varchar(15)'),
-            'log_time' => array('Column' => 'DateInserted', 'Type' => 'datetime', 'Filter' => 'timestampToDate'),
-            'log_operation' => array(
+        $userNote_Map = [
+            'log_id' => ['Column' => 'UserNoteID', 'Type' => 'int'],
+            'user_id' => ['Column' => 'InsertUserID', 'Type' => 'int'],
+            'reportee_id' => ['Column' => 'UserID', 'Type' => 'int'],
+            'log_ip' => ['Column' => 'InsertIPAddress', 'Type' => 'varchar(15)'],
+            'log_time' => ['Column' => 'DateInserted', 'Type' => 'datetime', 'Filter' => 'timestampToDate'],
+            'log_operation' => [
                 'Column' => 'Type',
                 'Type' => 'varchar(10)',
                 'Filter' => function ($value) {
@@ -100,9 +100,9 @@ class PhpBb3 extends Source
                             return 'note';
                     }
                 }
-            ),
-            'format' => array('Column' => 'Format', 'Type' => 'varchar(20)'),
-            'log_data' => array(
+            ],
+            'format' => ['Column' => 'Format', 'Type' => 'varchar(20)'],
+            'log_data' => [
                 'Column' => 'Body',
                 'Type' => 'text',
                 'Filter' => function ($value, $field, $row) use (&$corruptedRecords) {
@@ -114,8 +114,8 @@ class PhpBb3 extends Source
                     }
                     return array_pop($unserializedValue);
                 }
-            )
-        );
+            ]
+        ];
         $this->export(
             'UserNote',
             "select l.*, 'Text' as format
@@ -187,17 +187,17 @@ class PhpBb3 extends Source
 
         $cdn = ''; //$this->param('cdn', '');
 
-        $user_Map = array(
+        $user_Map = [
             'user_id' => 'UserID',
-            'username' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'user_password' => 'Password',
             'user_email' => 'Email',
             //'user_timezone' => 'HourOffset',
-            'user_posts' => array('Column' => 'CountComments', 'Type' => 'int'),
+            'user_posts' => ['Column' => 'CountComments', 'Type' => 'int'],
             'photo' => 'Photo',
             'user_rank' => 'RankID',
             'user_ip' => 'LastIPAddress'
-        );
+        ];
         $this->export(
             'User',
             "select *,
@@ -220,22 +220,22 @@ class PhpBb3 extends Source
 
     protected function ranks(): void
     {
-        $rank_Map = array(
+        $rank_Map = [
             'rank_id' => 'RankID',
-            'level' => array(
+            'level' => [
                 'Column' => 'Level',
                 'Filter' => function ($value) {
                     static $level = 0;
                     $level++;
                     return $level;
                 }
-            ),
+            ],
             'rank_title' => 'Name',
             'title2' => 'Label',
-            'rank_min' => array(
+            'rank_min' => [
                 'Column' => 'Attributes',
                 'Filter' => function ($value, $field, $row) {
-                    $result = array();
+                    $result = [];
                     if ($row['rank_min']) {
                         $result['Criteria']['CountPosts'] = $row['rank_min'];
                     }
@@ -245,8 +245,8 @@ class PhpBb3 extends Source
 
                     return serialize($result);
                 }
-            )
-        );
+            ]
+        ];
         $this->export(
             'Rank',
             "select r.*, r.rank_title as title2, 0 as level
@@ -258,18 +258,18 @@ class PhpBb3 extends Source
 
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'group_id' => 'RoleID',
             'group_name' => 'Name',
             'group_desc' => 'Description'
-        );
+        ];
         $this->export('Role', 'select * from :_groups', $role_Map);
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'user_id' => 'UserID',
             'group_id' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             'select user_id, group_id from :_users
@@ -281,11 +281,11 @@ class PhpBb3 extends Source
 
     protected function signatures(): void
     {
-        $userMeta_Map = array(
+        $userMeta_Map = [
             'user_id' => 'UserID',
             'name' => 'Name',
-            'user_sig' => array('Column' => 'Value', 'Filter' => array($this, 'removeBBCodeUIDs'))
-        );
+            'user_sig' => ['Column' => 'Value', 'Filter' => [$this, 'removeBBCodeUIDs']]
+        ];
         $this->export(
             'UserMeta',
             "select
@@ -309,12 +309,12 @@ class PhpBb3 extends Source
 
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'forum_id' => 'CategoryID',
-            'forum_name' => array('Column' => 'Name', 'Filter' => 'HTMLDecoder'),
+            'forum_name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
             'forum_desc' => 'Description',
             'left_id' => 'Sort'
-        );
+        ];
         $this->export(
             'Category',
             "select *,
@@ -326,16 +326,16 @@ class PhpBb3 extends Source
 
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'topic_poster' => 'InsertUserID',
             'topic_title' => 'Name',
             'Format' => 'Format',
             'topic_views' => 'CountViews',
-            'topic_first_post_id' => array('Column' => 'FirstCommentID', 'Type' => 'int'),
+            'topic_first_post_id' => ['Column' => 'FirstCommentID', 'Type' => 'int'],
             'type' => 'Type'
-        );
+        ];
         $this->export(
             'Discussion',
             "select t.*,
@@ -353,15 +353,15 @@ class PhpBb3 extends Source
 
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
-            'post_text' => array('Column' => 'Body', 'Filter' => array($this, 'removeBBCodeUIDs')),
+            'post_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
             'Format' => 'Format',
             'poster_id' => 'InsertUserID',
-            'poster_ip' => array('Column' => 'InsertIPAddress', 'Filter' => 'forceIP4'),
+            'poster_ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'forceIP4'],
             'post_edit_user' => 'UpdateUserID'
-        );
+        ];
         $this->export(
             'Comment',
             "select p.*,
@@ -487,15 +487,15 @@ class PhpBb3 extends Source
             set pm.groupid = g.groupid;"
         );
 
-        $conversation_Map = array(
+        $conversation_Map = [
             'msg_id' => 'ConversationID',
             'author_id' => 'InsertUserID',
-            'RealSubject' => array(
+            'RealSubject' => [
                 'Column' => 'Subject',
                 'Type' => 'varchar(250)',
                 'Filter' => 'HTMLDecoder'
-            )
-        );
+            ]
+        ];
         $this->export(
             'Conversation',
             "select pm.*,
@@ -507,12 +507,12 @@ class PhpBb3 extends Source
         );
 
         // Coversation Messages.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'msg_id' => 'MessageID',
             'groupid' => 'ConversationID',
-            'message_text' => array('Column' => 'Body', 'Filter' => array($this, 'removeBBCodeUIDs')),
+            'message_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
             'author_id' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select pm.*,
@@ -525,10 +525,10 @@ class PhpBb3 extends Source
         );
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'userid' => 'UserID',
             'groupid' => 'ConversationID'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select g.groupid, t.userid
@@ -545,14 +545,14 @@ class PhpBb3 extends Source
 
     protected function polls(): void
     {
-        $poll_Map = array(
+        $poll_Map = [
             'poll_id' => 'PollID',
             'poll_title' => 'Name',
             'topic_id' => 'DiscussionID',
-            'topic_time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'topic_poster' => 'InsertUserID',
             'anonymous' => 'Anonymous'
-        );
+        ];
         $this->export(
             'Poll',
             "select distinct
@@ -564,16 +564,16 @@ class PhpBb3 extends Source
             $poll_Map
         );
 
-        $pollOption_Map = array(
+        $pollOption_Map = [
             'id' => 'PollOptionID',
             'poll_option_id' => 'Sort',
             'topic_id' => 'PollID',
             'poll_option_text' => 'Body',
             'format' => 'Format',
             'poll_option_total' => 'CountVotes',
-            'topic_time' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'topic_poster' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'PollOption',
             "select po.*,
@@ -586,10 +586,10 @@ class PhpBb3 extends Source
             $pollOption_Map
         );
 
-        $pollVote_Map = array(
+        $pollVote_Map = [
             'vote_user_id' => 'UserID',
             'id' => 'PollOptionID'
-        );
+        ];
         $this->export(
             'PollVote',
             "select v.*, v.poll_option_id * 1000000 + v.topic_id as id

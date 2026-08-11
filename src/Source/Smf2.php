@@ -36,15 +36,15 @@ class Smf2 extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'boards' => array(),
-        'messages' => array(),
-        'personal_messages' => array(),
-        'pm_recipients' => array(),
-        'categories' => array('id_cat', 'name', 'cat_order'),
-        'membergroups' => array(),
-        'members' => array('id_member', 'member_name', 'passwd', 'email_address', 'date_registered')
-    );
+    public array $sourceTables = [
+        'boards' => [],
+        'messages' => [],
+        'personal_messages' => [],
+        'pm_recipients' => [],
+        'categories' => ['id_cat', 'name', 'cat_order'],
+        'membergroups' => [],
+        'members' => ['id_member', 'member_name', 'passwd', 'email_address', 'date_registered']
+    ];
 
     /**
      * Forum-specific export format.
@@ -64,7 +64,7 @@ class Smf2 extends Source
     public function decodeNumericEntity(string $text): array|false|string|null
     {
         if (function_exists('mb_decode_numericentity')) {
-            $convmap = array(0x0, 0x2FFFF, 0, 0xFFFF);
+            $convmap = [0x0, 0x2FFFF, 0, 0xFFFF];
             return mb_decode_numericentity($text, $convmap, 'UTF-8');
         } else {
             return $text;
@@ -113,7 +113,7 @@ class Smf2 extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'id_member' => 'UserID',
             'member_name' => 'Name',
             'password' => 'Password',
@@ -127,7 +127,7 @@ class Smf2 extends Source
             'DateFirstVisit' => 'DateFirstVisit',
             'DateLastActive' => 'DateLastActive',
             'DateUpdated' => 'DateUpdated'
-        );
+        ];
         $this->export(
             'User',
             " select m.*,
@@ -147,17 +147,17 @@ class Smf2 extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'id_group' => 'RoleID',
             'group_name' => 'Name'
-        );
+        ];
         $this->export('Role', "select * from :_membergroups", $role_Map);
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'id_member' => 'UserID',
             'id_group' => 'RoleID'
-        );
+        ];
         $this->export('UserRole', "select * from :_members", $userRole_Map);
     }
 
@@ -165,9 +165,9 @@ class Smf2 extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
-            'Name' => array('Column' => 'Name', 'Filter' => array($this, 'decodeNumericEntity')),
-        );
+        $category_Map = [
+            'Name' => ['Column' => 'Name', 'Filter' => [$this, 'decodeNumericEntity']],
+        ];
 
         $this->export(
             'Category',
@@ -194,11 +194,11 @@ class Smf2 extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'id_topic' => 'DiscussionID',
-            'subject' => array('Column' => 'Name', 'Filter' => array($this, 'decodeNumericEntity')),
+            'subject' => ['Column' => 'Name', 'Filter' => [$this, 'decodeNumericEntity']],
             //,'Filter'=>'bb2html'),
-            'body' => array('Column' => 'Body'),
+            'body' => ['Column' => 'Body'],
             //,'Filter'=>'bb2html'),
             'Format' => 'Format',
             'id_board' => 'CategoryID',
@@ -213,7 +213,7 @@ class Smf2 extends Source
             'numViews' => 'CountViews',
             'LastCommentUserID' => 'LastCommentUserID',
             'id_last_msg' => 'LastCommentID'
-        );
+        ];
         $this->export(
             'Discussion',
             "select t.*,
@@ -239,14 +239,14 @@ class Smf2 extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'id_msg' => 'CommentID',
             'id_topic' => 'DiscussionID',
             'Format' => 'Format',
-            'body' => array('Column' => 'Body'), //,'Filter'=>'bb2html'),
+            'body' => ['Column' => 'Body'], //,'Filter'=>'bb2html'),
             'id_member' => 'InsertUserID',
             'DateInserted' => 'DateInserted'
-        );
+        ];
         $this->export(
             'Comment',
             "select m.*,
@@ -263,21 +263,21 @@ class Smf2 extends Source
      */
     protected function attachments(): void
     {
-        $media_Map = array(
+        $media_Map = [
             'ID_ATTACH' => 'MediaID',
             'id_msg' => 'ForeignID',
             'size' => 'Size',
             'height' => 'ImageHeight',
             'width' => 'ImageWidth',
-            'extract_mimetype' => array(
+            'extract_mimetype' => [
                 'Column' => 'Type',
                 'Filter' => function ($value, $field, $row) {
                     return $this->getMimeTypeFromFileName($row['Path']);
                 }
-            ),
-            'thumb_path' => array('Column' => 'ThumbPath', 'Filter' => array($this, 'filterThumbnailData')),
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
-        );
+            ],
+            'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
+            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+        ];
         $this->export(
             'Media',
             "select a.*,
@@ -299,12 +299,12 @@ class Smf2 extends Source
      */
     protected function conversations(): void
     {
-        $conversation_Map = array(
+        $conversation_Map = [
             'id_pm_head' => 'ConversationID',
             'subject' => 'Subject',
             'id_member_from' => 'InsertUserID',
             'unixmsgtime' => 'DateInserted',
-        );
+        ];
         $this->export(
             'Conversation',
             "select pm.*,
@@ -313,14 +313,14 @@ class Smf2 extends Source
             $conversation_Map
         );
 
-        $convMsg_Map = array(
+        $convMsg_Map = [
             'id_pm' => 'MessageID',
             'id_pm_head' => 'ConversationID',
             'body' => 'Body',
             'format' => 'Format',
             'id_member_from' => 'InsertUserID',
             'unixmsgtime' => 'DateInserted',
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select pm.*,
@@ -330,11 +330,11 @@ class Smf2 extends Source
             $convMsg_Map
         );
 
-        $userConv_Map = array(
+        $userConv_Map = [
             'id_member2' => 'UserId',
             'id_pm_head' => 'ConversationID',
             'deleted2' => 'Deleted'
-        );
+        ];
         $this->export(
             'UserConversation',
             "(select

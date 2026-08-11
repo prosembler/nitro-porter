@@ -164,9 +164,9 @@ class Drupal7 extends Source
      */
     protected function discussions(): void
     {
-        $discussionMap = array(
-            'Body' => array('Column' => 'Body', 'Filter' => array($this, 'convertBase64Attachments')),
-        );
+        $discussionMap = [
+            'Body' => ['Column' => 'Body', 'Filter' => [$this, 'convertBase64Attachments']],
+        ];
         $this->export(
             'Discussion',
             "select
@@ -198,9 +198,9 @@ class Drupal7 extends Source
      */
     protected function comments(): void
     {
-        $commentMap = array(
-            'Body' => array('Column' => 'Body', 'Filter' => array($this, 'convertBase64Attachments')),
-        );
+        $commentMap = [
+            'Body' => ['Column' => 'Body', 'Filter' => [$this, 'convertBase64Attachments']],
+        ];
         $this->export(
             'Comment',
             "select

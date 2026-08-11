@@ -33,7 +33,7 @@ class Drupal6 extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array();
+    public array $sourceTables = [];
 
     /**
      */
@@ -52,15 +52,15 @@ class Drupal6 extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'uid' => 'UserID',
             'name' => 'Name',
             'Password' => 'Password',
             'mail' => 'Email',
             'photo' => 'Photo',
-            'created' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'login' => array('Column' => 'DateLastActive', 'Filter' => 'timestampToDate')
-        );
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'login' => ['Column' => 'DateLastActive', 'Filter' => 'timestampToDate']
+        ];
         $this->export(
             'User',
             "select u.*,
@@ -77,11 +77,11 @@ class Drupal6 extends Source
      */
     protected function signatures(): void
     {
-        $userMeta_Map = array(
+        $userMeta_Map = [
             'uid' => 'UserID',
             'Name' => 'Name',
             'signature' => 'Value'
-        );
+        ];
         $this->export(
             'UserMeta',
             "select u.*, 'Plugins.Signatures.Sig' as Name
@@ -95,17 +95,17 @@ class Drupal6 extends Source
      */
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'rid' => 'RoleID',
             'name' => 'Name'
-        );
+        ];
         $this->export('Role', "select r.* from :_role r", $role_Map);
 
         // User Role.
-        $userRole_Map = array(
+        $userRole_Map = [
             'uid' => 'UserID',
             'rid' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             "select * from :_users_roles",
@@ -117,12 +117,12 @@ class Drupal6 extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'tid' => 'CategoryID',
             'name' => 'Name',
             'description' => 'description',
             'parent' => 'ParentCategoryID'
-        );
+        ];
         $this->export(
             'Category',
             "select t.*, nullif(h.parent, 0) as parent
@@ -137,16 +137,16 @@ class Drupal6 extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'nid' => 'DiscussionID',
             'title' => 'Name',
             'body' => 'Body',
             'uid' => 'InsertUserID',
-            'created' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
-            'DateUpdated' => array('Column' => 'DateUpdated', 'Filter' => 'timestampToDate'),
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'DateUpdated' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
             'sticky' => 'Announce',
             'tid' => 'CategoryID'
-        );
+        ];
         $this->export(
             'Discussion',
             "select n.*, nullif(n.changed, n.created) as DateUpdated, f.tid, r.body
@@ -164,13 +164,13 @@ class Drupal6 extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'cid' => 'CommentID',
             'uid' => 'InsertUserID',
-            'body' => array('Column' => 'Body'),
+            'body' => ['Column' => 'Body'],
             'hostname' => 'InsertIPAddress',
-            'created' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate')
-        );
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate']
+        ];
         $this->export(
             'Comment',
             "select
@@ -196,11 +196,11 @@ class Drupal6 extends Source
      */
     protected function conversations(): void
     {
-        $conversation_Map = array(
+        $conversation_Map = [
             'thread_id' => 'ConversationID',
             'author' => 'InsertUserID',
             'title' => 'Subject',
-        );
+        ];
         $this->export(
             'Conversation',
             "select
@@ -216,11 +216,11 @@ class Drupal6 extends Source
         );
 
         // Conversation Messages.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'mid' => 'MessageID',
             'thread_id' => 'ConversationID',
             'author' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select
@@ -236,10 +236,10 @@ class Drupal6 extends Source
         );
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'uid' => 'UserID',
             'thread_id' => 'ConversationID'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select

@@ -33,8 +33,8 @@ class PhpBb2 extends Source
     /**
      * @var array Required tables => columns
      */
-    public array $sourceTables = array(
-        'users' => array(
+    public array $sourceTables = [
+        'users' => [
             'user_id',
             'username',
             'user_password',
@@ -43,11 +43,11 @@ class PhpBb2 extends Source
             'user_posts',
             'user_regdate',
             'user_lastvisit'
-        ),
-        'groups' => array('group_id', 'group_name', 'group_description'),
-        'user_group' => array('user_id', 'group_id'),
-        'forums' => array('forum_id', 'forum_name', 'forum_desc', 'forum_order'),
-        'topics' => array(
+        ],
+        'groups' => ['group_id', 'group_name', 'group_description'],
+        'user_group' => ['user_id', 'group_id'],
+        'forums' => ['forum_id', 'forum_name', 'forum_desc', 'forum_order'],
+        'topics' => [
             'topic_id',
             'forum_id',
             'topic_poster',
@@ -57,18 +57,18 @@ class PhpBb2 extends Source
             'topic_status',
             'topic_type',
             'topic_time'
-        ),
-        'posts' => array('post_id', 'topic_id', 'poster_id', 'post_time', 'post_edit_time'),
-        'posts_text' => array('post_id', 'post_text'),
-        'privmsgs' => array(
+        ],
+        'posts' => ['post_id', 'topic_id', 'poster_id', 'post_time', 'post_edit_time'],
+        'posts_text' => ['post_id', 'post_text'],
+        'privmsgs' => [
             'privmsgs_id',
             'privmsgs_subject',
             'privmsgs_from_userid',
             'privmsgs_to_userid',
             'privmsgs_date'
-        ),
-        'privmsgs_text' => array('privmsgs_text_id', 'privmsgs_bbcode_uid', 'privmsgs_text')
-    );
+        ],
+        'privmsgs_text' => ['privmsgs_text_id', 'privmsgs_bbcode_uid', 'privmsgs_text']
+    ];
 
     public function removeBBCodeUIDs(string $value, string $field, array $row): array|string
     {
@@ -101,14 +101,14 @@ class PhpBb2 extends Source
 
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'user_id' => 'UserID',
             'username' => 'Name',
             'user_password' => 'Password',
             'user_email' => 'Email',
             //'user_timezone' => 'HourOffset',
-            'user_posts' => array('Column' => 'CountComments', 'Type' => 'int')
-        );
+            'user_posts' => ['Column' => 'CountComments', 'Type' => 'int']
+        ];
         $this->export(
             'User',
             "select *,
@@ -122,19 +122,19 @@ class PhpBb2 extends Source
 
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'group_id' => 'RoleID',
             'group_name' => 'Name',
             'group_description' => 'Description'
-        );
+        ];
         // Skip single-user groups
         $this->export('Role', 'select * from :_groups where group_single_user = 0', $role_Map);
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'user_id' => 'UserID',
             'group_id' => 'RoleID'
-        );
+        ];
         // Skip pending memberships
         $this->export(
             'UserRole',
@@ -147,12 +147,12 @@ class PhpBb2 extends Source
 
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'id' => 'CategoryID',
             'cat_title' => 'Name',
             'description' => 'Description',
             'parentid' => 'ParentCategoryID'
-        );
+        ];
         $this->export(
             'Category',
             "select
@@ -177,13 +177,13 @@ class PhpBb2 extends Source
 
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'topic_poster' => 'InsertUserID',
             'topic_title' => 'Name',
             'topic_views' => 'CountViews'
-        );
+        ];
         $this->export(
             'Discussion',
             "select t.*,
@@ -198,12 +198,12 @@ class PhpBb2 extends Source
 
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
-            'post_text' => array('Column' => 'Body', 'Filter' => array($this, 'removeBBCodeUIDs')),
+            'post_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
             'poster_id' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'Comment',
             "select p.*,
@@ -311,15 +311,15 @@ class PhpBb2 extends Source
         );
 
         // Conversations.
-        $conversation_Map = array(
+        $conversation_Map = [
             'privmsgs_id' => 'ConversationID',
             'privmsgs_from_userid' => 'InsertUserID',
-            'RealSubject' => array(
+            'RealSubject' => [
                 'Column' => 'Subject',
                 'Type' => 'varchar(250)',
                 'Filter' => 'HTMLDecoder'
-            )
-        );
+            ]
+        ];
 
         $this->export(
             'Conversation',
@@ -333,12 +333,12 @@ class PhpBb2 extends Source
         );
 
         // Coversation Messages.
-        $conversationMessage_Map = array(
+        $conversationMessage_Map = [
             'privmsgs_id' => 'MessageID',
             'groupid' => 'ConversationID',
-            'privmsgs_text' => array('Column' => 'Body', 'Filter' => array($this, 'removeBBCodeUIDs')),
+            'privmsgs_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
             'privmsgs_from_userid' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'ConversationMessage',
             "select pm.*,
@@ -356,10 +356,10 @@ class PhpBb2 extends Source
         );
 
         // User Conversation.
-        $userConversation_Map = array(
+        $userConversation_Map = [
             'userid' => 'UserID',
             'groupid' => 'ConversationID'
-        );
+        ];
         $this->export(
             'UserConversation',
             "select

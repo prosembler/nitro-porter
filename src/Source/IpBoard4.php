@@ -160,8 +160,8 @@ class IpBoard4 extends Source
     protected function discussions(): void
     {
         $descriptionSQL = 'p.post';
-        $hasTopicDescription = ($this->hasInputSchema('forums_topics', array('description')) === true);
-        if ($hasTopicDescription || $this->hasInputSchema('forums_posts', array('description')) === true) {
+        $hasTopicDescription = ($this->hasInputSchema('forums_topics', ['description']) === true);
+        if ($hasTopicDescription || $this->hasInputSchema('forums_posts', ['description']) === true) {
             $description = ($hasTopicDescription) ? 't.description' : 'p.description';
             $descriptionSQL = "case
                 when $description <> '' and p.post is not null

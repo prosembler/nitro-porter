@@ -7,8 +7,8 @@
 /**
  * Record of all keys in the Porter format.
  */
-return array(
-    'Activity' => array(
+return [
+    'Activity' => [
         'ActivityID' => 'int',
         'ActivityTypeID' => 'int',
         'NotifyUserID' => 'int',
@@ -16,28 +16,28 @@ return array(
         'RegardingUserID' => 'int',
         'RecordID' => 'int',
         'InsertUserID' => 'int',
-    ),
-    'ActivityComment' => array(
+    ],
+    'ActivityComment' => [
         'ActivityCommentID' => 'int',
         'ActivityID' => 'int',
-    ),
-    'ActivityType' => array(
+    ],
+    'ActivityType' => [
         'ActivityTypeID' => 'int',
-    ),
-    'Attachment' => array(
+    ],
+    'Attachment' => [
         'AttachmentID' => 'int',
         'ForeignID' => 'varchar(50)',
         'ForeignUserID' => 'int',
         'SourceID' => 'varchar(32)',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int',
-    ),
-    'Badge' => array(
+    ],
+    'Badge' => [
         'BadgeID' => 'int',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int',
-    ),
-    'Category' => array(
+    ],
+    'Category' => [
         'CategoryID' => 'int',
         'ParentCategoryID' => 'int',
         'PointsCategoryID' => 'int',
@@ -45,8 +45,8 @@ return array(
         'UpdateUserID' => 'int',
         'LastCommentID' => 'int',
         'LastDiscussionID' => 'int',
-    ),
-    'Comment' => array(
+    ],
+    'Comment' => [
         'CommentID' => 'int',
         'DiscussionID' => 'int',
         "parentRecordID" => "int",
@@ -54,8 +54,8 @@ return array(
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int',
         'DeleteUserID' => 'int',
-    ),
-    'Conversation' => array(
+    ],
+    'Conversation' => [
         'ConversationID' => 'int',
         'ForeignID' => 'varchar(40)',
         'FirstMessageID' => 'int',
@@ -63,13 +63,13 @@ return array(
         'UpdateUserID' => 'int',
         'LastMessageID' => 'int',
         'RegardingID' => 'int'
-    ),
-    'ConversationMessage' => array(
+    ],
+    'ConversationMessage' => [
         'MessageID' => 'int',
         'ConversationID' => 'int',
         'InsertUserID' => 'int',
-    ),
-    'Discussion' => array(
+    ],
+    'Discussion' => [
         'DiscussionID' => 'int',
         'ForeignID' => 'varchar(200)',
         'CategoryID' => 'int',
@@ -81,133 +81,133 @@ return array(
         'LastCommentUserID' => 'int',
         'RegardingID' => 'int',
         'GroupID' => 'int',
-    ),
-    'Event' => array(
+    ],
+    'Event' => [
         'EventID' => 'int',
         'ParentRecordType' => 'varchar(25)',
         'ParentRecordID' => 'int',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int',
         'GroupID' => 'int'
-    ),
-    'Group' => array(
+    ],
+    'Group' => [
         'GroupID' => 'int',
         'CategoryID' => 'int',
         'LastCommentID' => 'int',
         'LastDiscussionID' => 'int',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int',
-    ),
-    'GroupApplicant' => array(
+    ],
+    'GroupApplicant' => [
         'GroupApplicantID' => 'int',
         'GroupID' => 'int',
         'UserID' => 'int',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int'
-    ),
-    'Media' => array( // Attachments
+    ],
+    'Media' => [ // Attachments
         'MediaID' => 'int',
         'InsertUserID' => 'int',
         'ForeignID' => 'int',
         'ForeignTable' => 'varchar(100)',
-    ),
-    'Poll' => array(
+    ],
+    'Poll' => [
         'PollID' => 'int',
         'DiscussionID' => 'int',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int'
-    ),
-    'PollOption' => array(
+    ],
+    'PollOption' => [
         'PollOptionID' => 'int',
         'PollID' => 'int',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int'
-    ),
-    'PollVote' => array(
+    ],
+    'PollVote' => [
         'UserID' => 'int',
         'PollOptionID' => 'int'
-    ),
-    'Rank' => array(
+    ],
+    'Rank' => [
         'RankID' => 'int',
-    ),
-    'ReactionType' => array(
+    ],
+    'ReactionType' => [
         'TagID' => 'int',
-    ),
-    'Role' => array(
+    ],
+    'Role' => [
         'RoleID' => 'int',
-    ),
-    'Status' => array( // Ideation
+    ],
+    'Status' => [ // Ideation
         'StatusID' => 'int',
         'TagID' => 'int',
-    ),
-    'Tag' => array(
+    ],
+    'Tag' => [
         'TagID' => 'int',
         'InsertUserID' => 'int',
         'CategoryID' => 'int',
-    ),
-    'TagDiscussion' => array(
+    ],
+    'TagDiscussion' => [
         'TagID' => 'int',
         'DiscussionID' => 'int',
         'CategoryID' => 'int',
-    ),
-    'User' => array(
+    ],
+    'User' => [
         'UserID' => 'int',
         'InviteUserID' => 'int',
         'RankID' => 'int',
-    ),
-    'UserBadge' => array(
+    ],
+    'UserBadge' => [
         'UserID' => 'int',
         'BadgeID' => 'int',
         'InsertUserID' => 'int'
-    ),
-    'UserCategory' => array(
+    ],
+    'UserCategory' => [
         'UserID' => 'int',
         'CategoryID' => 'int',
-    ),
-    'UserComment' => array(
+    ],
+    'UserComment' => [
         'UserID' => 'int',
         'CommentID' => 'int',
-    ),
-    'UserConversation' => array(
+    ],
+    'UserConversation' => [
         'UserID' => 'int',
         'ConversationID' => 'int',
         'LastMessageID' => 'int',
-    ),
-    'UserDiscussion' => array(
+    ],
+    'UserDiscussion' => [
         'UserID' => 'int',
         'DiscussionID' => 'int',
-    ),
-    'UserEvent' => array(
+    ],
+    'UserEvent' => [
         'EventID' => 'int',
         'UserID' => 'int',
-    ),
-    'UserGroup' => array(
+    ],
+    'UserGroup' => [
         'UserGroupID' => 'int',
         'GroupID' => 'int',
         'UserID' => 'int',
         'InsertUserID' => 'int',
-    ),
-    'UserMeta' => array(
+    ],
+    'UserMeta' => [
         'UserID' => 'int',
-    ),
-    'UserNote' => array(
+    ],
+    'UserNote' => [
         'UserNoteID' => 'int',
         'UserID' => 'int',
         'RecordID' => 'int',
         'InsertUserID' => 'int',
         'UpdateUserID' => 'int',
-    ),
-    'UserPoints' => array(
+    ],
+    'UserPoints' => [
         'CategoryID' => 'int',
         'UserID' => 'int',
-    ),
-    'UserRole' => array(
+    ],
+    'UserRole' => [
         'UserID' => 'int',
         'RoleID' => 'int'
-    ),
-    'UserTag' => array(
+    ],
+    'UserTag' => [
         'RecordID' => 'int',
         'TagID' => 'int',
         'UserID' => 'int',
-    ),
-);
+    ],
+];

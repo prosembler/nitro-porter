@@ -7,8 +7,8 @@
 /**
  * Defines acceptable data fields for the intermediary data map.
  */
-return array(
-    'Activity' => array(
+return [
+    'Activity' => [
         'ActivityID' => 'int',
         'ActivityTypeID' => 'int',
         'NotifyUserID' => 'int',
@@ -28,8 +28,8 @@ return array(
         'Notified' => 'tinyint',
         'Emailed' => 'tinyint',
         'Data' => 'text'
-    ),
-    'ActivityComment' => array(
+    ],
+    'ActivityComment' => [
         'ActivityCommentID' => 'int',
         'ActivityID' => 'int',
         'Body' => 'text',
@@ -37,8 +37,8 @@ return array(
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
         //'InsertIPAddress' => 'varchar(100)'
-    ),
-    'ActivityType' => array(
+    ],
+    'ActivityType' => [
         'ActivityTypeID' => 'int',
         'Name' => 'varchar(20)',
         'AllowComments' => 'tinyint',
@@ -48,7 +48,7 @@ return array(
         'RouteCode' => 'varchar(255)',
         'Notify' => 'tinyint',
         'Public' => 'tinyint'
-    ),
+    ],
     /*'AnalyticsLocal' => array(
         'TimeSlot' => 'varchar(8)',
         'Views' => 'int',
@@ -95,7 +95,7 @@ return array(
         'insertUserID' => 'int',
         'dateInserted' => 'datetime',
     ),*/
-    'Attachment' => array(
+    'Attachment' => [
         'AttachmentID' => 'int',
         'Type' => 'varchar(64)',
         'ForeignID' => 'varchar(50)',
@@ -110,8 +110,8 @@ return array(
         'DateUpdated' => 'datetime',
         'UpdateUserID' => 'int',
         'UpdateIPAddress' => 'varchar(100)'
-    ),
-    'Badge' => array(
+    ],
+    'Badge' => [
         'BadgeID' => 'int',
         'Name' => 'varchar(64)',
         'Slug' => 'varchar(32)',
@@ -132,7 +132,7 @@ return array(
         'Class' => 'varchar(20)',
         'Level' => 'smallint',
         'Attributes' => 'text'
-    ),
+    ],
     /*'Ban' => array(
         'BanID' => 'int',
         //'BanType' => array('IPAddress','Name','Email'),
@@ -147,7 +147,7 @@ return array(
         'DateUpdated' => 'datetime',
         'UpdateIPAddress' => 'varchar(100)'
     ),*/
-    'Category' => array(
+    'Category' => [
         'CategoryID' => 'int',
         'ParentCategoryID' => 'int',
         'TreeLeft' => 'int',
@@ -180,8 +180,8 @@ return array(
         'AllowGroups' => 'tinyint',
         'IdeationType' => 'varchar(255)', // up, up-down
         'Score' => 'float',
-    ),
-    'Comment' => array(
+    ],
+    'Comment' => [
         'CommentID' => 'int',
         'DiscussionID' => 'int',
         "parentRecordType" => "varchar(10)",
@@ -201,8 +201,8 @@ return array(
         'Score' => 'float',
         'Attributes' => 'text', // Vanilla serialized Reactions here for point-in-time reference. See: UserTag.
         'QnA' => 'varchar(255)', // 'Accepted', 'Rejected'
-    ),
-    'Conversation' => array(
+    ],
+    'Conversation' => [
         'ConversationID' => 'int',
         'Type' => 'varchar(10)',
         'ForeignID' => 'varchar(40)',
@@ -219,8 +219,8 @@ return array(
         'CountParticipants' => 'int',
         'LastMessageID' => 'int',
         'RegardingID' => 'int'
-    ),
-    'ConversationMessage' => array(
+    ],
+    'ConversationMessage' => [
         'MessageID' => 'int',
         'ConversationID' => 'int',
         'Body' => 'text',
@@ -228,8 +228,8 @@ return array(
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
         //'InsertIPAddress' => 'varbinary'
-    ),
-    'Discussion' => array(
+    ],
+    'Discussion' => [
         'DiscussionID' => 'int',
         'Type' => 'varchar(10)',
         'ForeignID' => 'varchar(200)',
@@ -260,7 +260,7 @@ return array(
         'RegardingID' => 'int',
         'GroupID' => 'int',
         'QnA' => 'varchar(255)', // 'Accepted', 'Answered', 'Rejected', 'Unanswered',
-    ),
+    ],
     /*'Draft' => array(
         'DraftID' => 'int',
         'DiscussionID' => 'int',
@@ -277,13 +277,13 @@ return array(
         'DateInserted' => 'datetime',
         'DateUpdated' => 'datetime'
     ),*/
-    'Emoji' => array(
+    'Emoji' => [
         'EmojiID' => 'int',
         'Name' => 'varchar(100)',
         'InsertUserID' => 'int',
         'Animated' => 'tinyint',
-    ),
-    'Event' => array(
+    ],
+    'Event' => [
         'EventID' => 'int',
         'Name' => 'varchar(255)',
         'Body' => 'text',
@@ -300,8 +300,8 @@ return array(
         'DateUpdated' => 'datetime',
         'UpdateUserID' => 'int',
         'GroupID' => 'int'
-    ),
-    'Group' => array(
+    ],
+    'Group' => [
         'GroupID' => 'int',
         'Name' => 'varchar(255)',
         'Description' => 'text',
@@ -322,8 +322,8 @@ return array(
         'DateUpdated' => 'datetime',
         'UpdateUserID' => 'int',
         'Attributes' => 'text'
-    ),
-    'GroupApplicant' => array(
+    ],
+    'GroupApplicant' => [
         'GroupApplicantID' => 'int',
         'GroupID' => 'int',
         'UserID' => 'int',
@@ -333,7 +333,7 @@ return array(
         'InsertUserID' => 'int',
         'DateUpdated' => 'datetime',
         'UpdateUserID' => 'int'
-    ),
+    ],
     /*'Invitation' => array(
         'InvitationID' => 'int',
         'Email' => 'varchar(200)',
@@ -395,7 +395,7 @@ return array(
         'sourceKnowledgeBaseID' => 'int',
         'targetKnowledgeBaseID' => 'int'
     ),*/
-    'Log' => array(
+    'Log' => [
         'LogID' => 'int',
         //'Operation' => array('Delete','Edit','Spam','Moderate','Pending','Ban','Error'),
         //'RecordType' => array('Discussion','Comment','User','Registration','Activity','ActivityComment',
@@ -414,8 +414,8 @@ return array(
         'CategoryID' => 'int',
         'Data' => 'mediumtext',
         'CountGroup' => 'int'
-    ),
-    'Media' => array( // Attachments
+    ],
+    'Media' => [ // Attachments
         'MediaID' => 'int',
         'Name' => 'text', // "download as" / original filename
         'Path' => 'text', // relative path from 'uploads' root
@@ -436,7 +436,7 @@ return array(
         // Optionally calculated by Target to enable FileTransfer.
         'TargetFullPath' => 'varchar(255)',
         'TargetThumbFullPath' => 'varchar(255)',
-    ),
+    ],
     /*'Message' => array( // Static text boxes, not what you think.
         'MessageID' => 'int',
         'Content' => 'text',
@@ -491,7 +491,7 @@ return array(
         'Vanilla.Comments.Edit' => 'tinyint',
         'Vanilla.Comments.Delete' => 'tinyint'
     ),*/
-    'Poll' => array(
+    'Poll' => [
         'PollID' => 'int',
         'Name' => 'text',
         'DiscussionID' => 'int',
@@ -505,8 +505,8 @@ return array(
         'UpdateUserID' => 'int',
         'AllowMultiple' => 'tinyint',  // Added 2026-07 for Discord
         'DateClosed' => 'datetime', // Added 2026-07 for Discord
-    ),
-    'PollOption' => array(
+    ],
+    'PollOption' => [
         'PollOptionID' => 'int',
         'PollID' => 'int',
         'Body' => 'varchar(255)',
@@ -518,21 +518,21 @@ return array(
         'DateUpdated' => 'datetime',
         'UpdateUserID' => 'int',
         'EmojiID' => 'int', // Added 2026-07 for Discord
-    ),
-    'PollVote' => array(
+    ],
+    'PollVote' => [
         'UserID' => 'int',
         'PollOptionID' => 'int',
         'PollID' => 'int', // Added 2026-07 for Discord
-    ),
-    'Rank' => array(
+    ],
+    'Rank' => [
         'RankID' => 'int',
         'Name' => 'text',
         'Level' => 'smallint',
         'Label' => 'varchar(255)',
         'Body' => 'text',
         'Attributes' => 'text'
-    ),
-    'ReactionType' => array(
+    ],
+    'ReactionType' => [
         'UrlCode' => 'varchar(32)',
         'Name' => 'varchar(100)',
         'Description' => 'text',
@@ -543,8 +543,8 @@ return array(
         'Active' => 'tinyint',
         'Custom' => 'tinyint',
         'Hidden' => 'tinyint'
-    ),
-    'Regarding' => array(
+    ],
+    'Regarding' => [
         'RegardingID' => 'int',
         'Type' => 'varchar(255)',
         'InsertUserID' => 'int',
@@ -557,8 +557,8 @@ return array(
         'ForeignURL' => 'varchar(255)',
         'Comment' => 'text',
         'Reports' => 'int'
-    ),
-    'Role' => array(
+    ],
+    'Role' => [
         'RoleID' => 'int',
         'Name' => 'varchar(100)',
         'Description' => 'varchar(500)',
@@ -566,7 +566,7 @@ return array(
         'Deletable' => 'tinyint',
         'CanSession' => 'tinyint',
         'PersonalInfo' => 'tinyint'
-    ),
+    ],
     /*'Session' => array(
         'SessionID' => 'char(32)',
         'UserID' => 'int',
@@ -600,14 +600,14 @@ return array(
         'forum' => 'tinyint',
         'themeID' => 'varchar(30)'
     ),*/
-    'Status' => array( // Ideation
+    'Status' => [ // Ideation
         'StatusID' => 'int',
         'Name' => 'varchar(100)',
         'State' => 'varchar(255)', // Open, Closed
         'TagID' => 'int',
         'IsDefault' => 'tinyint',
-    ),
-    'Tag' => array(
+    ],
+    'Tag' => [
         'TagID' => 'int',
         'Name' => 'text',
         'FullName' => 'text',
@@ -617,14 +617,14 @@ return array(
         'DateInserted' => 'datetime',
         'CategoryID' => 'int',
         'CountDiscussions' => 'int'
-    ),
-    'TagDiscussion' => array(
+    ],
+    'TagDiscussion' => [
         'TagID' => 'int',
         'DiscussionID' => 'int',
         'CategoryID' => 'int',
         'DateInserted' => 'datetime'
-    ),
-    'User' => array(
+    ],
+    'User' => [
         'UserID' => 'int',
         'Name' => 'varchar(200)',
         'Password' => 'varbinary(100)',
@@ -676,7 +676,7 @@ return array(
         // Optionally calculated by Target to enable FileTransfer
         'TargetAvatarFullPath' => 'varchar(255)',
         'TargetAvatarThumbFullPath' => 'varchar(255)',
-    ),
+    ],
     /*'UserAuthentication' => array(
         'ForeignUserKey' => 'varchar(255)',
         'ProviderKey' => 'varchar(64)',
@@ -714,7 +714,7 @@ return array(
         'Timestamp' => 'timestamp',
         'Lifetime' => 'int'
     ),*/
-    'UserBadge' => array(
+    'UserBadge' => [
         'UserID' => 'int',
         'BadgeID' => 'int',
         'Attributes' => 'text',
@@ -727,8 +727,8 @@ return array(
         "DateCompleted" => 'datetime',
         'DateInserted' => 'datetime',
         'InsertUserID' => 'int'
-    ),
-    'UserCategory' => array(
+    ],
+    'UserCategory' => [
         'UserID' => 'int',
         'CategoryID' => 'int',
         'DateMarkedRead' => 'datetime',
@@ -736,14 +736,14 @@ return array(
         'Unfollow' => 'tinyint',
         "DateFollowed" => "datetime",
         "DateUnfollowed" => "datetime",
-    ),
-    'UserComment' => array(
+    ],
+    'UserComment' => [
         'UserID' => 'int',
         'CommentID' => 'int',
         'Score' => 'float',
         'DateLastViewed' => 'datetime'
-    ),
-    'UserConversation' => array(
+    ],
+    'UserConversation' => [
         'UserID' => 'int',
         'ConversationID' => 'int',
         'CountReadMessages' => 'int',
@@ -753,8 +753,8 @@ return array(
         'Bookmarked' => 'tinyint',
         'Deleted' => 'tinyint',
         'DateConversationUpdated' => 'datetime'
-    ),
-    'UserDiscussion' => array(
+    ],
+    'UserDiscussion' => [
         'UserID' => 'int',
         'DiscussionID' => 'int',
         'Score' => 'float',
@@ -763,27 +763,27 @@ return array(
         'Dismissed' => 'tinyint',
         'Bookmarked' => 'tinyint',
         'Participated' => 'tinyint'
-    ),
-    'UserEvent' => array(
+    ],
+    'UserEvent' => [
         'EventID' => 'int',
         'UserID' => 'int',
         'DateInserted' => 'datetime',
         'Attending' => 'varchar(200)' // 'Yes', 'No', 'Maybe', 'Invited'
-    ),
-    'UserGroup' => array(
+    ],
+    'UserGroup' => [
         'UserGroupID' => 'int',
         'GroupID' => 'int',
         'UserID' => 'int',
         'DateInserted' => 'datetime',
         'InsertUserID' => 'int',
         'Role' => 'varchar(255)' // 'Leader', 'Member'
-    ),
-    'UserMeta' => array(
+    ],
+    'UserMeta' => [
         'UserID' => 'int',
         'Name' => 'text',
         'Value' => 'text'
-    ),
-    'UserNote' => array(
+    ],
+    'UserNote' => [
         'UserNoteID' => 'int',
         'Type' => 'varchar(10)',
         'UserID' => 'int',
@@ -798,20 +798,20 @@ return array(
         'DateUpdated' => 'datetime',
         //'UpdateIPAddress' => 'varbinary',
         'Attributes' => 'text'
-    ),
-    'UserPoints' => array(
+    ],
+    'UserPoints' => [
         //'SlotType' => array('d','w','m','y','a'),
         'TimeSlot' => 'datetime',
         'Source' => 'varchar(10)',
         'CategoryID' => 'int',
         'UserID' => 'int',
         'Points' => 'int'
-    ),
-    'UserRole' => array(
+    ],
+    'UserRole' => [
         'UserID' => 'int',
         'RoleID' => 'int'
-    ),
-    'UserTag' => array( // Reactions
+    ],
+    'UserTag' => [ // Reactions
         'RecordType' => 'varchar(200)', //'Discussion', 'Discussion-Total', 'Comment', 'Comment-Total',
         //  'User', 'User-Total', 'Activity', 'Activity-Total', 'ActivityComment', 'ActivityComment-Total'
         'RecordID' => 'int',
@@ -819,5 +819,5 @@ return array(
         'UserID' => 'int',
         'DateInserted' => 'datetime',
         'Total' => 'int'
-    ),
-);
+    ],
+];

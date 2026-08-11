@@ -112,22 +112,22 @@ class VBulletin extends Source
     /**
      * @var array Required tables => columns. Commented values are optional.
      */
-    public array $sourceTables = array(
+    public array $sourceTables = [
         //'attachment'
         //'contenttype'
         //'customavatar'
-        'deletionlog' => array('type', 'primaryid'),
+        'deletionlog' => ['type', 'primaryid'],
         //'filedata'
-        'forum' => array('forumid', 'description', 'displayorder', 'title', 'description', 'displayorder'),
+        'forum' => ['forumid', 'description', 'displayorder', 'title', 'description', 'displayorder'],
         //'phrase' => array('varname','text','product','fieldname','varname'),
         //'pm'
         //'pmgroup'
         //'pmreceipt'
         //'pmtext'
-        'post' => array('postid', 'threadid', 'pagetext', 'userid', 'dateline', 'visible'),
+        'post' => ['postid', 'threadid', 'pagetext', 'userid', 'dateline', 'visible'],
         //'setting'
-        'subscribethread' => array('userid', 'threadid'),
-        'thread' => array(
+        'subscribethread' => ['userid', 'threadid'],
+        'thread' => [
             'threadid',
             'forumid',
             'postuserid',
@@ -137,9 +137,9 @@ class VBulletin extends Source
             'dateline',
             'lastpost',
             'visible'
-        ),
+        ],
         //'threadread'
-        'user' => array(
+        'user' => [
             'userid',
             'username',
             'password',
@@ -161,12 +161,12 @@ class VBulletin extends Source
             'yahoo',
             'styleid',
             'avatarid'
-        ),
+        ],
         //'userban'
-        'userfield' => array('userid'),
-        'usergroup' => array('usergroupid', 'title', 'description'),
+        'userfield' => ['userid'],
+        'usergroup' => ['usergroupid', 'title', 'description'],
         //'visitormessage'
-    );
+    ];
 
     /**
      * Export each table one at a time.
@@ -206,7 +206,7 @@ class VBulletin extends Source
         $this->discussions($minDiscussionID, '');
         $this->comments($minDiscussionID, '');
 
-        if ($this->hasInputSchema('threadread', array('readtime')) === true) {
+        if ($this->hasInputSchema('threadread', ['readtime']) === true) {
             $threadReadTime = 'from_unixtime(tr.readtime)';
             $threadReadJoin = 'left join :_threadread as tr on tr.userid = st.userid and tr.threadid = st.threadid';
         } else {
@@ -270,7 +270,7 @@ class VBulletin extends Source
             $identity = 'f.attachmentid';
             $extension = '';
 
-            if ($this->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
+            if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid']) === true) {
                 $extension = self::fileExtension('a.filename');
                 $identity = 'f.filedataid';
             } elseif ($this->hasInputSchema('attach') === true) {
@@ -286,7 +286,7 @@ class VBulletin extends Source
                from ";
 
             // Table is dependent on vBulletin version (v4+ is filedata, v3 is attachment)
-            if ($this->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
+            if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid']) === true) {
                 $sql .= ":_filedata f left join :_attachment a on a.filedataid = f.filedataid";
             } elseif ($this->hasInputSchema('attach') === true) {
                 $sql .= ":_filedata f left join :_attach a on a.filedataid = f.filedataid";
@@ -298,7 +298,7 @@ class VBulletin extends Source
         }
 
         if ($customAvatars) {
-            if ($this->hasInputSchema('customavatar', array('avatardata')) === true) {
+            if ($this->hasInputSchema('customavatar', ['avatardata']) === true) {
                 $avatarDataColumn = 'avatardata';
             } else {
                 $avatarDataColumn = 'filedata';
@@ -352,7 +352,7 @@ class VBulletin extends Source
 
                 // Split up the userid into a path, digit by digit
                 $n = strlen($pathParts[1]);
-                $dirParts = array();
+                $dirParts = [];
                 for ($i = 0; $i < $n; $i++) {
                     $dirParts[] = $pathParts[1][$i];
                 }
@@ -413,13 +413,13 @@ class VBulletin extends Source
         } else {
             $discussionWhere = '';
         }
-        $media_Map = array(
+        $media_Map = [
             'attachmentid' => 'MediaID',
             'filename' => 'Name',
             'filesize' => 'Size',
             'userid' => 'InsertUserID',
-            'filehash' => array('Column' => 'Path', 'Filter' => array($this, 'buildMediaPath')),
-            'filethumb' => array(
+            'filehash' => ['Column' => 'Path', 'Filter' => [$this, 'buildMediaPath']],
+            'filethumb' => [
                 'Column' => 'ThumbPath',
                 'Filter' => function ($value, $field, $row) use ($instance) {
                     $filteredData = $this->filterThumbnailData($value, $field, $row);
@@ -430,17 +430,17 @@ class VBulletin extends Source
                         return null;
                     }
                 }
-            ),
-            'thumb_width' => array('Column' => 'ThumbWidth', 'Filter' => array($this, 'filterThumbnailData')),
-            'height' => array('Column' => 'ImageHeight', 'Filter' => array($this, 'buildMediaDimension')),
-            'width' => array('Column' => 'ImageWidth', 'Filter' => array($this, 'buildMediaDimension')),
-        );
+            ],
+            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+            'height' => ['Column' => 'ImageHeight', 'Filter' => [$this, 'buildMediaDimension']],
+            'width' => ['Column' => 'ImageWidth', 'Filter' => [$this, 'buildMediaDimension']],
+        ];
         $filters = [
             'extension' => 'mimeTypeFromExtension',
         ];
 
         // Add hash fields if they exist (from 2.x)
-        $attachColumns = array('hash', 'filehash');
+        $attachColumns = ['hash', 'filehash'];
         $hasColumns = $this->hasInputSchema('attachment', $attachColumns);
         $attachColumnsString = '';
         foreach ($attachColumns as $columnName) {
@@ -451,7 +451,7 @@ class VBulletin extends Source
             }
         }
         // Do the export
-        if ($this->hasInputSchema('attachment', array('contenttypeid', 'contentid')) === true) {
+        if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid']) === true) {
             // Exporting 4.x with 'filedata' table.
             // Build an index to join on.
             if (!$this->indexExists('ix_thread_firstpostid', ':_thread')) {
@@ -583,14 +583,14 @@ class VBulletin extends Source
 
     protected function polls(): void
     {
-        $poll_Map = array(
+        $poll_Map = [
             'pollid' => 'PollID',
             'question' => 'Name',
             'threadid' => 'DiscussionID',
             'anonymous' => 'Anonymous',
-            'dateline' => array('Column' => 'DateInserted', 'Filter' => 'timestampToDate'),
+            'dateline' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
             'postuserid' => 'InsertUserID'
-        );
+        ];
         $this->export(
             'Poll',
             "select
@@ -709,29 +709,29 @@ class VBulletin extends Source
                 ->orderBy('minposts', 'desc')
                 ->get();
 
-            $rank_Map = array(
+            $rank_Map = [
                 'usertitleid' => 'RankID',
                 'title' => 'Name',
                 'title2' => 'Label',
-                'minposts' => array(
+                'minposts' => [
                     'Column' => 'Attributes',
                     'Filter' => function ($value) {
-                        $result = array(
-                            'Criteria' => array(
+                        $result = [
+                            'Criteria' => [
                                 'CountPosts' => $value
-                            )
-                        );
+                            ]
+                        ];
                         return serialize($result);
                     }
-                ),
-                'level' => array(
+                ],
+                'level' => [
                     'Column' => 'Level',
                     'Filter' => function ($value) {
                         static $level = 1;
                         return $level++;
                     }
-                )
-            );
+                ]
+            ];
 
             $this->export(
                 'Rank',
@@ -773,7 +773,7 @@ class VBulletin extends Source
         } else { // Newer than 3.0
             // Build user directory path
             $chars = str_split($row['userid']);
-            $dirParts = array();
+            $dirParts = [];
             foreach ($chars as $char) {
                 $dirParts[] = $char;
             }
@@ -804,12 +804,12 @@ class VBulletin extends Source
     public function buildMediaDimension($value, $field, $row): mixed
     {
         // Non-images get no height/width
-        if ($this->hasInputSchema('attachment', array('extension')) === true) {
+        if ($this->hasInputSchema('attachment', ['extension']) === true) {
             $extension = $row['extension'];
         } else {
             $extension = pathinfo($row['filename'], PATHINFO_EXTENSION);
         }
-        if (in_array(strtolower($extension), array('jpg', 'gif', 'png', 'jpeg'))) {
+        if (in_array(strtolower($extension), ['jpg', 'gif', 'png', 'jpeg'])) {
             return null;
         }
 
@@ -978,10 +978,10 @@ class VBulletin extends Source
      */
     protected function categories(string $forumWhere): void
     {
-        $category_Map = array(
-            'title' => array('Column' => 'Name', 'Filter' => array($this, 'htmlDecode')),
-            'displayorder' => array('Column' => 'Sort', 'Type' => 'int'),
-        );
+        $category_Map = [
+            'title' => ['Column' => 'Name', 'Filter' => [$this, 'htmlDecode']],
+            'displayorder' => ['Column' => 'Sort', 'Type' => 'int'],
+        ];
         $this->export(
             'Category',
             "select
@@ -999,18 +999,18 @@ class VBulletin extends Source
 
     protected function roles(): void
     {
-        $role_Map = array(
+        $role_Map = [
             'usergroupid' => 'RoleID',
             'title' => 'Name',
             'description' => 'Description'
-        );
+        ];
         $this->export('Role', 'select * from :_usergroup', $role_Map);
 
         // UserRoles
-        $userRole_Map = array(
+        $userRole_Map = [
             'userid' => 'UserID',
             'usergroupid' => 'RoleID'
-        );
+        ];
         $this->query("drop table if exists VbulletinRoles");
         $this->query(
             "create table VbulletinRoles (
@@ -1047,14 +1047,14 @@ class VBulletin extends Source
     protected function users(mixed $ranks): void
     {
         $cdn = '';
-        $user_Map = array(
-            'usertitle' => array(
+        $user_Map = [
+            'usertitle' => [
                 'Column' => 'Title',
                 'Filter' => function ($value) {
                     return trim(strip_tags(str_replace('&nbsp;', ' ', $value)));
                 }
-            ),
-            'posts' => array(
+            ],
+            'posts' => [
                 'Column' => 'RankID',
                 'Filter' => function ($value) use ($ranks) {
                     // Look  up the posts in the ranks table.
@@ -1065,8 +1065,8 @@ class VBulletin extends Source
                     }
                     return null;
                 }
-            )
-        );
+            ]
+        ];
 
         // Use file avatar or the result of our blob export?
         if ($this->getConfig('usefileavatar')) {
@@ -1123,13 +1123,13 @@ class VBulletin extends Source
                 `Value` text not null
             );");
         // Standard vB user data
-        $userFields = array(
+        $userFields = [
             'usertitle' => 'Title',
             'homepage' => 'Website',
             'styleid' => 'StyleID'
-        );
+        ];
 
-        if ($this->hasInputSchema('user', array('skype')) === true) {
+        if ($this->hasInputSchema('user', ['skype']) === true) {
             $userFields['skype'] = 'Skype';
         }
 
@@ -1157,7 +1157,7 @@ class VBulletin extends Source
             );
         }
 
-        if ($this->hasInputSchema('phrase', array('product', 'fieldname')) === true) {
+        if ($this->hasInputSchema('phrase', ['product', 'fieldname']) === true) {
             // Dynamic vB user data (userfield)
             $profileFields = $this->query(
                 "select distinct
@@ -1170,7 +1170,7 @@ class VBulletin extends Source
             );
 
             if (is_object($profileFields)) {
-                $profileQueries = array();
+                $profileQueries = [];
                 while ($field = $profileFields->nextResultRow()) {
                     $column = str_replace('_title', '', $field['varname']);
                     $name = preg_replace('/[^a-zA-Z0-9\s_-]/', '', $field['text']);
@@ -1217,12 +1217,12 @@ class VBulletin extends Source
      */
     protected function comments($minDiscussionID, string $forumWhere): void
     {
-        $comment_Map = array(
-            'pagetext' => array('Column' => 'Body', 'Filter' => function ($value) {
+        $comment_Map = [
+            'pagetext' => ['Column' => 'Body', 'Filter' => function ($value) {
                 return $value;
             }
-            ),
-        );
+            ],
+        ];
 
         $minDiscussionWhere = '';
         if ($minDiscussionID) {
@@ -1271,13 +1271,13 @@ class VBulletin extends Source
                 $minDiscussionWhere = "and dateline > $minDiscussionID";
             }
 
-            $activity_Map = array(
+            $activity_Map = [
                 'postuserid' => 'RegardingUserID',
                 'userid' => 'ActivityUserID',
                 'pagetext' => 'Story',
                 'NotifyUserID' => 'NotifyUserID',
                 'Format' => 'Format'
-            );
+            ];
             $this->export(
                 'Activity',
                 "select
@@ -1304,13 +1304,13 @@ class VBulletin extends Source
      */
     protected function discussions($minDiscussionID, string $forumWhere): void
     {
-        $discussion_Map = array(
-            'title' => array('Column' => 'Name', 'Filter' => array($this, 'htmlDecode')),
-            'pagetext' => array('Column' => 'Body', 'Filter' => function ($value) {
+        $discussion_Map = [
+            'title' => ['Column' => 'Name', 'Filter' => [$this, 'htmlDecode']],
+            'pagetext' => ['Column' => 'Body', 'Filter' => function ($value) {
                 return $value;
             }
-            ),
-        );
+            ],
+        ];
 
         $minDiscussionWhere = '';
         if ($minDiscussionID) {

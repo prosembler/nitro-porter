@@ -48,13 +48,13 @@ class Toast extends Source
      */
     protected function users(): void
     {
-        $user_Map = array(
+        $user_Map = [
             'ID' => 'UserID',
             'Username' => 'Name',
             'Email' => 'Email',
-            'LastLoginDate' => array('Column' => 'DateLastActive', 'Type' => 'datetime'),
+            'LastLoginDate' => ['Column' => 'DateLastActive', 'Type' => 'datetime'],
             'IP' => 'LastIPAddress'
-        );
+        ];
         $this->export(
             'User',
             "select *, NOW() as DateInserted from :_Member u",
@@ -74,10 +74,10 @@ class Toast extends Source
         }
 
         // Add default Member role.
-        $role_Map = array(
+        $role_Map = [
             'ID' => 'RoleID',
             'Name' => 'Name'
-        );
+        ];
         $this->export(
             'Role',
             " select ID, Name from :_Group
@@ -88,10 +88,10 @@ class Toast extends Source
 
         // UserRole.
         // Users without roles get put into new Member role.
-        $userRole_Map = array(
+        $userRole_Map = [
             'MemberID' => 'UserID',
             'GroupID' => 'RoleID'
-        );
+        ];
         $this->export(
             'UserRole',
             " select GroupID, MemberID from :_MemberGroupLink
@@ -133,12 +133,12 @@ class Toast extends Source
      */
     protected function categories(): void
     {
-        $category_Map = array(
+        $category_Map = [
             'ID' => 'CategoryID',
             'CategoryID' => 'ParentCategoryID',
             'ForumName' => 'Name',
             'Description' => 'Description'
-        );
+        ];
         $this->export(
             'Category',
             "select
@@ -162,7 +162,7 @@ class Toast extends Source
      */
     protected function discussions(): void
     {
-        $discussion_Map = array(
+        $discussion_Map = [
             'ID' => 'DiscussionID',
             'ForumID' => 'CategoryID',
             'MemberID' => 'InsertUserID',
@@ -173,7 +173,7 @@ class Toast extends Source
             'Message' => 'Body',
             'Hits' => 'CountViews',
             'ReplyCount' => 'CountComments'
-        );
+        ];
         $this->export(
             'Discussion',
             "select p.*,
@@ -189,14 +189,14 @@ class Toast extends Source
      */
     protected function comments(): void
     {
-        $comment_Map = array(
+        $comment_Map = [
             'ID' => 'CommentID',
             'TopicID' => 'DiscussionID',
             'MemberID' => 'InsertUserID',
             'PostDate' => 'DateInserted',
             'ModifyDate' => 'DateUpdated',
             'Message' => 'Body'
-        );
+        ];
         $this->export(
             'Comment',
             "select *,

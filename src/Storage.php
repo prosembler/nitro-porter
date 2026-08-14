@@ -46,7 +46,7 @@ class Storage
                 $info = $this->stream($row, $structure, $info);
             }
         }
-        $this->stream([], [], $info, true); // Insert remaining records.
+        $info = $this->stream([], [], $info, true); // Insert remaining records.
 
         return new StorageInfo(
             name: $name,

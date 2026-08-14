@@ -8,6 +8,7 @@
 
 namespace Porter\Source;
 
+use Porter\Log;
 use Porter\Source;
 
 /**
@@ -208,8 +209,11 @@ class Discord extends Source
 
         // ReactionType: All Tags we just added are Reactions.
         // Unbuffered use of PorterQB -> must put in memory!
-        $tags = $this->porterQB()->from('Tag')->get(['Name', 'TagID'])->toArray();
-        $this->porterStorage->store('ReactionType', [], ['Name' => 'varchar(100)', 'TagID' => 'int'], $tags, []);
+        $data = $this->porterQB()->from('Tag')->get(['Name', 'TagID'])->toArray();
+        $structure = ['Name' => 'varchar(100)', 'TagID' => 'int'];
+        $this->porterStorage->prepare('ReactionType', $structure);
+        $info = $this->porterStorage->store('ReactionType', [], $structure, $data, []);
+        Log::storage('export', $info); // Manually log the 'export'.
 
         // UserTag: Individual user reactions.
         $map = [

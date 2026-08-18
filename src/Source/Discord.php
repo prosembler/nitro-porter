@@ -96,11 +96,9 @@ class Discord extends Source
             'topic' => 'Description',
             //'new_last_message_id' => 'LastCommentID',
         ];
-        $query = $this->sourceQB()->from('discord_channels')->select('discord_channels.*')
-            ->selectRaw('dc.new_id as new_parent_id')
-            //->selectRaw('discord_messages.new_id as new_last_message_id')
+        $query = $this->sourceQB()->from('discord_channels')
+            ->select(['discord_channels.*', 'dc.new_id as new_parent_id'])
             ->join('discord_channels as dc', 'discord_channels.parent_id', '=', 'dc.id')
-            //->join('discord_messages', 'discord_messages.id', '=', 'discord_channels.last_message_id')
             ->whereIn('discord_channels.type', [
                 self::CHANNEL_TYPE['GUILD_CATEGORY'],
                 self::CHANNEL_TYPE['GUILD_FORUM'],
@@ -127,10 +125,10 @@ class Discord extends Source
         $query = $this->sourceQB()->from('discord_channels')
             ->join('discord_users', 'discord_users.id', '=', 'discord_channels.owner_id')
             ->join('discord_channels as dcparent', 'discord_channels.parent_id', '=', 'dcparent.id')
-            ->select('discord_channels.*')
-            ->selectRaw('discord_users.new_id as new_owner_id')
-            ->selectRaw('discord_channels.id as derived_timestamp')
-            ->selectRaw('dcparent.new_id as new_parent_id')
+            ->select(['discord_channels.*',
+                'discord_users.new_id as new_owner_id',
+                'discord_channels.id as derived_timestamp',
+                'dcparent.new_id as new_parent_id'])
             ->whereIn('discord_channels.type', [
                 self::CHANNEL_TYPE['PUBLIC_THREAD'],
                 self::CHANNEL_TYPE['GUILD_ANNOUNCEMENT'],
@@ -153,11 +151,11 @@ class Discord extends Source
         $query = $this->sourceQB()->from('discord_messages')
             ->join('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
             ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
-            ->select('discord_messages.*')
-            ->selectRaw('discord_channels.new_id as new_channel_id')
-            ->selectRaw('discord_users.new_id as new_authorid')
-            ->selectRaw('timestamp(timestamp) as DateInserted')
-            ->selectRaw('timestamp(edited_timestamp) as DateUpdated');
+            ->select(['discord_messages.*',
+                'discord_channels.new_id as new_channel_id',
+                'discord_users.new_id as new_authorid',
+                'timestamp(timestamp) as DateInserted',
+                'timestamp(edited_timestamp) as DateUpdated']);
         $this->export('Comment', $query, $map);
     }
 
@@ -175,8 +173,7 @@ class Discord extends Source
         ];
         $query = $this->sourceQB()->from('discord_attachments')
             ->join('discord_messages', 'discord_messages.id', '=', 'discord_attachments.message_id')
-            ->select('discord_attachments.*')
-            ->selectRaw('discord_messages.new_id as new_message_id');
+            ->select(['discord_attachments.*', 'discord_messages.new_id as new_message_id']);
         $this->export('Media', $query, $map);
     }
 
@@ -223,9 +220,9 @@ class Discord extends Source
             ->join('discord_users', 'discord_users.id', '=', 'discord_user_reactions.user_id')
             ->join('discord_messages', 'discord_messages.id', '=', 'discord_user_reactions.message_id')
             ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_user_reactions.emoji_id')
-            ->selectRaw('discord_users.new_id as new_user_id')
-            ->selectRaw('discord_messages.new_id as new_message_id')
-            ->selectRaw('discord_emojis.new_id as new_emoji_id');
+            ->select(['discord_users.new_id as new_user_id',
+                'discord_messages.new_id as new_message_id',
+                'discord_emojis.new_id as new_emoji_id']);
         $this->export('UserTag', $query, $map);
 
         // UserTag: Reaction counts.
@@ -237,10 +234,10 @@ class Discord extends Source
         $query = $this->sourceQB()->from('discord_reactions')
             ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_reactions.emoji_id')
             ->join('discord_messages', 'discord_messages.id', '=', 'discord_reactions.message_id')
-            ->select('discord_reactions.*')
-            ->selectRaw('discord_emojis.new_id as new_emoji_id')
-            ->selectRaw('discord_messages.new_id as new_message_id')
-            ->selectRaw('"Comment-Total" as RecordType');
+            ->select(['discord_reactions.*',
+                'discord_emojis.new_id as new_emoji_id',
+                'discord_messages.new_id as new_message_id',
+                '"Comment-Total" as RecordType']);
         $this->export('UserTag', $query, $map);
     }
 
@@ -248,39 +245,36 @@ class Discord extends Source
     {
         // Polls.
         $map = [
-            'new_poll_id' => 'PollID',
+            'new_id' => 'PollID',
             'question' => 'Name',
             'allow_multiselect' => 'AllowMultiple',
             'expiry' => 'DateClosed',
+            'timestamp' => 'DateInserted',
+            'edited_timestamp' => 'DateUpdated',
         ];
         $query = $this->sourceQB()->from('discord_polls')
             ->join('discord_messages', 'discord_messages.id', '=', 'discord_polls.id')
             ->join('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
             ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
-            ->select(['discord_polls.expiry', 'discord_polls.allow_multiselect', 'discord_polls.question'])
-            ->selectRaw('discord_polls.new_id as new_poll_id')
-            ->selectRaw('discord_messages.new_id as CommentID')
-            ->selectRaw('discord_messages.timestamp as DateInserted')
-            ->selectRaw('discord_messages.edited_timestamp as DateUpdated')
-            ->selectRaw('discord_channels.new_id as DiscussionID')
-            ->selectRaw('discord_users.new_id as InsertUserID');
+            ->select(['discord_polls.expiry', 'discord_polls.allow_multiselect', 'discord_polls.question',
+                'discord_polls.new_id', 'discord_messages.timestamp', 'discord_messages.edited_timestamp',
+                'discord_messages.new_id as CommentID',
+                'discord_channels.new_id as DiscussionID',
+                'discord_users.new_id as InsertUserID']);
         $this->export('Poll', $query, $map);
 
         // Answers.
         $map = [
-            'new_poll_id' => 'PollID',
-            'new_answer_id' => 'PollOptionID',
+            'new_id' => 'PollOptionID',
             'text' => 'Body',
             'count' => 'CountVotes',
-            'new_emoji_id' => 'EmojiID',
         ];
         $query = $this->sourceQB()->from('discord_poll_answers')
             ->join('discord_polls', 'discord_polls.id', '=', 'discord_poll_answers.poll_id')
             ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_poll_answers.emoji_id')
-            ->select(['discord_poll_answers.text', 'discord_poll_answers.count'])
-            ->selectRaw('discord_poll_answers.new_id as new_answer_id')
-            ->selectRaw('discord_polls.new_id as new_poll_id')
-            ->selectRaw('discord_emojis.new_id as new_emoji_id');
+            ->select(['discord_poll_answers.text', 'discord_poll_answers.count', 'discord_poll_answers.new_id',
+                'discord_polls.new_id as PollID',
+                'discord_emojis.new_id as EmojiID']);
         $this->export('PollOption', $query, $map);
 
         // Votes.
@@ -289,16 +283,16 @@ class Discord extends Source
             'new_poll_id' => 'PollID',
             'new_answer_id' => 'PollOptionID',  // answer_is non-unique in Discord
         ];
-        $query = $this->sourceQB()->from('discord_poll_user_answers')
-            ->join('discord_users', 'discord_users.id', '=', 'discord_poll_user_answers.user_id')
-            ->join('discord_polls', 'discord_polls.id', '=', 'discord_poll_user_answers.poll_id')
+        $query = $this->sourceQB()->from('discord_poll_user_answers as ua')
+            ->join('discord_users', 'discord_users.id', '=', 'ua.user_id')
+            ->join('discord_polls', 'discord_polls.id', '=', 'ua.poll_id')
             ->join('discord_poll_answers', function ($join) {
-                $join->on('discord_poll_answers.poll_id', '=', 'discord_poll_user_answers.poll_id')
-                    ->where('discord_poll_answers.answer_id', '=', 'discord_poll_user_answers.answer_id');
+                $join->on('discord_poll_answers.poll_id', '=', 'ua.poll_id')
+                    ->where('discord_poll_answers.answer_id', '=', 'ua.answer_id');
             })
-            ->selectRaw('discord_polls.new_id as new_poll_id')
-            ->selectRaw('discord_users.new_id as new_user_id')
-            ->selectRaw('discord_poll_answers.new_id as new_answer_id');
+            ->select(['discord_polls.new_id as new_poll_id',
+                'discord_users.new_id as new_user_id',
+                'discord_poll_answers.new_id as new_answer_id']);
         $this->export('PollVote', $query, $map);
     }
 

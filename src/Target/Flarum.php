@@ -700,8 +700,7 @@ class Flarum extends Target
             'CountVotes' => 'vote_count',
         ];
         $query = $this->porterQB()->from('Poll')
-            ->select('*')
-            ->select('DateInserted as end_date')
+            ->select(['*', 'DateInserted as end_date'])
             ->selectRaw('"" as settings')
             // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');

@@ -834,6 +834,7 @@ class Flarum extends Target
             ->select(['InsertUserID', 'DateInserted'])
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as id')
             ->selectRaw('DateInserted as last_posted_at') // @todo Orders old PMs by OP instead of last comment.
+            ->selectRaw('0 as is_sticky')
             ->selectRaw('0 as is_locked')
             ->selectRaw('1 as is_private')
             ->selectRaw('0 as votes') // Hedge against fof/gamification

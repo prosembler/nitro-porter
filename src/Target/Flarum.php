@@ -620,8 +620,9 @@ class Flarum extends Target
             ->selectRaw('"local" as upload_method')
             // MIME type cannot be null, so default to "application/octet-stream" as most generic default.
             ->selectRaw('COALESCE(Type, "application/octet-stream") as type')
-            // fof_upload_files disallows null for base_name.
+            // fof_upload_files disallows null for base_name or created_at.
             ->selectRaw('COALESCE(RIGHT(Name, 220), "untitled") as base_name')
+            ->selectRaw('COALESCE(DateInserted, NOW()) as created_at')
             // @see packages/upload/src/Providers/DownloadProvider.php
             ->selectRaw("case
                 when Type like 'image/%' then 'image-preview'

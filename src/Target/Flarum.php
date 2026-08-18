@@ -376,7 +376,7 @@ class Flarum extends Target
             'RoleID' => 'group_id',
         ];
         $query = $this->porterQB()->from('UserRole')
-            ->select()
+            ->select(['UserID'])
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
         $this->import('group_user', $query, self::SCHEMA_USER_ROLES, $map);
 
@@ -390,7 +390,7 @@ class Flarum extends Target
     protected function promote(): void
     {
         $result = $this->porterQB()->from('User')->where('Admin', '>', 0)->first();
-        if (isset($result->UserID, $result->Name, $result->Email)) {
+        if (isset($result->Name, $result->Email) && !empty($result->UserID)) {
             $this->dbOutput()->table('group_user')->insert(['group_id' => 1, 'user_id' => $result->UserID]);
             Log::comment('Promoted to Admin: ' . $result->Name . ' (' . $result->Email . ')');
         } else {

@@ -837,6 +837,7 @@ class Flarum extends Target
             ->selectRaw('0 as votes') // Hedge against fof/gamification
             ->selectRaw('0 as hotness') // Hedge against fof/gamification
             ->selectRaw('0 as view_count')
+            ->selectRaw('1 as best_answer_notified') // fof/best-answer
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as slug')
             // Use a numbered title "Private discussion 1234" if there's no Subject line.
             ->selectRaw('ifnull(Subject,

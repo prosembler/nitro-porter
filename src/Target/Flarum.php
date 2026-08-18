@@ -400,7 +400,7 @@ class Flarum extends Target
             $this->dbOutput()->table('group_user')->insert(['group_id' => 1, 'user_id' => $result->UserID]);
             Log::comment('Promoted to Admin: ' . $result->Name . ' (' . $result->Email . ')');
         } else {
-            Log::comment('No user found to promote to Admin. (Searching for Admin=1 flag on PORT_User.)');
+            Log::comment('No user promoted to Admin (PORT_User.Admin=1 not found).');
         }
     }
 

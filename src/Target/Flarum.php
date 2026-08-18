@@ -745,11 +745,12 @@ class Flarum extends Target
         $map = [
             'TagID' => 'id',
             'Name' => 'identifier',
-            'Active' => 'enabled',
+            //'Active' => 'enabled',
         ];
         $query = $this->porterQB()->from('ReactionType')
             // @todo Setting type='emoji' is a kludge since it won't render Vanilla defaults that way.
             ->select('*')
+            ->selectRaw('COALESCE(Active, 1) as enabled')
             ->selectRaw('"emoji" as type');
         $this->import('reactions', $query, self::SCHEMA_REACTIONS, $map);
 

@@ -225,6 +225,7 @@ class Flarum extends Target
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'vote_count' => 'int',
+        'settings' => 'text',
     ];
 
     protected const array SCHEMA_POLL_OPTIONS = [
@@ -677,7 +678,7 @@ class Flarum extends Target
     }
 
     /**
-     * Requires addon `fof/pollsx`.
+     * Requires addon `fof/polls`.
      */
     protected function polls(): void
     {
@@ -701,7 +702,8 @@ class Flarum extends Target
         $query = $this->porterQB()->from('Poll')
             ->select('*')
             ->select('DateInserted as end_date')
-                // Whether its public or anonymous are inverse conditions, so flip the value.
+            ->selectRaw('"" as settings')
+            // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');
         $this->import('polls', $query, self::SCHEMA_POLLS, $map);
 

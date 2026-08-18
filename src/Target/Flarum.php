@@ -310,6 +310,11 @@ class Flarum extends Target
             $structure['view_count'] = 'int';
         }
 
+        // fof/best-answer
+        if ($this->hasOutputSchema('discussions', ['best_answer_notified'])) {
+            $structure['best_answer_notified'] = 'tinyint';
+        }
+
         return $structure;
     }
 

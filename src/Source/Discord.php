@@ -153,9 +153,9 @@ class Discord extends Source
             ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
             ->select(['discord_messages.*',
                 'discord_channels.new_id as new_channel_id',
-                'discord_users.new_id as new_authorid',
-                'timestamp(timestamp) as DateInserted',
-                'timestamp(edited_timestamp) as DateUpdated']);
+                'discord_users.new_id as new_authorid'])
+            ->selectRaw('timestamp(timestamp) as DateInserted')
+            ->selectRaw('timestamp(edited_timestamp) as DateUpdated');
         $this->export('Comment', $query, $map);
     }
 
@@ -236,8 +236,8 @@ class Discord extends Source
             ->join('discord_messages', 'discord_messages.id', '=', 'discord_reactions.message_id')
             ->select(['discord_reactions.*',
                 'discord_emojis.new_id as new_emoji_id',
-                'discord_messages.new_id as new_message_id',
-                '"Comment-Total" as RecordType']);
+                'discord_messages.new_id as new_message_id'])
+            ->selectRaw('"Comment-Total" as RecordType');
         $this->export('UserTag', $query, $map);
     }
 

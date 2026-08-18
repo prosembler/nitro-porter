@@ -608,7 +608,7 @@ class Flarum extends Target
             ->selectRaw('0 as discussion_id')
             ->selectRaw("concat('imported/', Path) as path")
             ->selectRaw("concat('/" . self::SUPPORTED['attachmentPath'] . "/',
-                trim(leading '/' from Path)) as url") // @todo Only a relative URL so far.
+                trim(leading '/' from COALESCE(Path, ''))) as url") // @todo Only a relative URL so far.
             // Untangle the Media.ForeignID & Media.ForeignTable [comment, discussion, message]
             ->selectRaw("case
                 when ForeignID is null then 0

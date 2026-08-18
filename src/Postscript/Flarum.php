@@ -322,7 +322,7 @@ class Flarum extends Postscript
         $memory = memory_get_usage(); // @todo This is a memory bottleneck — can it be streamed?
         $px = $this->dbPostscript()->getTablePrefix();
         foreach ($bookmarks as $post) {
-            $count = $this->dbPostscript()->affectingStatement("update $px.discussion_user
+            $count = $this->dbPostscript()->affectingStatement("update {$px}discussion_user
                 set last_read_post_number = " . (int)$post->last_number . "
                 where user_id = " . $post->user_id . "
                     and discussion_id = " . $post->discussion_id);

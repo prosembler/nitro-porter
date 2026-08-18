@@ -470,6 +470,7 @@ class Flarum extends Target
             ->selectRaw('COALESCE(CountComments, 0) as post_number_index')
             ->selectRaw('DiscussionID as slug')
             ->selectRaw('CountComments as last_post_number')
+            ->selectRaw('0 as is_private')
             ->selectRaw('0 as votes')
             ->selectRaw('0 as hotness')
             ->selectRaw('1 as best_answer_notified');

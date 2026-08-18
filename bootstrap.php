@@ -1,39 +1,26 @@
 <?php
 
-// Autoload.
-if (isset($GLOBALS['_composer_autoload_path'])) {
-    // If running via Composer, use provided location.
-    require_once $GLOBALS['_composer_autoload_path'];
-} else {
-    // If running locally, guess the location.
-    foreach (['../..', '../vendor', 'vendor'] as $path) {
-        $autoloader = __DIR__ . '/' . $path . '/autoload.php';
-        if (file_exists($autoloader)) {
-            require_once $autoloader;
-            unset($autoloader);
-            break;
-        }
-    }
-}
-
 // Environment.
 const APP_VERSION = '4.1';
 const ROOT_DIR = __DIR__;
+error_reporting(E_ALL & ~E_DEPRECATED);
 if (ini_get('date.timezone') == '') {
     date_default_timezone_set('America/Detroit');
 }
 
-// Require & load config.
+// Autoload.
+$autoloader = match (true) {
+    isset($GLOBALS['_composer_autoload_path']) => $GLOBALS['_composer_autoload_path'],
+    file_exists(__DIR__ . '/../../autoload.php') => __DIR__ . '/../../autoload.php',
+    file_exists(__DIR__ . '/../vendor/autoload.php') => __DIR__ . '/../vendor/autoload.php',
+    file_exists(__DIR__ . '/vendor/autoload.php') => __DIR__ . '/vendor/autoload.php',
+    default => null,
+};
+require_once($autoloader);
+unset($autoloader);
+
+// Load data.
 \Porter\Config::getInstance()->set(\Porter\Config::loadFile());
-
-// See deprecation notices in debug mode only.
-if (\Porter\Config::getInstance()->debugEnabled()) {
-    error_reporting(E_ALL);
-} else {
-    error_reporting(E_ALL & ~E_DEPRECATED);
-}
-
-// Load source & target support.
 \Porter\Support::getInstance()->setOrigins(\Porter\Data::load('origins'));
 \Porter\Support::getInstance()->setSources(\Porter\Data::load('sources'));
 \Porter\Support::getInstance()->setTargets(\Porter\Data::load('targets'));

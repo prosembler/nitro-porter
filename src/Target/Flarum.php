@@ -820,9 +820,11 @@ class Flarum extends Target
         $map = [
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
+            'Closed' => 'is_locked',
         ];
         $filters = [
             'slug' => 'createDiscussionSlugs',
+            'Closed' => 'emptyToZero',
         ];
 
         // fof/gamification — no data, just prevent failure (no default value is set)
@@ -831,7 +833,7 @@ class Flarum extends Target
         }
 
         $query = $this->porterQB()->from('Conversation')
-            ->select(['InsertUserID', 'DateInserted'])
+            ->select(['InsertUserID', 'DateInserted', 'Closed'])
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as id')
             ->selectRaw('DateInserted as last_posted_at') // @todo Orders old PMs by OP instead of last comment.
             ->selectRaw('1 as is_private')

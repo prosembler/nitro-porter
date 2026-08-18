@@ -599,9 +599,7 @@ class Flarum extends Target
 
         $map = [
             'MediaID' => 'id',
-            //'Name' => 'base_name',
             'InsertUserID' => 'actor_id',
-            'DateInserted' => 'created_at',
             'Size' => 'size',
         ];
         $query = $this->porterQB()->from('Media')

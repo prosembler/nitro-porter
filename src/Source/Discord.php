@@ -82,9 +82,7 @@ class Discord extends Source
         ];
         $query = $this->sourceQB()->from('discord_user_roles')
             ->join('discord_roles', 'discord_roles.id', '=', 'discord_user_roles.role_id')
-            //->join('discord_users', 'discord_users.id', '=', 'discord_user_roles.user_id')
-            //->selectRaw('discord_users.new_id as new_user_id')
-            ->selectRaw('discord_roles.new_id as new_role_id');
+            ->select(['discord_user_roles.*', 'discord_roles.new_id as new_role_id']);
         $this->export('UserRole', $query, $map);
     }
 

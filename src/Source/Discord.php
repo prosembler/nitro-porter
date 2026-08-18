@@ -101,7 +101,7 @@ class Discord extends Source
         $query = $this->sourceQB()->from('discord_channels')->select('discord_channels.*')
             ->selectRaw('dc.new_id as new_parent_id')
             //->selectRaw('discord_messages.new_id as new_last_message_id')
-            ->join('discord_channels as dc', 'discord_channels.id', '=', 'dc.parent_id')
+            ->join('discord_channels as dc', 'discord_channels.parent_id', '=', 'dc.id')
             //->join('discord_messages', 'discord_messages.id', '=', 'discord_channels.last_message_id')
             ->whereIn('discord_channels.type', [
                 self::CHANNEL_TYPE['GUILD_CATEGORY'],

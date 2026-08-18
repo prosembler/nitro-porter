@@ -218,6 +218,7 @@ class Flarum extends Target
         'id' => 'int',
         'question' => 'varchar(200)',
         'discussion_id' => 'int',
+        'post_id' => 'int',
         'user_id' => 'int',
         'public_poll' => 'tinyint', // Map to "Anonymous" somehow?
         'end_date' => 'datetime', // Using date created here will close all polls, but work fine.
@@ -692,6 +693,7 @@ class Flarum extends Target
             'PollID' => 'id',
             'Name' => 'question',
             'DiscussionID' => 'discussion_id',
+            'CommentID' => 'post_id',
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
             'DateUpdated' => 'updated_at',

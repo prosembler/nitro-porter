@@ -205,9 +205,8 @@ class Discord extends Source
         // ReactionType: All Tags we just added are Reactions.
         // Unbuffered use of PorterQB -> must put in memory!
         $data = $this->porterQB()->from('Tag')->get(['Name', 'TagID'])->toArray();
-        $structure = ['Name' => 'varchar(100)', 'TagID' => 'int'];
-        $this->porterStorage->prepare('ReactionType', $structure);
-        $info = $this->porterStorage->store('ReactionType', [], $structure, $data, []);
+        $this->porterStorage->prepare('ReactionType', $this->porterStructure['ReactionType']);
+        $info = $this->porterStorage->store('ReactionType', [], $this->porterStructure['ReactionType'], $data, []);
         Log::storage('export', $info); // Manually log the 'export'.
 
         // UserTag: Individual user reactions.

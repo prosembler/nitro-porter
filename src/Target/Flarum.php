@@ -699,12 +699,15 @@ class Flarum extends Target
             'DateUpdated' => 'updated_at',
             'CountVotes' => 'vote_count',
         ];
+        $filters = [
+            'CountVotes' => 'emptyToZero',
+        ];
         $query = $this->porterQB()->from('Poll')
             ->select(['*', 'DateInserted as end_date'])
-            ->selectRaw('"{}" as settings')
+            ->selectRaw('"{}" as settings') // cannot be null
             // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');
-        $this->import('polls', $query, self::SCHEMA_POLLS, $map);
+        $this->import('polls', $query, self::SCHEMA_POLLS, $map, $filters);
 
         // Poll Options
         $map = [

@@ -5,6 +5,19 @@ namespace Porter;
 class Schema
 {
     /**
+     * Retrieve an array from named file in `/data`.
+     */
+    public static function load(string $name): array
+    {
+        $data = ['porter'];
+        if (in_array($name, $data, true)) {
+            return include(ROOT_DIR . '/data/' . $name . '.php');
+        } else {
+            return [];
+        }
+    }
+
+    /**
      * Prepare a row of data for storage.
      *
      * Beware sensitive order of operations.

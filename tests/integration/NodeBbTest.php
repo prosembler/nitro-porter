@@ -5,6 +5,7 @@ use PHPUnit\Framework\TestCase;
 use Porter\Config;
 use Porter\Data;
 use Porter\Factory;
+use Porter\Schema;
 use Porter\Storage;
 use Porter\Storage\Mongo;
 use Porter\Target\NodeBb;
@@ -120,7 +121,7 @@ class NodeBbTest extends TestCase
      */
     protected function seed(Storage $storage, bool $withGuest = false): void
     {
-        $structure = Data::load('structure');
+        $structure = Schema::load('porter');
         foreach (['User', 'Role', 'UserRole', 'Category', 'Discussion', 'Comment', 'Media'] as $table) {
             $storage->prepare($table, $structure[$table]);
         }

@@ -6,6 +6,7 @@ use Porter\Config;
 use Porter\Data;
 use Porter\Factory;
 use Porter\Package;
+use Porter\Schema;
 use Porter\Storage;
 use Porter\Target;
 
@@ -96,7 +97,7 @@ class AttachmentsTest extends TestCase
      */
     protected static function seed(Storage $storage): void
     {
-        $structure = Data::load('structure');
+        $structure = Schema::load('porter');
         foreach (['User', 'Category', 'Discussion', 'Comment', 'Media'] as $table) {
             $storage->prepare($table, $structure[$table]);
         }

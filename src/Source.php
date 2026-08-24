@@ -77,7 +77,7 @@ abstract class Source extends Package
 
     public function __construct(public ?Storage $inputStorage = null, public ?Storage $porterStorage = null)
     {
-        $this->porterStructure = Data::load('structure');
+        $this->porterStructure = Schema::load('porter');
     }
 
     public function sourceQB(): Builder

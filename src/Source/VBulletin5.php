@@ -278,8 +278,6 @@ class VBulletin5 extends VBulletin
      */
     protected function pollsV5(): void
     {
-        //$fp = $ex->file;
-
         $poll_Map = [
             'nodeid' => 'PollID',
             'title' => 'Name',
@@ -306,14 +304,18 @@ class VBulletin5 extends VBulletin
             $poll_Map
         );
 
+        // Options.
         $pollOption_Map = [
             'polloptionid' => 'PollOptionID',
             'nodeid' => 'PollID',
             'title' => 'Body',
             'format' => 'Format',
             'sort' => 'Sort',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'created' => 'DateInserted',
             'userid' => 'InsertUserID',
+        ];
+        $filters = [
+            'created' => 'timestampToDate'
         ];
         $sql = "select
                 po.polloptionid,
@@ -325,35 +327,10 @@ class VBulletin5 extends VBulletin
                 n.userid
             from :_polloption as po
                 left join :_node as n on n.nodeid = po.nodeid;";
+        // @todo generate a sort order
+        $this->export('PollOption', $sql, $pollOption_Map, $filters);
 
-        // We have to generate a sort order so let's do the exportation manually line by line....
-        list($revMappings, $legacyFilter) = $this->porterStorage->normalizeDataMap($pollOption_Map);
-        //$exportStructure = $ex->porterStructure['PollOption'];
-        //$exportStructure = getExportStructure($pollOption_Map, $ex->mapStructure['PollOption'], $pollOption_Map);
-        //$revMappings = flipMappings($pollOption_Map);
-
-        //$ex->writeBeginTable($fp, 'PollOption', $exportStructure);
-
-        $result = $this->query($sql);
-        $currentPollID = null;
-        $currentSortID = 0;
-        $pollCount = 0;
-        if ($result) {
-            while ($row = $result->nextResultRow()) {
-                if ($currentPollID !== $row['nodeid']) {
-                    $currentPollID = $row['nodeid'];
-                    $currentSortID = 0;
-                }
-
-                $row['sort'] = ++$currentSortID;
-
-                //$ex->writeRow($fp, $row, $exportStructure, $revMappings, $legacyFilter);
-                $pollCount++;
-            }
-        }
-        //$ex->writeEndTable($fp);
-        Log::comment("Exported Table: PollOption (" . $pollCount . " rows)");
-
+        // Votes.
         $pollVote_Map = [
             'userid' => 'UserID',
             'polloptionid' => 'PollOptionID',

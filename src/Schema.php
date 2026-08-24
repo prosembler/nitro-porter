@@ -77,7 +77,6 @@ class Schema
                 $row[$srcColumnName] = call_user_func($callable, $row[$srcColumnName], $srcColumnName, $row);
             }
         }
-
         return $row;
     }
 
@@ -90,10 +89,6 @@ class Schema
      *      Ex: API response {'foo':[],'meta':0} where 'foo' is the list to be stored, not the top-level metadata.
      * 3) `src.sub` => `dest` — maps JSON array key `sub` in $row key `src` to column `dest.
      *      Ex: ['src.name' => 'dest'] takes JSON in `src` field and gets property `name`.
-     *
-     * @param array $row
-     * @param array $map
-     * @return array
      */
     private static function mapData(array $row, array $map): array
     {
@@ -115,15 +110,11 @@ class Schema
                 }
             }
         }
-
         return $row;
     }
 
     /**
      * Convert non-UTF-8 encodings to UTF-8 as needed.
-     *
-     * @param array $row
-     * @return array
      */
     private static function encodeData(array $row): array
     {
@@ -142,9 +133,6 @@ class Schema
 
     /**
      * Convert arrays & objects to flat text (JSON).
-     *
-     * @param array $row
-     * @return array
      */
     private static function flattenData(array $row): array
     {
@@ -201,7 +189,6 @@ class Schema
                 }
             }
         }
-
         return [$dataMap, $filter];
     }
 }

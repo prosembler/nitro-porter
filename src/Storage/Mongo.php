@@ -4,7 +4,7 @@ namespace Porter\Storage;
 
 use MongoDB\Collection;
 use MongoDB\Database;
-use Porter\PorterConnection;
+use Porter\DataConnection;
 use Porter\Storage;
 
 /**
@@ -19,14 +19,14 @@ class Mongo extends Storage
     /** @var int How many documents to write per `insertMany()`. */
     public const int INSERT_BATCH = 1000;
 
-    /** @var PorterConnection */
-    protected PorterConnection $connectionManager;
+    /** @var DataConnection */
+    protected DataConnection $connectionManager;
 
     /** @var array Documents pending insert, keyed by collection name. */
     protected array $buffer = [];
 
-    /** @param PorterConnection $c */
-    public function __construct(PorterConnection $c)
+    /** @param DataConnection $c */
+    public function __construct(DataConnection $c)
     {
         $this->connectionManager = $c;
     }

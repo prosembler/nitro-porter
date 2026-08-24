@@ -10,7 +10,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * Manages a single connection to a data source or target, like a database or API.
  */
-class PorterConnection
+class DataConnection
 {
     /** @var array Valid values for $type. */
     public const array ALLOWED_TYPES = ['database', 'file', 'https', 'mongo'];

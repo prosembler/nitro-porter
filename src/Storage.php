@@ -105,15 +105,15 @@ class Storage
      * Prepare a row of data for storage.
      *
      * @param array $row Data to operate on.
-     * @param array $fields [fieldName => type]
+     * @param array $structure [fieldName => type]
      * @param array $map [fieldName => newName]
      * @param array $filters [fieldName => callable]
      * @return array
      */
-    public function normalizeRow(array $row, array $fields, array $map, array $filters): array
+    public function normalizeRow(array $row, array $structure, array $map, array $filters): array
     {
-        // $fields['keys'] is only for prepare(); ignore here.
-        unset($fields['keys']);
+        // $structure['keys'] is only for prepare(); ignore here.
+        unset($structure['keys']);
 
         // Apply callback filters.
         $row = $this->filterData($row, $filters);
@@ -122,10 +122,10 @@ class Storage
         $row = $this->mapData($row, $map);
 
         // Drop columns not in the structure.
-        $row = array_intersect_key($row, $fields);
+        $row = array_intersect_key($row, $structure);
 
         // Add missing keys.
-        $row = array_merge(array_fill_keys(array_keys($fields), null), $row);
+        $row = array_merge(array_fill_keys(array_keys($structure), null), $row);
 
         // Convert arrays & objects to text (JSON).
         $row = $this->flattenData($row);

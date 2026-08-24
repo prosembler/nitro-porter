@@ -104,8 +104,6 @@ abstract class Package
 
     /**
      * Get support info of the target package.
-     *
-     * @return array
      * @see Target::setSources()
      */
     public static function getSupport(): array
@@ -115,8 +113,6 @@ abstract class Package
 
     /**
      * Get name of the target package.
-     *
-     * @return string
      */
     public static function getName(): string
     {
@@ -125,8 +121,6 @@ abstract class Package
 
     /**
      * Get default table prefix of the target package.
-     *
-     * @return string
      */
     public static function getPrefix(): string
     {
@@ -135,19 +129,14 @@ abstract class Package
 
     /**
      * Retrieve characteristics of the package.
-     *
-     * @param string $name
-     * @return mixed|null
      */
-    public static function getFlag(string $name)
+    public static function getFlag(string $name): mixed
     {
         return (isset(static::FLAGS[$name])) ? static::FLAGS[$name] : null;
     }
 
     /**
      * Whether to connect the OP to the discussion record.
-     *
-     * @return bool
      */
     public function getDiscussionBodyMode(): bool
     {
@@ -164,8 +153,6 @@ abstract class Package
 
     /**
      * Whether to attempt a file transfer.
-     *
-     * @return bool
      */
     public function getFileTransferSupport(): bool
     {

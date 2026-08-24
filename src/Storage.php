@@ -133,9 +133,7 @@ class Storage
         $row = array_intersect_key($row, $structure);
 
         // Add missing keys.
-        $row = array_merge(array_fill_keys(array_keys($structure), null), $row);
-
-        return $row;
+        return array_merge(array_fill_keys(array_keys($structure), null), $row);
     }
 
     /**

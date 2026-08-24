@@ -111,27 +111,17 @@ class Storage
      */
     public function normalizeRow(array $row, array $structure, array $map, array $filters): array
     {
-        // Apply callback filters.
         $row = $this->filterData($row, $filters);
-
-        // Rename data keys for the target.
         $row = $this->mapData($row, $map);
-
-        // Enforce which keys are present.
         $row = $this->structureData($row, $structure);
-
-        // Convert arrays & objects to text (JSON).
         $row = $this->flattenData($row);
-
-        // Fix encoding as needed.
         $row = $this->encodeData($row);
-
-        // Convert empty strings to null.
-        return array_map(function ($value) {
-            return ('' === $value) ? null : $value;
-        }, $row);
+        return $this->nullData($row);
     }
 
+    /**
+     * Enforce which keys are present in $row to match $structure.
+     */
     protected function structureData(array $row, array $structure): array
     {
         // $structure['keys'] is only for prepare(); ignore here.
@@ -144,6 +134,16 @@ class Storage
         $row = array_merge(array_fill_keys(array_keys($structure), null), $row);
 
         return $row;
+    }
+
+    /**
+     * Convert all empty strings to null.
+     */
+    protected function nullData(array $row): array
+    {
+        return array_map(function ($value) {
+            return ('' === $value) ? null : $value;
+        }, $row);
     }
 
     /**
@@ -165,7 +165,7 @@ class Storage
     }
 
     /**
-     * Apply column map to the data row to rename keys as required.
+     * Rename keys as required by applying column $map to the data $row.
      *
      * Uses:
      * 1) 'src' => 'dest' — maps key `src` in $row to column `dest`. Simplest and original use.
@@ -231,7 +231,7 @@ class Storage
     }
 
     /**
-     * Convert non-UTF-8 encodings to UTF-8.
+     * Convert non-UTF-8 encodings to UTF-8 as needed.
      *
      * @param array $row
      * @return array
@@ -252,7 +252,7 @@ class Storage
     }
 
     /**
-     * Convert arrays & objects to flat text.
+     * Convert arrays & objects to flat text (JSON).
      *
      * @param array $row
      * @return array

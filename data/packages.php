@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Packages manifest to avoid file detection and allow omitting incomplete, example, or private packages.
+ */
+
 return [
     'sources' => [
         'AdvancedForum',

@@ -138,26 +138,17 @@ class File extends Storage
      *
      * @param resource $fp
      * @param array $row
-     * @param array $structure
      * @param StorageInfo|null $info
      * @return StorageInfo
      */
-    public function writeRow($fp, array $row, array $structure, ?StorageInfo $info = null): StorageInfo
+    public function writeRow($fp, array $row, ?StorageInfo $info = null): StorageInfo
     {
-        // Loop through the columns in the export structure and grab their values from the row.
-        $exRow = [];
-        foreach ($structure as $field => $dest) {
-            // Get the value of the export.
-            $value = $row[$field] ?? null;
-
-            // Format the value for writing.
-            $exRow[] = $this->formatValue($value);
-        }
+        // Format values for file output.
+        $row = array_map([$this, 'formatValue'], $row);
 
         // Write the data.
-        fwrite($fp, implode(self::DELIM, $exRow));
-        // End the record.
-        fwrite($fp, self::NEWLINE);
+        fwrite($fp, implode(self::DELIM, $row));
+        fwrite($fp, self::NEWLINE); // End the record.
 
         return new StorageInfo(
             rows: $info->rows + 1
@@ -175,7 +166,7 @@ class File extends Storage
      */
     public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
-        $info = $this->writeRow($this->getHandle(), $row, $structure, $info);
+        $info = $this->writeRow($this->getHandle(), $row, $info);
         if ($final) {
             $this->writeEndTable($this->getHandle());
         }

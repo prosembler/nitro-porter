@@ -5,13 +5,13 @@ namespace Porter;
 class Schema
 {
     /**
-     * Retrieve an array from named file in `/data`.
+     * Retrieve an array from named file in `/schemas`.
      */
     public static function load(string $name): array
     {
         $data = ['porter'];
         if (in_array($name, $data, true)) {
-            return include(ROOT_DIR . '/data/' . $name . '.php');
+            return include(ROOT_DIR . '/schemas/' . $name . '.php');
         } else {
             return [];
         }

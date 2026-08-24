@@ -111,14 +111,31 @@ class Storage
      */
     public function normalizeRow(array $row, array $structure, array $map, array $filters): array
     {
-        // $structure['keys'] is only for prepare(); ignore here.
-        unset($structure['keys']);
-
         // Apply callback filters.
         $row = $this->filterData($row, $filters);
 
         // Rename data keys for the target.
         $row = $this->mapData($row, $map);
+
+        // Enforce which keys are present.
+        $row = $this->structureData($row, $structure);
+
+        // Convert arrays & objects to text (JSON).
+        $row = $this->flattenData($row);
+
+        // Fix encoding as needed.
+        $row = $this->encodeData($row);
+
+        // Convert empty strings to null.
+        return array_map(function ($value) {
+            return ('' === $value) ? null : $value;
+        }, $row);
+    }
+
+    protected function structureData(array $row, array $structure): array
+    {
+        // $structure['keys'] is only for prepare(); ignore here.
+        unset($structure['keys']);
 
         // Drop columns not in the structure.
         $row = array_intersect_key($row, $structure);
@@ -126,16 +143,7 @@ class Storage
         // Add missing keys.
         $row = array_merge(array_fill_keys(array_keys($structure), null), $row);
 
-        // Convert arrays & objects to text (JSON).
-        $row = $this->flattenData($row);
-
-        // Fix encoding as needed.
-        $row = $this->fixEncoding($row);
-
-        // Convert empty strings to null.
-        return array_map(function ($value) {
-            return ('' === $value) ? null : $value;
-        }, $row);
+        return $row;
     }
 
     /**
@@ -145,7 +153,7 @@ class Storage
      * @param array $filters List of column => callable.
      * @return array
      */
-    public function filterData(array $row, array $filters): array
+    protected function filterData(array $row, array $filters): array
     {
         foreach ($filters as $srcColumnName => $callable) {
             if (array_key_exists($srcColumnName, $row)) {
@@ -170,7 +178,7 @@ class Storage
      * @param array $map
      * @return array
      */
-    public function mapData(array $row, array $map): array
+    protected function mapData(array $row, array $map): array
     {
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
@@ -228,7 +236,7 @@ class Storage
      * @param array $row
      * @return array
      */
-    public function fixEncoding(array $row): array
+    protected function encodeData(array $row): array
     {
         return array_map(function ($value) {
             $doEncode = $value && function_exists('mb_detect_encoding') &&

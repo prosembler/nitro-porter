@@ -95,7 +95,8 @@ abstract class Package
     {
         $data = ['origins', 'sources', 'targets'];
         if (in_array($name, $data, true)) {
-            return include(ROOT_DIR . '/data/' . $name . '.php');
+            $packages = include(ROOT_DIR . '/data/packages.php');
+            return $packages[$name] ?? [];
         } else {
             return [];
         }

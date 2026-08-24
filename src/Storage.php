@@ -103,11 +103,13 @@ class Storage
     /**
      * Prepare a row of data for storage.
      *
+     * Beware sensitive order of operations.
+     *
      * @param array $row Data to operate on.
      * @param array $structure [fieldName => type]
      * @param array $map [fieldName => newName]
      * @param array $filters [fieldName => callable]
-     * @return array
+     * @return array Normalized row of data.
      */
     public function normalizeRow(array $row, array $structure, array $map, array $filters): array
     {

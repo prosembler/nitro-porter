@@ -21,6 +21,6 @@ unset($autoloader);
 
 // Load data.
 \Porter\Config::getInstance()->set(\Porter\Config::loadFile());
-\Porter\Support::getInstance()->setOrigins(\Porter\Data::load('origins'));
-\Porter\Support::getInstance()->setSources(\Porter\Data::load('sources'));
-\Porter\Support::getInstance()->setTargets(\Porter\Data::load('targets'));
+\Porter\Support::getInstance()->setOrigins(\Porter\Package::list('origins'));
+\Porter\Support::getInstance()->setSources(\Porter\Package::list('sources'));
+\Porter\Support::getInstance()->setTargets(\Porter\Package::list('targets'));

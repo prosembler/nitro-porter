@@ -5,6 +5,7 @@ use PHPUnit\Framework\TestCase;
 use Porter\Config;
 use Porter\Data;
 use Porter\Factory;
+use Porter\Package;
 use Porter\Storage;
 use Porter\Target;
 
@@ -195,7 +196,7 @@ class AttachmentsTest extends TestCase
     public static function getAttachmentTargets(): array
     {
         $targets = [];
-        foreach (Data::load('targets') as $name) {
+        foreach (Package::list('targets') as $name) {
             $support = ('\Porter\Target\\' . $name)::getSupport();
             if (!empty($support['attachmentPath']) && !empty($support['features']['Attachments'])) {
                 $targets[$name] = [$name];

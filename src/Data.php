@@ -9,7 +9,7 @@ class Data
      */
     public static function load(string $name): array
     {
-        $data = ['origins', 'sources', 'targets', 'structure'];
+        $data = ['structure'];
         if (in_array($name, $data, true)) {
             return include(ROOT_DIR . '/data/' . $name . '.php');
         } else {

@@ -89,6 +89,19 @@ abstract class Package
     }
 
     /**
+     * Retrieve an array from named file in `/data`.
+     */
+    public static function list(string $name): array
+    {
+        $data = ['origins', 'sources', 'targets'];
+        if (in_array($name, $data, true)) {
+            return include(ROOT_DIR . '/data/' . $name . '.php');
+        } else {
+            return [];
+        }
+    }
+
+    /**
      * Get support info of the target package.
      *
      * @return array

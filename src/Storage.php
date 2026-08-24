@@ -31,22 +31,22 @@ class Storage
             // Iterate on API data.
             foreach ($data as $row) {
                 $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
-                $info = $this->stream($row, $structure, $info);
+                $info = $this->stream($row, $info);
             }
         } elseif (is_a($data, '\Porter\Database\ResultSet')) {
             // Iterate on @deprecated ResultSet.
             while ($row = $data->nextResultRow()) {
                 $row = $this->normalizeRow($row, $structure, $map, $filters);
-                $info = $this->stream($row, $structure, $info);
+                $info = $this->stream($row, $info);
             }
         } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
             // Use the Builder to process results one at a time.
             foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
                 $row = $this->normalizeRow((array)$row, $structure, $map, $filters);
-                $info = $this->stream($row, $structure, $info);
+                $info = $this->stream($row, $info);
             }
         }
-        $info = $this->stream([], [], $info, true); // Insert remaining records.
+        $info = $this->stream([], $info, true); // Insert remaining records.
 
         return new StorageInfo(
             name: $name,
@@ -88,7 +88,6 @@ class Storage
     /** Send one record for storage at a time. */
     public function stream(
         array $row,
-        array $structure,
         ?StorageInfo $info = null,
         bool $final = false
     ): StorageInfo {

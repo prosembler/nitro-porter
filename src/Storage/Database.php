@@ -65,12 +65,11 @@ class Database extends Storage
      * While `store()` takes a batch and processes it, this takes 1 row at a time.
      * Created for Postscripts to have finer control over record inserts.
      * @param array $row
-     * @param array $structure
      * @param ?StorageInfo $info
      * @param bool $final Must be `true` on final call or records will be lost.
      * @return StorageInfo
      */
-    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
+    public function stream(array $row, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
         $info = $this->batchInsert($row, $info, $final);
         return new StorageInfo(

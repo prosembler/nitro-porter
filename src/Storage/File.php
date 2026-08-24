@@ -159,12 +159,11 @@ class File extends Storage
      * Send one record for storage at a time.
      *
      * @param array $row
-     * @param array $structure
      * @param ?StorageInfo $info
      * @param bool $final Whether this is the last row.
      * @return StorageInfo
      */
-    public function stream(array $row, array $structure, ?StorageInfo $info = null, bool $final = false): StorageInfo
+    public function stream(array $row, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
         $info = $this->writeRow($this->getHandle(), $row, $info);
         if ($final) {

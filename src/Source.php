@@ -217,7 +217,7 @@ abstract class Source extends Package
         }
 
         // Reconcile data structure to be written to storage.
-        list($map, $legacyFilter) = $this->porterStorage->normalizeDataMap($map); // @todo Remove legacy filter usage.
+        list($map, $legacyFilter) = Schema::normalizeDataMap($map); // @todo Remove legacy filter usage.
         $filters = array_merge($filters, $legacyFilter);
 
         // Prepare the storage medium for the incoming structure.

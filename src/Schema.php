@@ -73,11 +73,15 @@ class Schema
     private static function filterData(array $row, array $filters): array
     {
         foreach ($filters as $columnName => $filterName) {
-            $filterName = '\Porter\\Filter\\' . $filterName;
-            if (array_key_exists($columnName, $row) && class_exists($filterName)) {
-                $filter = new $filterName($row[$columnName], $columnName, $row);
-                if ($filter instanceof Filter) {
-                    $row[$columnName] = $filter();
+            if (is_callable($filterName)) {
+                $row[$columnName] = $filterName($row[$columnName], $columnName, $row);
+            } else {
+                $filterName = '\Porter\\Filter\\' . $filterName;
+                if (array_key_exists($columnName, $row) && class_exists($filterName)) {
+                    $filter = new $filterName($row[$columnName], $columnName, $row);
+                    if ($filter instanceof Filter) {
+                        $row[$columnName] = $filter();
+                    }
                 }
             }
         }

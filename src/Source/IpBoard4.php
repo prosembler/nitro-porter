@@ -62,7 +62,7 @@ class IpBoard4 extends Source
             'mt_starter_id' => 'InsertUserID'
         ];
         $filters = [
-            'mt_date' => 'timestampToDate',
+            'mt_date' => 'UnixtimeToDate',
         ];
         $query = "select * from :_core_message_topics where mt_is_deleted = 0";
         $this->export('Conversation', $query, $map, $filters);
@@ -77,7 +77,7 @@ class IpBoard4 extends Source
             'msg_ip_address' => 'InsertIPAddress'
         ];
         $filters = [
-            'msg_date' => 'timestampToDate',
+            'msg_date' => 'UnixtimeToDate',
         ];
         $query = "select m.*, 'Html' as Format from :_core_message_posts m";
         $this->export('ConversationMessage', $query, $map, $filters);
@@ -109,9 +109,9 @@ class IpBoard4 extends Source
             'location' => 'Location'
         ];
         $filters = [
-            'name' => 'HtmlDecoder',
-            'joined' => 'timestampToDate',
-            'last_activity' => 'timestampToDate',
+            'name' => 'DecodeHtml',
+            'joined' => 'UnixtimeToDate',
+            'last_activity' => 'UnixtimeToDate',
         ];
         $query = "select m.*, 'ipb' as HashMethod
             from :_core_members m";
@@ -150,7 +150,7 @@ class IpBoard4 extends Source
             'position' => 'Sort'
         ];
         $filters = [
-            'name' => 'HtmlDecoder',
+            'name' => 'DecodeHtml',
         ];
         $this->export('Category', "select * from :_forums_forums", $map, $filters);
     }
@@ -185,8 +185,8 @@ class IpBoard4 extends Source
             'closed' => 'Closed'
         ];
         $filters = [
-            'start_date' => 'timestampToDate',
-            'edit_time' => 'timestampToDate',
+            'start_date' => 'UnixtimeToDate',
+            'edit_time' => 'UnixtimeToDate',
         ];
         $query = "select t.*, $descriptionSQL as post, 
                 IF(t.state = 'closed', 1, 0) as closed, 'Html' as Format, p.edit_time
@@ -209,8 +209,8 @@ class IpBoard4 extends Source
             'post' => 'Body'
         ];
         $filters = [
-            'post_date' => 'timestampToDate',
-            'edit_time' => 'timestampToDate',
+            'post_date' => 'UnixtimeToDate',
+            'edit_time' => 'UnixtimeToDate',
         ];
         $query = "select p.*, 'Html' as Format
             from :_forums_posts p
@@ -236,7 +236,7 @@ class IpBoard4 extends Source
             'img_height' => 'ImageHeight'
         ];
         $filters = [
-            'attach_date' => 'timestampToDate',
+            'attach_date' => 'UnixtimeToDate',
         ];
         $query = "select a.*
             from :_core_attachments a";

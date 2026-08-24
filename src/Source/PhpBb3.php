@@ -88,7 +88,7 @@ class PhpBb3 extends Source
             'user_id' => ['Column' => 'InsertUserID', 'Type' => 'int'],
             'reportee_id' => ['Column' => 'UserID', 'Type' => 'int'],
             'log_ip' => ['Column' => 'InsertIPAddress', 'Type' => 'varchar(15)'],
-            'log_time' => ['Column' => 'DateInserted', 'Type' => 'datetime', 'Filter' => 'timestampToDate'],
+            'log_time' => ['Column' => 'DateInserted', 'Type' => 'datetime', 'Filter' => 'UnixtimeToDate'],
             'log_operation' => [
                 'Column' => 'Type',
                 'Type' => 'varchar(10)',
@@ -189,7 +189,7 @@ class PhpBb3 extends Source
 
         $user_Map = [
             'user_id' => 'UserID',
-            'username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'user_password' => 'Password',
             'user_email' => 'Email',
             //'user_timezone' => 'HourOffset',
@@ -311,7 +311,7 @@ class PhpBb3 extends Source
     {
         $category_Map = [
             'forum_id' => 'CategoryID',
-            'forum_name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'forum_name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'forum_desc' => 'Description',
             'left_id' => 'Sort'
         ];
@@ -359,7 +359,6 @@ class PhpBb3 extends Source
             'post_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
             'Format' => 'Format',
             'poster_id' => 'InsertUserID',
-            'poster_ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'forceIP4'],
             'post_edit_user' => 'UpdateUserID'
         ];
         $this->export(
@@ -493,7 +492,7 @@ class PhpBb3 extends Source
             'RealSubject' => [
                 'Column' => 'Subject',
                 'Type' => 'varchar(250)',
-                'Filter' => 'HTMLDecoder'
+                'Filter' => 'DecodeHtml'
             ]
         ];
         $this->export(
@@ -549,7 +548,7 @@ class PhpBb3 extends Source
             'poll_id' => 'PollID',
             'poll_title' => 'Name',
             'topic_id' => 'DiscussionID',
-            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'topic_poster' => 'InsertUserID',
             'anonymous' => 'Anonymous'
         ];
@@ -571,7 +570,7 @@ class PhpBb3 extends Source
             'poll_option_text' => 'Body',
             'format' => 'Format',
             'poll_option_total' => 'CountVotes',
-            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'topic_poster' => 'InsertUserID'
         ];
         $this->export(

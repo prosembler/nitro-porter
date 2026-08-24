@@ -108,8 +108,8 @@ class Xenforo extends Source
             'avatarThumbFullPath' => 'SourceAvatarThumbFullPath',
         ];
         $filter = [
-            'register_date' => 'timestampToDate',
-            'last_activity' => 'timestampToDate',
+            'register_date' => 'UnixtimeToDate',
+            'last_activity' => 'UnixtimeToDate',
         ];
         $prx = $this->dbInput()->getTablePrefix();
         $query = $this->sourceQB()->from('user', 'u')->select()
@@ -179,7 +179,7 @@ class Xenforo extends Source
                 }
             ],
             'display_order' => 'Sort',
-            'display_in_list' => ['Column' => 'HideAllDiscussions', 'Filter' => 'NotFilter']
+            'display_in_list' => ['Column' => 'HideAllDiscussions', 'Filter' => 'InvertInt']
         ];
         $this->export(
             'Category',
@@ -199,13 +199,12 @@ class Xenforo extends Source
             'reply_count' => 'CountComments',
             'view_count' => 'CountViews',
             'user_id' => 'InsertUserID',
-            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'sticky' => 'Announce',
-            'discussion_open' => ['Column' => 'Closed', 'Filter' => 'NotFilter'],
-            'last_post_date' => ['Column' => 'DateLastComment', 'Filter' => 'timestampToDate'],
+            'discussion_open' => ['Column' => 'Closed', 'Filter' => 'InvertInt'],
+            'last_post_date' => ['Column' => 'DateLastComment', 'Filter' => 'UnixtimeToDate'],
             'message' => 'Body',
             'format' => 'Format',
-            'ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'long2ipf']
         ];
         $this->export(
             'Discussion',
@@ -230,10 +229,9 @@ class Xenforo extends Source
             'post_id' => 'CommentID',
             'thread_id' => 'DiscussionID',
             'user_id' => 'InsertUserID',
-            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'message' => 'Body',
             'format' => 'Format',
-            'ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'long2ipf']
         ];
         $this->export(
             'Comment',
@@ -284,7 +282,7 @@ class Xenforo extends Source
             'height' => 'ImageHeight',
         ];
         $filters = [
-            'Type' => 'mimeTypeFromExtension',
+            'Type' => 'ExtToMime',
         ];
         $prx = $this->dbInput()->getTablePrefix();
 
@@ -333,7 +331,7 @@ class Xenforo extends Source
             'conversation_id' => 'ConversationID',
             'title' => 'Subject',
             'user_id' => 'InsertUserID',
-            'start_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate']
+            'start_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate']
         ];
         $this->export(
             'Conversation',
@@ -344,11 +342,10 @@ class Xenforo extends Source
         $conversationMessage_Map = [
             'message_id' => 'MessageID',
             'conversation_id' => 'ConversationID',
-            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'user_id' => 'InsertUserID',
             'message' => 'Body',
             'format' => 'Format',
-            'ip' => ['Column' => 'InsertIPAddress', 'Filter' => 'long2ipf']
         ];
         $this->export(
             'ConversationMessage',

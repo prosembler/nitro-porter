@@ -155,7 +155,7 @@ class BbPress1 extends Source
         $comment_Map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
-            'post_text' => ['Column' => 'Body', 'Filter' => 'bbPressTrim'],
+            'post_text' => ['Column' => 'Body', 'Filter' => 'BBPressBody'],
             'Format' => 'Format',
             'poster_id' => 'InsertUserID',
             'post_time' => 'DateInserted'
@@ -204,7 +204,7 @@ class BbPress1 extends Source
                 'ID' => 'MessageID',
                 'pm_thread' => 'ConversationID',
                 'pm_from' => 'InsertUserID',
-                'pm_text' => ['Column' => 'Body', 'Filter' => 'bbPressTrim']
+                'pm_text' => ['Column' => 'Body', 'Filter' => 'BBPressBody']
             ];
             $this->export(
                 'ConversationMessage',

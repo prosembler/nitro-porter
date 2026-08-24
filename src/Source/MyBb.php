@@ -67,7 +67,7 @@ class MyBb extends Source
     {
         $user_Map = [
             'uid' => 'UserID',
-            'username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'avatar' => 'Photo',
             'regdate2' => 'DateInserted',
             'regdate3' => 'DateFirstVisit',
@@ -139,7 +139,7 @@ class MyBb extends Source
             'tid' => 'DiscussionID',
             'fid' => 'CategoryID',
             'uid' => 'InsertUserID',
-            'subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'views' => 'CountViews',
             'replies' => 'CountComments',
         ];

@@ -8,6 +8,9 @@
 
 namespace Porter\Target;
 
+use Porter\Filter\BlankEmails;
+use Porter\Filter\DeletedNameDuplicates;
+use Porter\Formatter;
 use Porter\Log;
 use Porter\Target;
 
@@ -101,14 +104,7 @@ class Waterhole extends Target
      */
     public function uniqueUserNames(): void
     {
-        $allowlist = [
-            '[Deleted User]',
-            '[DeletedUser]',
-            '-Deleted-User-',
-            '[Slettet bruker]', // Norwegian
-            '[Utilisateur supprimé]', // French
-        ]; // @see fixDuplicateDeletedNames()
-        $dupes = array_diff($this->findDuplicates('User', 'Name'), $allowlist);
+        $dupes = array_diff($this->findDuplicates('User', 'Name'), Formatter::DELETED_USERNAMES);
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
@@ -168,8 +164,8 @@ class Waterhole extends Target
             'Confirmed' => 'email_verified_at',
         ];
         $filters = [
-            'Name' => 'fixDuplicateDeletedNames',
-            'Email' => 'fixNullEmails',
+            'Name' => 'DeletedNameDuplicates',
+            'Email' => 'BlankEmails',
         ];
         $query = $this->porterQB()->from('User')->select();
 
@@ -267,7 +263,7 @@ class Waterhole extends Target
             'Body' => 'body',
         ];
         $filters = [
-            'slug' => 'createDiscussionSlugs',
+            'slug' => 'FormatUrl',
         ];
 
         // CountComments needs to be double-mapped so it's included as an alias also.

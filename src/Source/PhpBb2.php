@@ -317,7 +317,7 @@ class PhpBb2 extends Source
             'RealSubject' => [
                 'Column' => 'Subject',
                 'Type' => 'varchar(250)',
-                'Filter' => 'HTMLDecoder'
+                'Filter' => 'DecodeHtml'
             ]
         ];
 

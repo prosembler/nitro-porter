@@ -86,10 +86,10 @@ class Vanilla extends Source
      */
     public function users(): void
     {
-        $map = [
-            'Photo' => ['Column' => 'Photo', 'Type' => 'string', 'Filter' => 'vanillaPhoto'],
+        $filters = [
+            'Photo' => 'VanillaPhoto',
         ];
-        $this->export('User', "select * from :_User u", $map);
+        $this->export('User', "select * from :_User u", [], $filters);
     }
 
     /**

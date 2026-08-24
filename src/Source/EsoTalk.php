@@ -129,7 +129,7 @@ class EsoTalk extends Source
     {
         $discussion_Map = [
             'conversationId' => 'DiscussionID',
-            'title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'title' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'channelId' => 'CategoryID',
             'memberId' => 'InsertUserID',
             'sticky' => 'Announce',

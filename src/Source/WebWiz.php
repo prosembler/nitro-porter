@@ -217,17 +217,17 @@ class WebWiz extends Source
     {
         $user_Map = [
             'Author_ID' => 'UserID',
-            'Username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
-            'Real_name' => ['Column' => 'FullName', 'Type' => 'varchar(50)', 'Filter' => 'HTMLDecoder'],
+            'Username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'Real_name' => ['Column' => 'FullName', 'Type' => 'varchar(50)', 'Filter' => 'DecodeHtml'],
             'Password2' => 'Password',
             'Gender2' => 'Gender',
             'Author_email' => 'Email',
-            'Photo2' => ['Column' => 'Photo', 'Filter' => 'HTMLDecoder'],
+            'Photo2' => ['Column' => 'Photo', 'Filter' => 'DecodeHtml'],
             'Login_IP' => 'LastIPAddress',
             'Banned' => 'Banned',
             'Join_date' => ['Column' => 'DateInserted'],
             'Last_visit' => ['Column' => 'DateLastActive'],
-            'Location' => ['Column' => 'Location', 'Filter' => 'HTMLDecoder'],
+            'Location' => ['Column' => 'Location', 'Filter' => 'DecodeHtml'],
             'DOB' => 'DateOfBirth',
             'Show_email' => 'ShowEmail'
         ];
@@ -326,7 +326,7 @@ class WebWiz extends Source
             'Topic_ID' => 'DiscussionID',
             'Forum_ID' => 'CategoryID',
             'Author_ID' => 'InsertUserID',
-            'Subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'Subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'IP_addr' => 'InsertIPAddress',
             'Message' => ['Column' => 'Body'],
             'Format' => 'Format',

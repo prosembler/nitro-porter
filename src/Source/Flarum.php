@@ -73,7 +73,7 @@ class Flarum extends Source
     {
         $user_Map = [
             'id' => 'UserID',
-            'username' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'email' => 'Email',
             'password' => 'Password',
             'joined_at' => 'DateInserted',
@@ -142,7 +142,7 @@ class Flarum extends Source
         $discussion_Map = [
             'id' => 'DiscussionID',
             'user_id' => 'InsertUserID',
-            'title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'title' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'is_sticky' => 'Announce', // flarum/sticky — optional field
             'is_locked' => 'Closed', // flarum/lock — optional field
         ];

@@ -270,7 +270,7 @@ class NodeBb extends Target
             $uid = $this->uid((int)$user->UserID);
             // NodeBB requires unique usernames, and every deleted user shares one. Renaming them
             // is what uniqueUserNames() assumes has happened when it allowlists those names.
-            $name = (string)fixDuplicateDeletedNames((string)$user->Name, 'Name', (array)$user);
+            $name = Formatter::instance()->deletedNameDuplicates((string)$user->Name, $uid);
             $slug = $this->slugify($name, (string)$uid);
             $email = strtolower((string)$user->Email);
             $joined = $this->toMillis($user->DateInserted);

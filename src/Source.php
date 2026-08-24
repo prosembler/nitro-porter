@@ -314,7 +314,7 @@ abstract class Source extends Package
      *
      * @param string $table Name of the database table to derive the encoding from.
      * @return string Encoding found.
-     * @see HTMLDecoder()
+     * @see DecodeHtml()
      */
     public function getInputEncoding(string $table): string
     {

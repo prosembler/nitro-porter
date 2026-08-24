@@ -97,7 +97,7 @@ class Q2a extends Source
             'postid' => 'DiscussionID',
             'categoryid' => 'CategoryID',
             'userid' => 'InsertUserID',
-            'Subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'Subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
         ];
         $this->export(
             'Discussion',

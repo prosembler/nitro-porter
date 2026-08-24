@@ -7,6 +7,7 @@
 
 namespace Porter\Target;
 
+use Porter\Filter\DeletedNameDuplicates;
 use Porter\Log;
 use Porter\Formatter;
 use Porter\Target;
@@ -263,14 +264,7 @@ class Flarum extends Target
         // Flarum must have unique usernames. Report users skipped (because of `insert ignore`).
         // Unsure fix could be automated. Manually edit existing forum data for now to rectify dupe issues.
         // Would need to find data attached & possibly merge. Would need IDs etc from findDuplicates().
-        $allowlist = [
-            '[Deleted User]',
-            '[DeletedUser]',
-            '-Deleted-User-',
-            '[Slettet bruker]', // Norwegian
-            '[Utilisateur supprimé]', // French
-        ]; // @see fixDuplicateDeletedNames()
-        $dupes = array_diff($this->findDuplicates('User', 'Name'), $allowlist);
+        $dupes = array_diff($this->findDuplicates('User', 'Name'), Formatter::DELETED_USERNAMES);
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
@@ -336,8 +330,8 @@ class Flarum extends Target
             'CountComments' => 'comment_count',
         ];
         $filters = [
-            'Name' => 'fixDuplicateDeletedNames',
-            'Email' => 'fixNullEmails',
+            'Name' => 'DeletedNameDuplicates',
+            'Email' => 'BlankEmails',
         ];
         $query = $this->porterQB()->from('User')
             ->select()
@@ -453,7 +447,7 @@ class Flarum extends Target
             'Closed' => 'is_locked',
         ];
         $filters = [
-            'slug' => 'createDiscussionSlugs', // 'DiscussionID as slug' (below).
+            'slug' => 'FormatUrl', // 'DiscussionID as slug' (below).
             'Announce' => 'emptyToZero',
             'Closed' => 'emptyToZero',
         ];
@@ -469,7 +463,7 @@ class Flarum extends Target
         $query = $this->porterQB()->from('Discussion')
             ->select()
             ->selectRaw('COALESCE(CountComments, 0) as post_number_index')
-            ->selectRaw('DiscussionID as slug')
+            ->selectRaw('CONCAT(DiscussionID, "-", Name) as slug')
             ->selectRaw('CountComments as last_post_number')
             ->selectRaw('0 as is_private')
             ->selectRaw('0 as votes')
@@ -536,7 +530,7 @@ class Flarum extends Target
             'Body' => 'content'
         ];
         $filters = [
-            'Body' => 'filterFlarumContent',
+            'Body' => 'FlarumBody',
         ];
         $query = $this->porterQB()->from('Comment')
             // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
@@ -823,9 +817,6 @@ class Flarum extends Target
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
         ];
-        $filters = [
-            'slug' => 'createDiscussionSlugs',
-        ];
 
         // fof/gamification — no data, just prevent failure (no default value is set)
         if ($this->hasOutputSchema('discussions', ['votes'])) {
@@ -849,7 +840,7 @@ class Flarum extends Target
             ->selectRaw('ifnull(Subject,
                 concat("Private discussion ", (ConversationID + ' . $MaxDiscussionID . '))) as title');
 
-        $this->import('discussions', $query, $structure, $map, $filters);
+        $this->import('discussions', $query, $structure, $map);
 
         // Messages — Comments
         $MaxCommentID = $this->messagePostOffset = $this->getMaxValue('id', 'posts');
@@ -860,7 +851,7 @@ class Flarum extends Target
             'DateInserted' => 'created_at',
         ];
         $filters = [
-            'Body' => 'filterFlarumContent',
+            'Body' => 'FlarumBody',
         ];
         $query = $this->porterQB()->from('ConversationMessage')
             ->select(['Body', 'Format', 'InsertUserID', 'DateInserted'])

@@ -283,7 +283,7 @@ class VBulletin5 extends VBulletin
             'title' => 'Name',
             'discussionid' => 'DiscussionID',
             'anonymous' => 'Anonymous',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'userid' => 'InsertUserId',
         ];
         $this->export(
@@ -315,7 +315,7 @@ class VBulletin5 extends VBulletin
             'userid' => 'InsertUserID',
         ];
         $filters = [
-            'created' => 'timestampToDate'
+            'created' => 'UnixtimeToDate'
         ];
         $sql = "select
                 po.polloptionid,
@@ -334,7 +334,7 @@ class VBulletin5 extends VBulletin
         $pollVote_Map = [
             'userid' => 'UserID',
             'polloptionid' => 'PollOptionID',
-            'votedate' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate']
+            'votedate' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate']
         ];
         $this->export(
             'PollVote',
@@ -690,7 +690,7 @@ class VBulletin5 extends VBulletin
             'filesize' => 'Size',
         ];
         $filters = [
-            'extension' => 'mimeTypeFromExtension',
+            'extension' => 'ExtToMime',
         ];
         $this->export(
             'Media',

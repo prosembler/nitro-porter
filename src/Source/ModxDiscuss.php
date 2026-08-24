@@ -171,7 +171,7 @@ class ModxDiscuss extends Source
     protected function discussions(): void
     {
         $discussion_Map = [
-            'title2' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'title2' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
         ];
         // It's easier to convert between Unix time and MySQL datestamps during the db query.
         $this->export(

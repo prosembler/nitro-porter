@@ -72,10 +72,10 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
             'Username' => 'Name',
         ];
         // You can filter values with a function: $sourceColumnName => $filterFunctionName
-        // Here, 'HTMLDecoder' is a function in `Functions/filter.php`. Check there for available filters.
+        // Here, 'DecodeHtml' is a function in `Functions/filter.php`. Check there for available filters.
         // Assume no filter is needed and only use one if you encounter issues.
         $filters = [
-            'Name' => 'HTMLDecoder',
+            'Name' => 'DecodeHtml',
         ];
         // This is the query that the $map array above will be mapped against.
         // Therefore, our select statement must cover all the "source" columns.
@@ -168,7 +168,7 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
             'Subject' => 'Name'
         ];
         $filters = [
-            'Subject' => 'HTMLDecoder', // Use the INPUT column name, not the Porter name.
+            'Subject' => 'DecodeHtml', // Use the INPUT column name, not the Porter name.
         ];
         $query = $this->sourceQB()->from('tblTopic')
             ->select()

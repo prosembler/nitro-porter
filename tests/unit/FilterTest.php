@@ -24,7 +24,8 @@ final class FilterTest extends TestCase
             'userpics/396/YGIC427MJADQ.ext' => 'userpics/396/YGIC427MJADQ.ext',
         ];
         foreach ($photoTests as $input => $expectedOutput) {
-            $testOutput = \vanillaPhoto($input);
+            $filter = new \Porter\Filter\VanillaPhoto($input);
+            $testOutput = $filter();
             $this->assertEquals($testOutput, $expectedOutput);
         }
     }

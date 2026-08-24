@@ -131,7 +131,7 @@ class SimplePress extends Source
     {
         $category_Map = [
             'forum_id' => 'CategoryID',
-            'forum_name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'forum_name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'forum_desc' => 'Description',
             'forum_seq' => 'Sort',
             'form_slug' => 'UrlCode',

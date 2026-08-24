@@ -59,7 +59,7 @@ class ExpressionEngine extends Source
             'message_id' => 'ConversationID',
             'title2' => ['Column' => 'Subject', 'Type' => 'varchar(255)'],
             'sender_id' => 'InsertUserID',
-            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
         ];
         $this->export(
             'Conversation',
@@ -89,7 +89,7 @@ class ExpressionEngine extends Source
             'group_id' => 'ConversationID',
             'message_id' => 'MessageID',
             'message_body' => 'Body',
-            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'sender_id' => 'InsertUserID'
         ];
         $this->export(
@@ -266,24 +266,7 @@ class ExpressionEngine extends Source
         );
     }
 
-    /**
-     * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @access public
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     *@see    Migration::writeTableToFile
-     *
-     */
-    public function filterThumbnailData($value, $field, $row): ?string
-    {
-        if (strpos(mimeTypeFromExtension(strtolower($row['extension'])), 'image/') === 0) {
-            return $value;
-        }
-        return null;
-    }
+
 
     /**
      */
@@ -292,12 +275,12 @@ class ExpressionEngine extends Source
         $user_Map = [
             'member_id' => 'UserID',
             'username' => ['Column' => 'Username', 'Type' => 'varchar(50)'],
-            'screen_name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'screen_name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'Password2' => 'Password',
             'email' => 'Email',
             'ipaddress' => 'InsertIPAddress',
-            'join_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
-            'last_activity' => ['Column' => 'DateLastActive', 'Filter' => 'timestampToDate'],
+            'join_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'last_activity' => ['Column' => 'DateLastActive', 'Filter' => 'UnixtimeToDate'],
             //'timezone' => 'HourOffset',
             'location' => 'Location'
         ];
@@ -383,12 +366,12 @@ class ExpressionEngine extends Source
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'author_id' => 'InsertUserID',
-            'title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'title' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'ip_address' => 'InsertIPAddress',
-            'body' => ['Column' => 'Body', 'Filter' => 'cleanBodyBrackets'],
-            'body2' => ['Column' => 'Format', 'Filter' => 'guessFormat'],
-            'topic_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
-            'topic_edit_date' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
+            'body' => ['Column' => 'Body', 'Filter' => 'AngleToSquareBrackets'],
+            'body2' => ['Column' => 'Format', 'Filter' => 'BodyToFormat'],
+            'topic_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'topic_edit_date' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
             'topic_edit_author' => 'UpdateUserID'
         ];
         $this->export(
@@ -411,10 +394,10 @@ class ExpressionEngine extends Source
             'topic_id' => 'DiscussionID',
             'author_id' => 'InsertUserID',
             'ip_address' => 'InsertIPAddress',
-            'body' => ['Column' => 'Body', 'Filter' => 'cleanBodyBrackets'],
-            'body2' => ['Column' => 'Format', 'Filter' => 'guessFormat'],
-            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
-            'post_edit_date' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
+            'body' => ['Column' => 'Body', 'Filter' => 'AngleToSquareBrackets'],
+            'body2' => ['Column' => 'Format', 'Filter' => 'BodyToFormat'],
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'post_edit_date' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
             'post_edit_author' => 'UpdateUserID'
         ];
         $this->export(
@@ -433,12 +416,12 @@ class ExpressionEngine extends Source
     {
         $media_Map = [
             'filename' => 'Name',
-            'extension' => ['Column' => 'Type', 'Filter' => 'mimeTypeFromExtension'],
+            'extension' => ['Column' => 'Type', 'Filter' => 'ExtToMime'],
             'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
             'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
             'filesize' => 'Size',
             'member_id' => 'InsertUserID',
-            'attachment_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'attachment_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'filehash' => ['Column' => 'FileHash', 'Type' => 'varchar(100)']
         ];
         $this->export(

@@ -68,9 +68,6 @@
     "autoload": {
         "psr-4": {
             "Porter\\": "src/"
-        },
-        "files": [
-            "src/Functions/filter.php"
-        ]
+        }
     }
 }

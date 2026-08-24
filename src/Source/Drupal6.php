@@ -58,8 +58,8 @@ class Drupal6 extends Source
             'Password' => 'Password',
             'mail' => 'Email',
             'photo' => 'Photo',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
-            'login' => ['Column' => 'DateLastActive', 'Filter' => 'timestampToDate']
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'login' => ['Column' => 'DateLastActive', 'Filter' => 'UnixtimeToDate']
         ];
         $this->export(
             'User',
@@ -142,8 +142,8 @@ class Drupal6 extends Source
             'title' => 'Name',
             'body' => 'Body',
             'uid' => 'InsertUserID',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
-            'DateUpdated' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'DateUpdated' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
             'sticky' => 'Announce',
             'tid' => 'CategoryID'
         ];
@@ -169,7 +169,7 @@ class Drupal6 extends Source
             'uid' => 'InsertUserID',
             'body' => ['Column' => 'Body'],
             'hostname' => 'InsertIPAddress',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate']
+            'created' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate']
         ];
         $this->export(
             'Comment',

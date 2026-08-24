@@ -55,44 +55,6 @@ class NodeBb extends Source
     }
 
     /**
-     * @param string $name
-     * @return string
-     */
-    public function nameToSlug($name): string
-    {
-        return $this->url($name);
-    }
-
-    /**
-     * @param mixed $mixed
-     * @return string
-     */
-    public function url($mixed): string
-    {
-        // Preliminary decoding
-        $mixed = strip_tags(html_entity_decode($mixed, ENT_COMPAT, 'UTF-8'));
-        $mixed = formatUrl($mixed);
-        $mixed = preg_replace('`[\']`', '', $mixed);
-
-        // Test for Unicode PCRE support
-        // On non-UTF8 systems this will result in a blank string.
-        $unicodeSupport = (preg_replace('`[\pP]`u', '', 'P') != '');
-
-        // Convert punctuation, symbols, and spaces to hyphens
-        if ($unicodeSupport) {
-            $mixed = preg_replace('`[\pP\pS\s]`u', '-', $mixed);
-        } else {
-            $mixed = preg_replace('`[\s_[^\w\d]]`', '-', $mixed);
-        }
-
-        // Lowercase, no trailing or repeat hyphens
-        $mixed = preg_replace('`-+`', '-', strtolower($mixed));
-        $mixed = trim($mixed, '-');
-
-        return rawurlencode($mixed);
-    }
-
-    /**
      * @param string $time
      * @return false|string|null
      */
@@ -284,7 +246,7 @@ class NodeBb extends Source
     {
         $category_Map = [
             'cid' => 'CategoryID',
-            'name' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'description' => 'Description',
             'order' => 'Sort',
             'parentCid' => 'ParentCategoryID',
@@ -551,8 +513,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function tags(): void
     {
         if (!$this->indexExists('z_idx_topic_key', ':_topic')) {
@@ -560,18 +520,17 @@ class NodeBb extends Source
         }
 
         $tag_Map = [
-            'slug' => ['Column' => 'Name', 'Filter' => [$this, 'nameToSlug']],
+            'slug' => 'Name',
             'fullname' => 'FullName',
             'count' => 'CountDiscussions',
             'tagid' => 'TagID',
             'cid' => 'CategoryID',
             'type' => 'Type',
-            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
+            'timestamp' => 'DateInserted',
             'uid' => 'InsertUserID'
         ];
-
+        $filters = ['slug' => 'FormatUrl', 'timestamp' => [$this, 'tsToDate']];
         $this->query("set @rownr=1000;");
-
         $this->export(
             'Tag',
             "select @rownr:=@rownr+1 as tagid, members as fullname, members as slug,
@@ -585,7 +544,8 @@ class NodeBb extends Source
                 on tt._id = _parentid
                 left join :_topic t
                 on substring(tt._key, 1, length(tt._key) - 5) = t._key",
-            $tag_Map
+            $tag_Map,
+            $filters
         );
 
         $tagDiscussion_Map = [
@@ -594,9 +554,7 @@ class NodeBb extends Source
             'cid' => 'CategoryID',
             'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']]
         ];
-
         $this->query("set @rownr=1000;");
-
         $this->export(
             'TagDiscussion',
             "select tagid, cid, tid, timestamp

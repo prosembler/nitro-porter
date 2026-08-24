@@ -81,14 +81,7 @@ abstract class Target extends Package
      */
     protected function uniqueUserNames(): void
     {
-        $allowlist = [
-            '[Deleted User]',
-            '[DeletedUser]',
-            '-Deleted-User-',
-            '[Slettet bruker]', // Norwegian
-            '[Utilisateur supprimé]', // French
-        ]; // @see fixDuplicateDeletedNames()
-        $dupes = array_diff($this->findDuplicates('User', 'Name'), $allowlist);
+        $dupes = array_diff($this->findDuplicates('User', 'Name'), Formatter::DELETED_USERNAMES);
         if (!empty($dupes)) {
             Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }

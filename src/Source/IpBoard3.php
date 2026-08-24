@@ -342,7 +342,7 @@ EOT;
         $conversation_Map = [
             'groupid' => 'ConversationID',
             'title2' => 'Subject',
-            'mt_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'mt_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'mt_from_id' => 'InsertUserID'
         ];
         $sql = "select mt.*,
@@ -358,7 +358,7 @@ EOT;
         $conversationMessage_Map = [
             'msg_id' => 'MessageID',
             'groupid' => 'ConversationID',
-            'msg_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'msg_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'msg_post' => 'Body',
             'Format' => 'Format',
             'msg_author_id' => 'InsertUserID',
@@ -404,7 +404,7 @@ EOT;
         // Conversations.
         $conversation_Map = [
             'mt_id' => 'ConversationID',
-            'mt_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'mt_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'mt_title' => 'Subject',
             'mt_starter_id' => 'InsertUserID'
         ];
@@ -416,7 +416,7 @@ EOT;
         $conversationMessage_Map = [
             'msg_id' => 'MessageID',
             'msg_topic_id' => 'ConversationID',
-            'msg_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'msg_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'msg_post' => 'Body',
             'Format' => 'Format',
             'msg_author_id' => 'InsertUserID',
@@ -467,11 +467,11 @@ EOT;
 
             if (!is_array($filter)) {
                 switch ($filter) {
-                    case 'HTMLDecoder':
-                        //$this->ex->HTMLDecoderDb($table, $column, $PK);
+                    case 'DecodeHtml':
+                        //$this->ex->DecodeHtmlDb($table, $column, $PK);
                         unset($map[$column]['Filter']);
                         break;
-                    case 'timestampToDate':
+                    case 'UnixtimeToDate':
                         $selects[] = "from_unixtime($source) as {$column}_Date";
 
                         unset($map[$column]);
@@ -513,17 +513,16 @@ EOT;
     {
         $user_Map = [
             $memberID => 'UserID',
-            'members_display_name' => ['Column' => 'Name', 'Filter' => 'HtmlDecoder'],
+            'members_display_name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'email' => 'Email',
-            'joined' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'joined' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'firstvisit' => [
                 'Column' => 'DateFirstVisit',
-                'SourceColumn' => 'joined',
-                'Filter' => 'timestampToDate'
+                'Filter' => 'UnixtimeToDate'
             ],
             'ip_address' => 'InsertIPAddress',
             'time_offset' => 'HourOffset',
-            'last_activity' => ['Column' => 'DateLastActive', 'Filter' => 'timestampToDate'],
+            'last_activity' => ['Column' => 'DateLastActive', 'Filter' => 'UnixtimeToDate'],
             'member_banned' => 'Banned',
             'Photo' => 'Photo',
             'title' => 'Title',
@@ -680,7 +679,7 @@ EOT;
     {
         $category_Map = [
             'id' => 'CategoryID',
-            'name' => ['Column' => 'Name', 'Filter' => 'HtmlDecoder'],
+            'name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'name_seo' => 'UrlCode',
             'description' => 'Description',
             'parent_id' => 'ParentCategoryID',
@@ -710,10 +709,10 @@ EOT;
             'description' => ['Column' => 'SubName', 'Type' => 'varchar(255)'],
             'forum_id' => 'CategoryID',
             'starter_id' => 'InsertUserID',
-            'start_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'start_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'ip_address' => 'InsertIPAddress',
-            'edit_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
-            //          'last_post' => array('Column' => 'DateLastPost', 'Filter' => array($ex, 'timestampToDate')),
+            'edit_time' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
+            //          'last_post' => array('Column' => 'DateLastPost', 'Filter' => array($ex, 'UnixtimeToDate')),
             'posts' => 'CountComments',
             'views' => 'CountViews',
             'pinned' => 'Announce',
@@ -749,7 +748,7 @@ EOT;
         $this->query("insert into z_tag (FullName) (select distinct t.tag_text as FullName from :_core_tags t)");
 
         $tagDiscussion_Map = [
-            'tag_added' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'tag_added' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
         ];
         $sql = "select TagID, '0' as CategoryID, tag_meta_id as DiscussionID, t.tag_added
             from :_core_tags t
@@ -759,10 +758,13 @@ EOT;
 
         $tag_Map = [
             'FullName' => 'FullName',
-            'FullNameToName' => ['Column' => 'Name', 'Filter' => 'formatUrl']
+            'FullNameToName' => 'Name'
+        ];
+        $filters = [
+            'FullNameToName' => 'FormatUrl'
         ];
         $sql = "select TagID, FullName, FullName as FullNameToName from z_tag zt";
-        $this->export('Tag', $sql, $tag_Map);
+        $this->export('Tag', $sql, $tag_Map, $filters);
     }
 
     /**
@@ -774,8 +776,8 @@ EOT;
             'topic_id' => 'DiscussionID',
             'author_id' => 'InsertUserID',
             'ip_address' => 'InsertIPAddress',
-            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
-            'edit_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
+            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'edit_time' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
             'post' => 'Body'
         ];
         $sql = "select p.*,
@@ -798,7 +800,7 @@ EOT;
             'atype_mimetype' => 'Type',
             'attach_file' => 'Name',
             'attach_path' => 'Path',
-            'attach_date' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'attach_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
             'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
             'attach_member_id' => 'InsertUserID',

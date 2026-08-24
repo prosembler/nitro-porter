@@ -33,8 +33,6 @@ class Kunena extends Source
         ]
     ];
 
-    /**
-     */
     public function run(): void
     {
         $this->users();
@@ -48,23 +46,15 @@ class Kunena extends Source
 
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     * @see    Migration::writeTableToFile
      */
-    public function filterThumbnailData($value, $field, $row): ?string
+    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
     {
-        if (strpos(strtolower($row['filetype']), 'image/') === 0) {
+        if (str_starts_with(strtolower($row['filetype']), 'image/')) {
             return $value;
         }
         return null;
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -77,8 +67,7 @@ class Kunena extends Source
             'showemail' => 'ShowEmail',
             'birthdate' => 'DateOfBirth',
             'banned' => 'Banned',
-            //         'DELETED'=>'Deleted',
-            'admin' => ['Column' => 'Admin', 'Type' => 'tinyint(1)'],
+            'admin' => 'Admin',
             'Photo' => 'Photo'
         ];
         $this->export(
@@ -97,8 +86,6 @@ class Kunena extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -119,8 +106,6 @@ class Kunena extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -138,21 +123,19 @@ class Kunena extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
             'id' => 'DiscussionID',
             'catid' => 'CategoryID',
             'userid' => 'InsertUserID',
-            'subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
-            'time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'ip' => 'InsertIPAddress',
             'locked' => 'Closed',
             'hits' => 'CountViews',
             'modified_by' => 'UpdateUserID',
-            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
+            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
             'message' => 'Body',
             'Format' => 'Format'
         ];
@@ -169,18 +152,16 @@ class Kunena extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
             'id' => 'CommentID',
             'thread' => 'DiscussionID',
             'userid' => 'InsertUserID',
-            'time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'ip' => 'InsertIPAddress',
             'modified_by' => 'UpdateUserID',
-            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'timestampToDate'],
+            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
             'message' => 'Body',
             'Format' => 'Format'
         ];
@@ -197,8 +178,6 @@ class Kunena extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         $userDiscussion_Map = [
@@ -212,8 +191,6 @@ class Kunena extends Source
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $media_Map = [
@@ -221,12 +198,12 @@ class Kunena extends Source
             'mesid' => 'ForeignID',
             'userid' => 'InsertUserID',
             'size' => 'Size',
-            'path2' => ['Column' => 'Path', 'Filter' => 'urlDecoder'],
+            'path2' => ['Column' => 'Path', 'Filter' => 'DecodeUrl'],
             'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
             'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
             'filetype' => 'Type',
-            'filename' => ['Column' => 'Name', 'Filter' => 'urlDecoder'],
-            'time' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'filename' => ['Column' => 'Name', 'Filter' => 'DecodeUrl'],
+            'time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
         ];
         $this->export(
             'Media',

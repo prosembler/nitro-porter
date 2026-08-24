@@ -439,7 +439,7 @@ class VBulletin extends Source
             'width' => ['Column' => 'ImageWidth', 'Filter' => [$this, 'buildMediaDimension']],
         ];
         $filters = [
-            'extension' => 'mimeTypeFromExtension',
+            'extension' => 'ExtToMime',
         ];
 
         // Add hash fields if they exist (from 2.x)
@@ -591,7 +591,7 @@ class VBulletin extends Source
             'question' => 'Name',
             'threadid' => 'DiscussionID',
             'anonymous' => 'Anonymous',
-            'dateline' => ['Column' => 'DateInserted', 'Filter' => 'timestampToDate'],
+            'dateline' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
             'postuserid' => 'InsertUserID'
         ];
         $this->export(
@@ -833,11 +833,11 @@ class VBulletin extends Source
      */
     public function filterThumbnailData($value, $field, $row): ?string
     {
-        if (strpos(mimeTypeFromExtension(strtolower($row['extension'])), 'image/') === 0) {
+        $images = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
+        if (in_array(strtolower($row['extension']), $images)) {
             return $value;
-        } else {
-            return null;
         }
+        return null;
     }
 
     /**

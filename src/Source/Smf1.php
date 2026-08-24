@@ -84,24 +84,6 @@ class Smf1 extends Source
     }
 
     /**
-     * Determine mime type from file name
-     *
-     * @param  string $fileName File name (Can be full path or file name only)
-     * @return null|string Mime type if it could be determined or null.
-     */
-    public function getMimeTypeFromFileName($fileName): ?string
-    {
-        $mimeType = null;
-
-        $extension = pathinfo($fileName, PATHINFO_EXTENSION);
-        if ($extension) {
-            $mimeType = MimeTypeFromExtension('.' . strtolower($extension));
-        }
-
-        return $mimeType;
-    }
-
-    /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
      *
      * @access public
@@ -114,12 +96,12 @@ class Smf1 extends Source
      */
     public function filterThumbnailData($value, $field, $row): ?string
     {
-        $mimeType = $this->getMimeTypeFromFileName($row['Path']);
-        if ($mimeType && strpos($mimeType, 'image/') === 0) {
+        $extension = pathinfo($row['Path'], PATHINFO_EXTENSION);
+        $images = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
+        if (in_array(strtolower($extension), $images)) {
             return $value;
-        } else {
-            return null;
         }
+        return null;
     }
 
     /**
@@ -280,21 +262,20 @@ class Smf1 extends Source
             'size' => 'Size',
             'height' => 'ImageHeight',
             'width' => 'ImageWidth',
-            'extract_mimetype' => [
-                'Column' => 'Type',
-                'Filter' => function ($value, $field, $row) {
-                    return $this->getMimeTypeFromFileName($row['Path']);
-                }
-            ],
-            'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
-            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+            'thumb_path' => 'ThumbPath',
+            'thumb_width' => 'ThumbWidth',
+        ];
+        $filters = [
+            'Type' => 'ExtToMime',
+            'thumb_path' => [$this, 'filterThumbnailData'],
+            'thumb_width' => [$this, 'filterThumbnailData'],
         ];
         $this->export(
             'Media',
             "select a.*,
                     concat('attachments/', a.filename) as Path,
+                    a.filename as Type,
                     IF(b.filename is not null, concat('attachments/', b.filename), null) as thumb_path,
-                    null as extract_mimetype,
                     b.width as thumb_width,
                     if(t.ID_TOPIC is null, 'Comment', 'Discussion') as ForeignTable
                 from :_attachments a
@@ -302,7 +283,8 @@ class Smf1 extends Source
                     left join :_topics t on a.ID_MSG = t.ID_FIRST_MSG
                 where a.attachmentType = 0
                     and a.ID_MSG > 0",
-            $media_Map
+            $media_Map,
+            $filters
         );
     }
 

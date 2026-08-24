@@ -47,7 +47,7 @@ Typically, Sources do NOT reformat user generated content (UGC) and simply label
 
 ### Maps and filters
 
-Use a `$map` array to directly translate a column name in one database to another. Need the data transformed? You can use a function. Pass an array like `['Column' => 'Name', 'Filter' => 'HTMLDecoder']` and the `Name` column's value will be passed to the function `HTMLDecoder()` (along with the rest of the data in the row) for manipulation and the return value will be stored instead of the original. Use the `src/Functions/filter.php` for adding new filters.
+Use a `$map` array to directly translate a column name in one database to another. Need the data transformed? You can use a function. Pass an array like `['Column' => 'Name', 'Filter' => 'DecodeHtml']` and the `Name` column's value will be passed to the function `DecodeHtml()` (along with the rest of the data in the row) for manipulation and the return value will be stored instead of the original. Use the `src/Functions/filter.php` for adding new filters.
 
 ### Using export()
 

@@ -197,7 +197,7 @@ class JForum extends Source
     protected function discussions(string $postTextColumm, string $postTextSource): void
     {
         $discussion_Map = [
-            'topic_title' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'topic_title' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
         ];
         // It's easier to convert between Unix time and MySQL datestamps during the db query.
         $this->export(

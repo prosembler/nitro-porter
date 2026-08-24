@@ -220,7 +220,7 @@ class BbPress2 extends Source
         $comment_Map = [
             'ID' => 'CommentID',
             'post_parent_id' => 'DiscussionID',
-            'post_content' => 'Body',//array('Column'=>'Body', 'Filter'=>'bbPressTrim'),
+            'post_content' => 'Body',//array('Column'=>'Body', 'Filter'=>'BBPressBody'),
             'Format' => 'Format',
             'post_author' => 'InsertUserID',
             'post_date' => 'DateInserted',

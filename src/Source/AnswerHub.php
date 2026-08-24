@@ -293,7 +293,7 @@ class AnswerHub extends Source
             'Name' => ['Column' => 'Name', 'Filter' => [$this, 'getFileName']],
         ];
         $filters = [
-            'Type' => 'mimeTypeFromExtension',
+            'Type' => 'ExtToMime',
         ];
         $this->export(
             'Media',

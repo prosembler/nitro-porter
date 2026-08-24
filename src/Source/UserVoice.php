@@ -145,7 +145,7 @@ class UserVoice extends Source
     {
         $user_Map = [
             'LastActivity' => ['Column' => 'DateLastActive'],
-            'UserName' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
+            'UserName' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
             'CreateDate' => ['Column' => 'DateInserted'],
         ];
         $this->export(
@@ -220,8 +220,8 @@ class UserVoice extends Source
             'IsLocked' => 'Closed',
             'MostRecentPostAuthorID' => 'LastCommentUserID',
             'MostRecentPostID' => 'LastCommentID',
-            'Subject' => ['Column' => 'Name', 'Filter' => 'HTMLDecoder'],
-            'Body' => ['Column' => 'Body', 'Filter' => 'HTMLDecoder'],
+            'Subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'Body' => ['Column' => 'Body', 'Filter' => 'DecodeHtml'],
             'IPAddress' => 'InsertIPAddress'
         ];
         $this->export(
@@ -248,7 +248,7 @@ class UserVoice extends Source
             'ThreadID' => 'DiscussionID',
             'UserID' => 'InsertUserID',
             'IPAddress' => 'InsertIPAddress',
-            'Body' => ['Column' => 'Body', 'Filter' => 'HTMLDecoder'],
+            'Body' => ['Column' => 'Body', 'Filter' => 'DecodeHtml'],
             'PostDate' => 'DateInserted'
         ];
         $this->export(

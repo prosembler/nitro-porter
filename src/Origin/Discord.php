@@ -29,9 +29,13 @@ use Porter\Log;
 use Porter\Origin;
 
 /**
+ * Current behavior is to REBUILD users & channels on every run, but RESUME messages from last ID.
+ *
  * A Discord server is referred to as a 'guild' in the API docs.
- * 429 response code will have Retry-After header & retry_after in JSON body.
  * @see https://discord.com/developers/docs/reference
+ *
+ * 429 response code will have Retry-After header & retry_after in JSON body.
+ * @see https://discord.com/developers/docs/topics/rate-limits#rate-limits
  * @see \Porter\Https\DiscordRetryStrategy
  */
 class Discord extends Origin
@@ -85,29 +89,19 @@ class Discord extends Origin
     protected array $guildEmojis;
 
     /**
-     * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
-     * Current behavior is to REBUILD users & channels on every run, but RESUME messages from last ID.
-     * @see https://discord.com/developers/docs/topics/rate-limits#rate-limits
+     * Discord-specific setup.
      */
-    public function run(): void
+    public function setup(): void
     {
-        // Discord-specific setup.
         $this->originStorage->setHeader('Authorization', 'Bot ' . $this->config['token']);
         $this->attachmentFolder = $this->getDownloadFolder('attachments');
+    }
 
-        // Guild users & roles
-        $this->users(); // @todo Timing issue: setting $guildUsers for messages()
-        $this->roles();
-
-        // Guild taxonomy & emoji
-        $this->emojis();
-        $this->channels();
-        $this->threads();
-
-        // Guild content + non-guild users/emoji.
-        $this->messages();
-
-        // Download last to catch late additions.
+    /**
+     * Download last to catch late additions.
+     */
+    public function filetransfer(): void
+    {
         $this->downloadAvatars();
         $this->downloadEmojis();
     }
@@ -153,7 +147,7 @@ class Discord extends Origin
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
         $info = $this->pull($endpoint, $this->getSchema('users'), 'discord_users', null, $query, self::MAP_USERS);
-        $this->guildUsers = array_column($info->content, 'id');
+        $this->guildUsers = array_column($info->content, 'id'); // @todo Timing issue: setting for messages()
         $this->extractUserRoles($info->content);
     }
 
@@ -305,7 +299,7 @@ class Discord extends Origin
      * @see https://discord.com/developers/docs/resources/channel
      * @see https://discord.com/developers/docs/resources/guild#get-guild-channels
      */
-    protected function channels(): void
+    protected function categories(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/channels";
         $this->pull($endpoint, $this->getSchema('channels'), 'discord_channels');
@@ -313,10 +307,11 @@ class Discord extends Origin
 
     /**
      * Active threads per GUILD (1) & public archived threads per CHANNEL.
+     * Discord uses 'channel' for ANY type of message container (e.g. a thread) in addition to just 'channel'.
      * @see https://discord.com/developers/docs/resources/guild#list-active-guild-threads
      * @see https://discord.com/developers/docs/resources/channel#list-public-archived-threads
      */
-    protected function threads(): void
+    protected function discussions(): void
     {
         // Active threads.
         $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
@@ -337,7 +332,7 @@ class Discord extends Origin
      * It gives a 5-sec timeout every ~10 "identical" requests, which slows things down badly.
      * This means you're effectively limited to ~5K messages per minute if you don't cycle channels.
      */
-    protected function messages(): void
+    protected function comments(): void
     {
         $channelIds = $this->getTextChannels(self::TEXT_CHANNEL_TYPES);
         if (count($channelIds) > self::MAX_CHANNEL_QUERIES) {

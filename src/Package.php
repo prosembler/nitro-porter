@@ -62,6 +62,7 @@ abstract class Package
         'avatars',
         'attachments',
         'emojis',
+        'filetransfer', // HOOK
         // finalize
         'cleanup', // HOOK
     ];

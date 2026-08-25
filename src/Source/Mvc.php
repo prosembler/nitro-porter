@@ -37,11 +37,6 @@ class Mvc extends Source
         ]
     ];
 
-    /**
-     * You can use this to require certain tables and columns be present.
-     *
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
         'MembershipUser' => [],
         'Catagory' => [],
@@ -49,26 +44,6 @@ class Mvc extends Source
         'Topic' => [],
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->userMeta();
-        $this->roles();
-        $this->badges();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->tags();
-        $this->attachments();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         if (!$this->hasInputSchema('MembershipUser', 'UserID')) {
@@ -94,8 +69,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function userMeta(): void
     {
         $this->export(
@@ -116,8 +89,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         if (!$this->hasInputSchema('MembershipRole', 'RoleID')) {
@@ -142,8 +113,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function badges(): void
     {
         if (!$this->hasInputSchema('Badge', 'BadgeID')) {
@@ -176,8 +145,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         if (!$this->hasInputSchema('Category', 'CategoryID')) {
@@ -210,8 +177,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         if (!$this->hasInputSchema('Topic', 'TopicID')) {
@@ -242,8 +207,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         if (!$this->hasInputSchema('Post', 'PostID')) {
@@ -274,8 +237,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function tags(): void
     {
         if (!$this->hasInputSchema('TopicTag', 'TagID')) {
@@ -295,8 +256,6 @@ class Mvc extends Source
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         if (!$this->hasInputSchema('UploadedFile', 'MediaID')) {

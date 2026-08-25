@@ -33,21 +33,6 @@ class ExpressionEngine extends Source
     ];
 
     /**
-     *
-     */
-    public function run(): void
-    {
-        $this->conversations();
-        $this->users();
-        $this->roles();
-        $this->signatures();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->attachments();
-    }
-
-    /**
      * Private message conversion.
      */
     public function conversations(): void
@@ -118,14 +103,8 @@ class ExpressionEngine extends Source
             );'
         );
         $this->query(
-            "insert ignore z_pmto (
-                message_id,
-                userid,
-                deleted
-            )
-            select
-                message_id,
-                recipient_id,
+            "insert ignore z_pmto (message_id, userid, deleted)
+            select message_id, recipient_id,
                 case when message_deleted = 'y' then 1 else 0 end as `deleted`
             from forum_message_copies;"
         );
@@ -141,24 +120,14 @@ class ExpressionEngine extends Source
         );
 
         $this->query(
-            'insert ignore z_pmto (
-            message_id,
-            userid
-          )
-          select
-            message_id,
-            sender_id
+            'insert ignore z_pmto (message_id, userid)
+          select message_id, sender_id
           from forum_message_data;'
         );
 
         $this->query(
-            "insert ignore z_pmto (
-                message_id,
-                userid
-            )
-            select
-                message_id,
-                u.member_id
+            "insert ignore z_pmto (message_id, userid)
+            select  message_id, u.member_id
             from forum_message_data m
             join forum_members u
                 on  FIND_IN_SET(u.member_id, m.message_cc) > 0
@@ -166,13 +135,8 @@ class ExpressionEngine extends Source
         );
 
         $this->query(
-            "insert ignore z_pmto (
-                message_id,
-                userid
-            )
-            select
-                message_id,
-                u.member_id
+            "insert ignore z_pmto (message_id, userid)
+            select message_id, u.member_id
             from forum_message_data m
             join forum_members u
                 on  FIND_IN_SET(u.member_id, m.message_cc) > 0
@@ -188,13 +152,8 @@ class ExpressionEngine extends Source
             );"
         );
         $this->query(
-            "insert z_pmto2 (
-            message_id,
-            userids
-            )
-            select
-                message_id,
-                group_concat(userid order by userid)
+            "insert z_pmto2 (message_id, userids)
+            select message_id, group_concat(userid order by userid)
             from z_pmto t
             group by t.message_id;"
         );
@@ -210,14 +169,8 @@ class ExpressionEngine extends Source
             );"
         );
         $this->query(
-            "insert z_pmtext (
-            message_id,
-            title,
-            title2
-            )
-            select
-                message_id,
-                message_subject,
+            "insert z_pmtext (message_id, title, title2)
+            select message_id, message_subject,
                 case when message_subject like 'Re: %' then trim(substring(message_subject, 4))
                     else message_subject end as title2
             from forum_message_data;"
@@ -240,24 +193,15 @@ class ExpressionEngine extends Source
             );"
         );
         $this->query(
-            "insert z_pmgroup (
-            group_id,
-            title,
-            userids
-            )
-            select
-                min(pm.message_id),
-                pm.title2,
-                t2.userids
+            "insert z_pmgroup (group_id, title, userids)
+            select min(pm.message_id), pm.title2, t2.userids
             from z_pmtext pm
             join z_pmto2 t2
                 on pm.message_id = t2.message_id
             group by pm.title2, t2.userids;"
         );
-
         $this->query("CREATE INDEX z_idx_pmgroup ON z_pmgroup (title, userids);");
         $this->query("CREATE INDEX z_idx_pmgroup2 ON z_pmgroup (group_id);");
-
         $this->query(
             "UPDATE z_pmtext pm
             JOIN z_pmgroup g
@@ -266,10 +210,6 @@ class ExpressionEngine extends Source
         );
     }
 
-
-
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -298,8 +238,6 @@ class ExpressionEngine extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -325,8 +263,6 @@ class ExpressionEngine extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -340,8 +276,6 @@ class ExpressionEngine extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -358,8 +292,6 @@ class ExpressionEngine extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -385,8 +317,6 @@ class ExpressionEngine extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -410,8 +340,6 @@ class ExpressionEngine extends Source
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $media_Map = [

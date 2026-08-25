@@ -314,8 +314,6 @@ class Flarum extends Target
         return $structure;
     }
 
-    /**
-     */
     protected function users(): void
     {
         $map = [

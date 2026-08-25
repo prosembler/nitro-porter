@@ -37,23 +37,6 @@ class Yaf extends Source
 
     public static array $passwordFormats = [0 => 'md5', 1 => 'sha1', 2 => 'sha256', 3 => 'sha384', 4 => 'sha512'];
 
-    /**
-     * Main export method.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->ranks();
-        $this->signatures();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->conversations();
-    }
-
     public function cleanDate(?string $value): ?string
     {
         if (!$value) {
@@ -62,7 +45,6 @@ class Yaf extends Source
         if (substr($value, 0, 4) == '0000') {
             return null;
         }
-
         return $value;
     }
 
@@ -79,8 +61,6 @@ class Yaf extends Source
         return $method . '$' . $salt . '$' . $hash . '$';
     }
 
-    /**
-     */
     protected function exportConversationTemps(): void
     {
         $sql = "
@@ -91,26 +71,12 @@ class Yaf extends Source
             Deleted tinyint,
             primary key(PM_ID, User_ID)
             );
-         insert ignore z_pmto (
-            PM_ID,
-            User_ID,
-            Deleted
-         )
-         select
-            PMessageID,
-            FromUserID,
-            0
+         insert ignore z_pmto (PM_ID, User_ID, Deleted)
+         select PMessageID,  FromUserID, 0
          from :_PMessage;
 
-         replace z_pmto (
-            PM_ID,
-            User_ID,
-            Deleted
-         )
-         select
-            PMessageID,
-            UserID,
-            IsDeleted
+         replace z_pmto (PM_ID, User_ID, Deleted)
+         select PMessageID, UserID, IsDeleted
          from :_UserPMessage;
 
          drop table if exists z_pmto2;
@@ -120,13 +86,8 @@ class Yaf extends Source
              primary key (PM_ID)
          );
 
-         replace z_pmto2 (
-            PM_ID,
-            UserIDs
-         )
-         select
-            PM_ID,
-            group_concat(User_ID order by User_ID)
+         replace z_pmto2 (PM_ID, UserIDs)
+         select PM_ID, group_concat(User_ID order by User_ID)
          from z_pmto
          group by PM_ID;
 
@@ -139,17 +100,10 @@ class Yaf extends Source
              Group_ID int unsigned
          );
 
-         insert z_pmtext (
-            PM_ID,
-            Title,
-            Title2
-         )
-         select
-            PMessageID,
-            Subject,
+         insert z_pmtext (PM_ID, Title, Title2)
+         select PMessageID, Subject,
             case when Subject like 'Re:%' then trim(substring(Subject, 4)) else Subject end as Title2
          from :_PMessage;
-
          create index z_idx_pmtext on z_pmtext (PM_ID);
 
          update z_pmtext pm
@@ -158,7 +112,6 @@ class Yaf extends Source
          set pm.UserIDs = t.UserIDs;
 
          drop table if exists z_pmgroup;
-
          create table z_pmgroup (
                  Group_ID int unsigned,
                  Title varchar(250),
@@ -178,7 +131,6 @@ class Yaf extends Source
                join z_pmto2 t2
                  on pm.PM_ID = t2.PM_ID
                group by pm.Title2, t2.UserIDs;
-
          create index z_idx_pmgroup on z_pmgroup (Title, UserIDs);
          create index z_idx_pmgroup2 on z_pmgroup (Group_ID);
 
@@ -190,8 +142,6 @@ class Yaf extends Source
         $this->dbInput()->unprepared($sql);
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -223,8 +173,6 @@ class Yaf extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -245,8 +193,6 @@ class Yaf extends Source
         $this->export('UserRole', 'select * from :_UserGroup', $userRole_Map);
     }
 
-    /**
-     */
     protected function ranks(): void
     {
         $rank_Map = [
@@ -265,8 +211,6 @@ class Yaf extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -287,8 +231,6 @@ class Yaf extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -320,8 +262,6 @@ class Yaf extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -345,8 +285,6 @@ class Yaf extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -371,8 +309,6 @@ class Yaf extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $this->exportConversationTemps();

@@ -31,23 +31,6 @@ class EsoTalk extends Source
         ]
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->bookmarks();
-        $this->conversations();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -68,8 +51,6 @@ class EsoTalk extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -103,8 +84,6 @@ class EsoTalk extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -123,8 +102,6 @@ class EsoTalk extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -163,8 +140,6 @@ class EsoTalk extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -194,8 +169,6 @@ class EsoTalk extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         $userDiscussion_Map = [
@@ -211,8 +184,6 @@ class EsoTalk extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $conversation_map = [

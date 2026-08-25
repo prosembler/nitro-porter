@@ -174,25 +174,6 @@ class VBulletin extends Source
      */
     public function run(): void
     {
-        // Allow limited export of 1 category via ?forumid=ID
-        /*$forumID = $this->param('forumid');
-        if ($forumID) {
-            $forumWhere = ' and t.forumid ' . (strpos($forumID, ', ') === false ? "= $forumID" : "in ($forumID)");
-        } else {
-            $forumWhere = '';
-        }*/
-
-        /*$this->doFileExport(
-            $ex,
-            $this->param('db-files'),
-            $this->param('db-avatars')
-        );*/
-
-        /*if ($this->param('files-only')) {
-            $ex->comment('Skipping the export.');
-            return;
-        }*/
-
         $minDiscussionID = 0;
         $minDiscussionWhere = 0;
 
@@ -682,9 +663,6 @@ class VBulletin extends Source
         );
     }
 
-    /**
-     * @return array
-     */
     public function ranks(): iterable
     {
         $hasRanks = $this->dbInput()->table('ranks')->select()->get()->count();
@@ -694,7 +672,6 @@ class VBulletin extends Source
                 ->where('minposts', '>', 0)
                 ->orderBy('minposts', 'desc')
                 ->get();
-
             $this->export(
                 'Rank',
                 "select
@@ -712,7 +689,6 @@ class VBulletin extends Source
                 ->selectRaw('usertitleid as RankID')
                 ->orderBy('minposts', 'desc')
                 ->get();
-
             $rank_Map = [
                 'usertitleid' => 'RankID',
                 'title' => 'Name',
@@ -747,7 +723,6 @@ class VBulletin extends Source
                 $rank_Map
             );
         }
-
         return $ranks;
     }
 
@@ -761,15 +736,8 @@ class VBulletin extends Source
      * In vBulletin 2.x, files were stored as an md5 hash in the root
      * attachment directory with a '.file' extension. Existing files were not
      * moved when upgrading to 3.x so older forums will need those too.
-     *
-     * @param  string $value Ignored.
-     * @param  string $field Ignored.
-     * @param  array  $row   Contents of the current attachment record.
-     * @return string Future path to file.
-     * @see    Migration::writeTableToFile
-     *
      */
-    public function buildMediaPath($value, $field, $row): string
+    public function buildMediaPath(mixed $value, string $field, array $row): string
     {
         if (isset($row['hash']) && $row['hash'] != '') {
             // Old school! (2.x)
@@ -799,13 +767,8 @@ class VBulletin extends Source
 
     /**
      * Don't allow image dimensions to creep in for non-images.
-     *
-     * @param mixed $value
-     * @param string $field
-     * @param array $row
-     * @return mixed
      */
-    public function buildMediaDimension($value, $field, $row): mixed
+    public function buildMediaDimension(mixed $value, string $field, array $row): mixed
     {
         // Non-images get no height/width
         if ($this->hasInputSchema('attachment', ['extension']) === true) {
@@ -816,22 +779,13 @@ class VBulletin extends Source
         if (in_array(strtolower($extension), ['jpg', 'gif', 'png', 'jpeg'])) {
             return null;
         }
-
         return $value;
     }
 
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @access public
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     * @see    Migration::writeTableToFile
-     *
      */
-    public function filterThumbnailData($value, $field, $row): ?string
+    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
     {
         $images = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
         if (in_array(strtolower($row['extension']), $images)) {
@@ -846,28 +800,21 @@ class VBulletin extends Source
      * @param string $name Variable for which we want the value.
      * @return mixed Value or FALSE if not found.
      */
-    public function getConfig($name): mixed
+    public function getConfig(string $name): mixed
     {
         $sql = "select * from :_setting where varname = '$name'";
         $result = $this->query($sql);
         if ($result && $row = $result->nextResultRow()) {
             return $row['value'];
         }
-
         return false;
     }
 
-    /**
-     * @param mixed $value
-     * @return mixed
-     */
-    public function htmlDecode($value): mixed
+    public function htmlDecode(mixed $value): mixed
     {
         return ($value);
     }
 
-    /**
-     */
     protected function tags(): void
     {
         $this->export(
@@ -893,9 +840,6 @@ class VBulletin extends Source
         );
     }
 
-    /**
-     * @return void
-     */
     protected function conversations(): void
     {
         $this->export(
@@ -948,9 +892,6 @@ class VBulletin extends Source
         );
     }
 
-    /**
-     * @return void
-     */
     protected function reactions(): void
     {
         $this->export(
@@ -977,9 +918,6 @@ class VBulletin extends Source
         );
     }
 
-    /**
-     * @param string $forumWhere
-     */
     protected function categories(string $forumWhere): void
     {
         $category_Map = [
@@ -1045,9 +983,6 @@ class VBulletin extends Source
         $this->query("drop table if exists VbulletinRoles");
     }
 
-    /**
-     * @param mixed $ranks
-     */
     protected function users(mixed $ranks): void
     {
         $cdn = '';
@@ -1114,9 +1049,6 @@ class VBulletin extends Source
         );
     }
 
-    /**
-     * @param string $forumWhere
-     */
     protected function userMeta(string $forumWhere): void
     {
         $this->query("drop table if exists VbulletinUserMeta");
@@ -1132,7 +1064,6 @@ class VBulletin extends Source
             'homepage' => 'Website',
             'styleid' => 'StyleID'
         ];
-
         if ($this->hasInputSchema('user', ['skype']) === true) {
             $userFields['skype'] = 'Skype';
         }
@@ -1172,7 +1103,6 @@ class VBulletin extends Source
                     and fieldname='cprofilefield'
                     and varname like 'field%_title'"
             );
-
             if (is_object($profileFields)) {
                 $profileQueries = [];
                 while ($field = $profileFields->nextResultRow()) {
@@ -1215,11 +1145,7 @@ class VBulletin extends Source
         $this->categories($forumWhere);
     }
 
-    /**
-     * @param int $minDiscussionID
-     * @param string $forumWhere
-     */
-    protected function comments($minDiscussionID, string $forumWhere): void
+    protected function comments(int $minDiscussionID, string $forumWhere): void
     {
         $comment_Map = [
             'pagetext' => ['Column' => 'Body', 'Filter' => function ($value) {
@@ -1240,7 +1166,6 @@ class VBulletin extends Source
             $excludeFirstPost = 'p.postid <> t.firstpostid and';
             $joinThreads = 'inner join :_thread as t on p.threadid = t.threadid';
         }
-
         $this->export(
             'Comment',
             "select
@@ -1263,10 +1188,7 @@ class VBulletin extends Source
         );
     }
 
-    /**
-     * @param int $minDiscussionID
-     */
-    protected function wallPosts($minDiscussionID): void
+    protected function wallPosts(int $minDiscussionID): void
     {
         // Activity (from visitor messages in vBulletin 3.8+)
         $minDiscussionWhere = '';
@@ -1302,11 +1224,7 @@ class VBulletin extends Source
         }
     }
 
-    /**
-     * @param int $minDiscussionID
-     * @param string $forumWhere
-     */
-    protected function discussions($minDiscussionID, string $forumWhere): void
+    protected function discussions(int $minDiscussionID, string $forumWhere): void
     {
         $discussion_Map = [
             'title' => ['Column' => 'Name', 'Filter' => [$this, 'htmlDecode']],
@@ -1315,12 +1233,10 @@ class VBulletin extends Source
             }
             ],
         ];
-
         $minDiscussionWhere = '';
         if ($minDiscussionID) {
             $minDiscussionWhere = "and t.threadid > $minDiscussionID";
         }
-
         $this->export(
             'Discussion',
             "select

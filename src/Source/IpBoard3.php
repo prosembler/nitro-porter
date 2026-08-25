@@ -3,8 +3,6 @@
 /**
  * Invision Powerboard 3.x or earlier exporter tool.
  *
- * To export avatars, provide ?db-avatars=1&avatars-source=/path/to/avatars
- *
  * @author  Lincoln Russell, lincolnwebs.com
  */
 
@@ -47,7 +45,7 @@ class IpBoard3 extends Source
     /**
      * Export avatars into vanilla-compatibles names
      */
-    public function doAvatars(): void
+    public function avatars(): void
     {
         // Source table
         $sourceTable = 'profile_portal'; //$this->param('users-source', 'profile_portal');
@@ -166,45 +164,10 @@ class IpBoard3 extends Source
                 echo "{$error}\n";
             }
         }
-
         echo "Completed: {$completed}\n";
         echo "Skipped: {$skipped}\n";
     }
 
-    /**
-     */
-    public function run(): void
-    {
-        // Export avatars
-        //if ($this->param('avatars')) {
-            //$this->doAvatars($ex);
-        //}
-
-        if ($this->hasInputSchema('members', 'member_id') === true) {
-            $memberID = 'member_id';
-        } else {
-            $memberID = 'id';
-        }
-
-        $this->users($memberID);
-        $this->roles($memberID);
-        $this->userMeta();
-
-        $this->categories();
-        $this->discussions();
-        $this->tags();
-        $this->comments();
-        $this->attachments();
-
-        if ($this->hasInputSchema('message_topic_user_map')) {
-            $this->conversations(); // v3
-        } else {
-            $this->conversationsV2(); // v2
-        }
-    }
-
-    /**
-     */
     protected function conversationsV2(): void
     {
         $sql = <<<EOT
@@ -397,10 +360,13 @@ EOT;
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
+        if (!$this->hasInputSchema('message_topic_user_map')) {
+            $this->conversationsV2(); // v2
+            return;
+        }
+
         // Conversations.
         $conversation_Map = [
             'mt_id' => 'ConversationID',
@@ -457,7 +423,6 @@ EOT;
                 continue;
             }
 
-
             $filter = $info['Filter'];
             if (isset($info['SourceColumn'])) {
                 $source = $info['SourceColumn'];
@@ -473,7 +438,6 @@ EOT;
                         break;
                     case 'UnixtimeToDate':
                         $selects[] = "from_unixtime($source) as {$column}_Date";
-
                         unset($map[$column]);
                         $map[$column . '_Date'] = $info['Column'];
                         break;
@@ -489,15 +453,8 @@ EOT;
 
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     *@see    Migration::writeTableToFile
-     *
      */
-    public function filterThumbnailData($value, $field, $row): ?string
+    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
     {
         if (strpos(strtolower($row['atype_mimetype']), 'image/') === 0) {
             return $value;
@@ -506,11 +463,14 @@ EOT;
         }
     }
 
-    /**
-     * @param string $memberID
-     */
-    protected function users(string $memberID): void
+    protected function users(): void
     {
+        if ($this->hasInputSchema('members', 'member_id') === true) {
+            $memberID = 'member_id';
+        } else {
+            $memberID = 'id';
+        }
+
         $user_Map = [
             $memberID => 'UserID',
             'members_display_name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
@@ -584,11 +544,14 @@ EOT;
         $this->export('User', $sql, $user_Map);
     }
 
-    /**
-     * @param string $memberID
-     */
-    protected function roles(string $memberID): void
+    protected function roles(): void
     {
+        if ($this->hasInputSchema('members', 'member_id') === true) {
+            $memberID = 'member_id';
+        } else {
+            $memberID = 'id';
+        }
+
         $role_Map = [
             'g_id' => 'RoleID',
             'g_title' => 'Name'
@@ -624,8 +587,6 @@ EOT;
         $this->export('UserRole', $sql, $userRole_Map);
     }
 
-    /**
-     */
     protected function userMeta(): void
     {
         $userMeta_Map = [
@@ -636,33 +597,21 @@ EOT;
 
         if ($this->hasInputSchema('profile_portal', 'signature') === true) {
             $sql = "
-         select
-            pp_member_id as UserID,
-            'Plugin.Signatures.Sig' as Name,
-            signature as Value
+         select pp_member_id as UserID, 'Plugin.Signatures.Sig' as Name, signature as Value
          from :_profile_portal
          where length(signature) > 1
          union all
-         select
-            pp_member_id as UserID,
-            'Plugin.Signatures.Format' as Name,
-            'IPB' as Value
+         select pp_member_id as UserID, 'Plugin.Signatures.Format' as Name, 'IPB' as Value
          from :_profile_portal
          where length(signature) > 1
                ";
         } elseif ($this->hasInputSchema('member_extra', ['id', 'signature']) === true) {
             $sql = "
-         select
-            id as UserID,
-            'Plugin.Signatures.Sig' as Name,
-            signature as Value
+         select id as UserID, 'Plugin.Signatures.Sig' as Name, signature as Value
          from :_member_extra
          where length(signature) > 1
          union all
-         select
-            id as UserID,
-            'Plugin.Signatures.Format' as Name,
-            'IPB' as Value
+         select id as UserID, 'Plugin.Signatures.Format' as Name, 'IPB' as Value
          from :_member_extra
          where length(signature) > 1";
         } else {
@@ -673,8 +622,6 @@ EOT;
         }
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -688,8 +635,6 @@ EOT;
         $this->export('Category', "select * from :_forums", $category_Map);
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $descriptionSQL = 'p.post';
@@ -732,8 +677,6 @@ EOT;
         $this->export('Discussion', $sql, $discussion_Map);
     }
 
-    /**
-     */
     protected function tags(): void
     {
         $this->query("DROP TABLE IF EXISTS `z_tag` ");
@@ -767,8 +710,6 @@ EOT;
         $this->export('Tag', $sql, $tag_Map, $filters);
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -791,8 +732,6 @@ EOT;
         $this->export('Comment', $sql, $comment_Map);
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $media_Map = [

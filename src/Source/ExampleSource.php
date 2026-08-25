@@ -10,58 +10,36 @@ namespace Porter\Source;
 
 use Porter\Source;
 
-class ExampleSource extends Source // You MUST extend Source for this to work.
+/**
+ * @see Package::MANIFEST for a complete list of method names you can use.
+ */
+class ExampleSource extends Source
 {
     public const array SUPPORTED = [
-        'name' => '_Example', // The package name users will see.
-        'defaultTablePrefix' => '', // The default table prefix this software uses, if you know it.
+        'name' => '_Example', // Package name users will see.
+        'defaultTablePrefix' => '', // Default table prefix this software uses, if you know it.
         'charsetTable' => 'comments',  // Usually put the comments table name here. Used to derive charset.
         'features' => [  // Set features you support to 1 or a string (for support notes).
             'Users' => 1,
-            'Passwords' => 0,
-            'Categories' => 1,
+            'Roles' => 0,
+            'Categories' => 1, // May be a text note about support, like the name of a required plugin.
             'Discussions' => 1,
             'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 0,
-            'Avatars' => 0,
-            'PrivateMessages' => 0,
-            'Signatures' => 0,
             'Attachments' => 0,
-            'Bookmarks' => 0,
+            'Avatars' => 0,
+            'Reactions' => 0,
+            'PrivateMessages' => 0,
+            'Polls' => 0,
             'Badges' => 0,
-            'UserNotes' => 0, // You can just deleted all the '0' rows if you're never going to add them.
+            'Bookmarks' => 0,
             'Ranks' => 0,
             'Groups' => 0,
             'Tags' => 0,
-            'Reactions' => 0,
-            'Articles' => 0,
+            'Signatures' => 0,
+            'UserNotes' => 0,
         ]
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        // It's usually a good idea to do the porting in the approximate order laid out here.
-        // Users
-        $this->users(); // Always pass $port to these methods.
-        $this->roles();
-        $this->userMeta();
-
-        // Content
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-
-        // Everything else
-        // $this->attachments(); // Doesn't exist yet!
-    }
-
-    /**
-     */
     protected function users(): void
     {
         // Map as much as possible using the $xMap array for clarity.
@@ -72,7 +50,7 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
             'Username' => 'Name',
         ];
         // You can filter values with a function: $sourceColumnName => $filterFunctionName
-        // Here, 'DecodeHtml' is a function in `Functions/filter.php`. Check there for available filters.
+        // Here, 'DecodeHtml' is a class under `Filter/`. Check there for available filters.
         // Assume no filter is needed and only use one if you encounter issues.
         $filters = [
             'Name' => 'DecodeHtml',
@@ -89,12 +67,10 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         // Role.
-        // The Vanilla roles table will be wiped by any import. If your current platform doesn't have roles,
+        // The Porter roles table will be wiped by any import. If your current platform doesn't have roles,
         // you can hard code new ones into the select statement. See Vanilla's defaults for a good example.
         $map = [
             'Group_ID' => 'RoleID',
@@ -120,8 +96,6 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
         );
     }
 
-    /**
-     */
     protected function userMeta(): void
     {
         // This is an example of pulling Signatures into Vanilla's UserMeta table.
@@ -140,8 +114,6 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
         $this->export('UserMeta', $query); // No $map needed in this case.
     }
 
-    /**
-     */
     protected function categories(): void
     {
         // Be careful to not import hundreds of categories. Try translating huge schemas to Tags instead.
@@ -156,8 +128,6 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         // A frequent issue is for the OPs content to be on the comment/post table, so you may need to join it.
@@ -179,8 +149,6 @@ class ExampleSource extends Source // You MUST extend Source for this to work.
         $this->export('Discussion', $query, $map, $filters);
     }
 
-    /**
-     */
     protected function comments(): void
     {
         // This is where big migrations are going to get bogged down.

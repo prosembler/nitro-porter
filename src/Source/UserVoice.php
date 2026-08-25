@@ -34,33 +34,10 @@ class UserVoice extends Source
     ];
 
     /**
-     * Main export method.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->bookmarks();
-
-        //$this->attachments();
-        // Decode files in database.
-        $this->exportHexAvatars();
-        //$this->ExportHexAttachments($ex);
-    }
-
-    /**
      * Role IDs are crazy hex strings of hyphenated octets.
      * Create an integer RoleID using the first 4 characters.
-     *
-     * @param  string $roleID
-     * @return int
      */
-    public function roleIDConverter($roleID): int
+    public function roleIDConverter(mixed $roleID): int
     {
         return (int)hexdec(substr($roleID, 0, 4));
     }
@@ -68,11 +45,10 @@ class UserVoice extends Source
     /**
      * Avatars are hex-encoded in the database.
      */
-    public function exportHexAvatars(): void
+    public function avatars(): void
     {
         $thumbnail = true;
         Log::comment("Exporting hex encoded columns...");
-
         $result = $this->query("select UserID, Length, ContentType, Content from :_UserAvatar");
         $path = '/www/porter/userpics';
         $count = 0;
@@ -94,7 +70,6 @@ class UserVoice extends Source
             if ($thumbnail === true) {
                 $thumbnail = 50;
             }
-
             //$PicPath = str_replace('/avat', '/pavat', $photoPath);
             $thumbPath = str_replace('/pavat', '/navat', $photoPath);
             self::generateThumbnail($photoPath, $thumbPath, $thumbnail, $thumbnail);
@@ -104,11 +79,24 @@ class UserVoice extends Source
         Log::comment("$count Hex Encoded.", false);
     }
 
-    /**
-     *
-     */
-    public function exportHexAttachments(): void
+    public function attachments(): void
     {
+        $Media_Map = [
+            'FileName' => 'Name',
+            'ContentType' => 'Type',
+            'ContentSize' => 'Size',
+            'UserID' => 'InsertUserID',
+            'Created' => 'DateInserted',
+        ];
+        $this->export('Media', "
+           select a.*,
+              if(p.SortOrder = 1, 'Discussion', 'Comment') as ForeignTable,
+              if(p.SortOrder = 1, p.ThreadID, a.PostID) as ForeignID,
+              concat('import/attach/', a.FileName) as Path
+           from :_PostAttachments a
+           left join :_Posts p on p.PostID = a.PostID
+           where IsRemote = 0", $Media_Map);
+
         Log::comment("Exporting hex encoded columns...");
 
         $result = $this->query(
@@ -139,8 +127,6 @@ class UserVoice extends Source
         Log::comment("$count Hex Encoded.", false);
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -161,8 +147,6 @@ class UserVoice extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -188,8 +172,6 @@ class UserVoice extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -205,8 +187,6 @@ class UserVoice extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -239,8 +219,6 @@ class UserVoice extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -258,8 +236,6 @@ class UserVoice extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         $userDiscussion_Map = [
@@ -274,23 +250,4 @@ class UserVoice extends Source
             $userDiscussion_Map
         );
     }
-
-    /*protected function attachments(): void
-    {
-        $Media_Map = array(
-           'FileName' => 'Name',
-           'ContentType' => 'Type',
-           'ContentSize' => 'Size',
-           'UserID' => 'InsertUserID',
-           'Created' => 'DateInserted'
-        );
-        $ex->ExportTable('Media', "
-           select a.*,
-              if(p.SortOrder = 1, 'Discussion', 'Comment') as ForeignTable,
-              if(p.SortOrder = 1, p.ThreadID, a.PostID) as ForeignID,
-              concat('import/attach/', a.FileName) as Path
-           from :_PostAttachments a
-           left join :_Posts p on p.PostID = a.PostID
-           where IsRemote = 0", $Media_Map);
-    }*/
 }

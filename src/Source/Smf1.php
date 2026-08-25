@@ -31,16 +31,7 @@ class Smf1 extends Source
             'Roles' => 1,
             'Avatars' => 1,
             'PrivateMessages' => 1,
-            'Signatures' => 0,
             'Attachments' => 1,
-            'Bookmarks' => 0,
-            'Badges' => 0,
-            'UserNotes' => 0,
-            'Ranks' => 0,
-            'Groups' => 0,
-            'Tags' => 0,
-            'Reactions' => 0,
-            'Articles' => 0,
         ]
     ];
 
@@ -57,26 +48,10 @@ class Smf1 extends Source
         'members' => ['ID_MEMBER', 'memberName', 'passwd', 'emailAddress', 'dateRegistered']
     ];
 
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->attachments();
-        $this->conversations();
-    }
-
     public function decodeNumericEntity(string $text): array|false|string|null
     {
         if (function_exists('mb_decode_numericentity')) {
             $convmap = [0x0, 0x2FFFF, 0, 0xFFFF];
-
             return mb_decode_numericentity($text, $convmap, 'UTF-8');
         } else {
             return $text;
@@ -85,16 +60,8 @@ class Smf1 extends Source
 
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @access public
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     *@see    Migration::writeTableToFile
-     *
      */
-    public function filterThumbnailData($value, $field, $row): ?string
+    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
     {
         $extension = pathinfo($row['Path'], PATHINFO_EXTENSION);
         $images = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
@@ -104,8 +71,6 @@ class Smf1 extends Source
         return null;
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -137,8 +102,6 @@ class Smf1 extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -155,8 +118,6 @@ class Smf1 extends Source
         $this->export('UserRole', "select * from :_members", $userRole_Map);
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -183,8 +144,6 @@ class Smf1 extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -228,8 +187,6 @@ class Smf1 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -252,8 +209,6 @@ class Smf1 extends Source
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $media_Map = [
@@ -288,11 +243,9 @@ class Smf1 extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
-// Conversations need a bit more conversion so execute a series of queries for that.
+        // Conversations need a bit more conversion so execute a series of queries for that.
         $this->query(
             'create table :_smfpmto (
                 id int,
@@ -302,27 +255,13 @@ class Smf1 extends Source
             )'
         );
         $this->query(
-            'insert :_smfpmto (
-                id,
-                to_id,
-                deleted
-            )
-            select
-                ID_PM,
-                ID_MEMBER_FROM,
-                deletedBySender
+            'insert :_smfpmto (id, to_id, deleted)
+            select ID_PM, ID_MEMBER_FROM, deletedBySender
             from :_personal_messages'
         );
         $this->query(
-            'insert ignore :_smfpmto (
-                id,
-                to_id,
-                deleted
-            )
-            select
-                ID_PM,
-                ID_MEMBER,
-                deleted
+            'insert ignore :_smfpmto (id, to_id, deleted)
+            select ID_PM, ID_MEMBER, deleted
             from :_pm_recipients'
         );
 
@@ -333,16 +272,9 @@ class Smf1 extends Source
                 primary key(id)
             )'
         );
-
         $this->query(
-            'insert :_smfpmto2 (
-                id,
-                to_ids
-            )
-            select
-                id,
-                group_concat(to_id order by to_id
-            )
+            'insert :_smfpmto2 (id, to_ids)
+            select id,  group_concat(to_id order by to_id)
             from :_smfpmto
             group by id'
         );
@@ -357,10 +289,8 @@ class Smf1 extends Source
                 to_ids varchar(255)
             )'
         );
-
         $this->query('create index :_idx_smfpm2 on :_smfpm (subject2, from_id)');
         $this->query('create index :_idx_smfpmg on :_smfpm (group_id)');
-
         $this->query(
             'insert :_smfpm (
                 id,
@@ -390,8 +320,7 @@ class Smf1 extends Source
 
         $this->query(
             'insert :_smfgroups
-            select
-                min(id) as group_id, subject2, to_ids
+            select min(id) as group_id, subject2, to_ids
             from :_smfpm
             group by subject2, to_ids'
         );
@@ -457,10 +386,7 @@ class Smf1 extends Source
         ];
         $this->export(
             'UserConversation',
-            "select
-                    pm.group_id,
-                    t.to_id,
-                    t.deleted
+            "select pm.group_id, t.to_id, t.deleted
                 from :_smfpmto t
                 join :_smfpm pm
                     on t.id = pm.group_id",

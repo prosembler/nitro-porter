@@ -130,8 +130,6 @@ class FluxBb extends Source
         }
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -154,8 +152,6 @@ class FluxBb extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
@@ -169,8 +165,6 @@ class FluxBb extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -184,8 +178,6 @@ class FluxBb extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $this->export(
@@ -208,8 +200,6 @@ class FluxBb extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $this->export(
@@ -233,8 +223,6 @@ class FluxBb extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $this->export(
@@ -256,8 +244,6 @@ class FluxBb extends Source
         );
     }
 
-    /**
-     */
     protected function tags(): void
     {
         if ($this->hasInputSchema('tags')) {
@@ -272,8 +258,6 @@ class FluxBb extends Source
         }
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         if ($this->hasInputSchema('attach_files')) {

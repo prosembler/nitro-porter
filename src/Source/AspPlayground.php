@@ -31,22 +31,6 @@ class AspPlayground extends Source
         'hasDiscussionBody' => false,
     ];
 
-    /**
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->signatures();
-
-        $this->categories();
-
-        $this->discussions();
-        $this->comments();
-        $this->bookmarks();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $map = [
@@ -68,8 +52,6 @@ class AspPlayground extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -77,17 +59,13 @@ class AspPlayground extends Source
             "select Mem, 'Plugin.Signatures.Sig' as `Name`, signature as `Value`
             from :_Members
             where signature <> ''
-
             union all
-
             select Mem, 'Plugin.Signatures.Format' as `Name`, 'BBCode' as `Value`
             from :_Members
             where signature <> ''"
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $map = [
@@ -109,8 +87,6 @@ class AspPlayground extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $map = [
@@ -131,8 +107,6 @@ class AspPlayground extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $map = [
@@ -158,8 +132,6 @@ class AspPlayground extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         $map = [

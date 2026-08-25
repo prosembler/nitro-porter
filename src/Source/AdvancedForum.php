@@ -31,27 +31,9 @@ class AdvancedForum extends Source
     ];
 
     /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-    }
-
-    /**
      * Translate from known Drupal format slugs to those compatible with Vanilla
-     *
-     * @param mixed $value Value of the current row
-     * @param string $field Name associated with the current field value
-     * @param array $row Full data row columns
-     * @return string Translated format slug
      */
-    public static function translateFormatType($value, $field, $row): string
+    public static function translateFormatType(mixed $value, string $field, array $row): string
     {
         switch ($value) {
             case 'filtered_html':
@@ -62,8 +44,6 @@ class AdvancedForum extends Source
         }
     }
 
-    /**
-     */
     protected function users(): void
     {
         $filePath = ''; // @todo Avatar path support
@@ -77,8 +57,6 @@ class AdvancedForum extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
@@ -96,8 +74,6 @@ class AdvancedForum extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $this->export(
@@ -112,8 +88,6 @@ class AdvancedForum extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -135,8 +109,6 @@ class AdvancedForum extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [

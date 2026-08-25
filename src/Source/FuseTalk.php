@@ -54,6 +54,7 @@ class FuseTalk extends Source
     public function run(): void
     {
         $this->createIndices(); // Speed up the export.
+
         $this->users();
         $this->signatures();
         $this->roles();
@@ -64,7 +65,7 @@ class FuseTalk extends Source
     }
 
     /**
-     * Fix smileys URL
+     * Filter: Fix smileys URL
      *
      * @param mixed $value Value of the current row
      * @param string $field Name associated with the current field value
@@ -87,8 +88,6 @@ class FuseTalk extends Source
         return $value;
     }
 
-    /**
-     */
     protected function createIndices(): void
     {
         Log::comment("Creating indexes... ");
@@ -118,8 +117,6 @@ class FuseTalk extends Source
         Log::comment("Indexes done!");
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [];
@@ -147,8 +144,6 @@ class FuseTalk extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -169,8 +164,6 @@ class FuseTalk extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $memberRoleID = 1;
@@ -204,22 +197,18 @@ class FuseTalk extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $this->query("drop table if exists zConversations;");
         $this->query(
-            "
-            create table zConversations(
+            "create table zConversations(
                 `ConversationID` int(11) not null AUTO_INCREMENT,
                 `User1` int(11) not null,
                 `User2` int(11) not null,
                 `DateInserted` datetime not null,
                 primary key (`ConversationID`),
                 key `IX_zConversation_User1_User2` (`User1`,`User2`)
-            );
-        "
+            );"
         );
         $this->query(
             "insert into zConversations(`User1`, `User2`, `DateInserted`)
@@ -228,9 +217,7 @@ class FuseTalk extends Source
                     if (pm.iuserid < pm.iownerid, pm.iownerid, pm.iuserid) as User2,
                     min(pm.dtinsertdate)
                 from :_privatemessages as pm
-                group by
-                    User1,
-                    User2"
+                group by User1, User2"
         );
 
         // Conversations.
@@ -290,8 +277,6 @@ class FuseTalk extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $this->export(
@@ -305,8 +290,6 @@ class FuseTalk extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         // Skip "Body". It will be fixed at import.
@@ -326,12 +309,9 @@ class FuseTalk extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
-        // The iparentid column doesn't make any sense since the display is ordered by date only
-        // (there are no "sub" comment)
+        // The iparentid column doesn't make any sense since the display is ordered by date only (no "sub" comment)
         $comment_Map = [
             'txmessage' => ['Column' => 'Body', 'Filter' => [$this, 'fixSmileysURL']],
         ];

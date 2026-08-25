@@ -30,22 +30,6 @@ class Toast extends Source
         ]
     ];
 
-    /**
-     * Main export method.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->signatures();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -62,8 +46,6 @@ class Toast extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         // Determine safe RoleID to use for non-existant Member role
@@ -107,8 +89,6 @@ class Toast extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -129,8 +109,6 @@ class Toast extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -158,8 +136,6 @@ class Toast extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -185,8 +161,6 @@ class Toast extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [

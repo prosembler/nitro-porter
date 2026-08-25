@@ -35,26 +35,8 @@ class IpBoard4 extends Source
         ]
     ];
 
-    /**
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->attachments();
-
-        $this->conversations();
-    }
-
-    /**
-     */
     protected function conversations(): void
     {
-        // Conversations.
         $map = [
             'mt_id' => 'ConversationID',
             'mt_date' => 'DateInserted',
@@ -92,8 +74,6 @@ class IpBoard4 extends Source
         $this->export('UserConversation', $query, $map);
     }
 
-    /**
-     */
     protected function users(): void
     {
         $map = [
@@ -118,8 +98,6 @@ class IpBoard4 extends Source
         $this->export('User', $query, $map, $filters);
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $map = [
@@ -137,8 +115,6 @@ class IpBoard4 extends Source
         $this->export('UserRole', $query, $map);
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $map = [
@@ -155,8 +131,6 @@ class IpBoard4 extends Source
         $this->export('Category', "select * from :_forums_forums", $map, $filters);
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $descriptionSQL = 'p.post';
@@ -195,8 +169,6 @@ class IpBoard4 extends Source
         $this->export('Discussion', $query, $map, $filters);
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $map = [
@@ -219,8 +191,6 @@ class IpBoard4 extends Source
         $this->export('Comment', $query, $map, $filters);
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $map = [

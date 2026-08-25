@@ -40,22 +40,6 @@ class BbPress1 extends Source
         'meta' => []
     ];
 
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->conversations();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -68,8 +52,6 @@ class BbPress1 extends Source
         $this->export('User', "select * from :_users", $user_Map);
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
@@ -103,8 +85,6 @@ class BbPress1 extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -124,8 +104,6 @@ class BbPress1 extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -148,8 +126,6 @@ class BbPress1 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -170,8 +146,6 @@ class BbPress1 extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         // The export is different depending on the table layout.

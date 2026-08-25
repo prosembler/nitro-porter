@@ -42,23 +42,6 @@ class SimplePress extends Source
         'users' => ['ID', 'user_nicename', 'user_pass', 'user_email', 'user_registered'],
     ];
 
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->tags();
-        $this->comments();
-        $this->conversations();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -79,8 +62,6 @@ class SimplePress extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -110,14 +91,10 @@ class SimplePress extends Source
         ];
         $this->export(
             'UserRole',
-            "select
-                    m.user_id,
-                    m.usergroup_id
+            "select  m.user_id,  m.usergroup_id
                 from :_sfmemberships m
                 union
-                select
-                    um.user_id,
-                    100
+                select um.user_id, 100
                 from :_usermeta um
                 where um.meta_key = 'wp_capabilities'
                     and um.meta_value like '%PF Manage Forums%'",
@@ -125,8 +102,6 @@ class SimplePress extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -160,8 +135,6 @@ class SimplePress extends Source
         );
     }
 
-    /**
-     */
     protected function tags(): void
     {
         if ($this->hasInputSchema('sftags')) {
@@ -182,8 +155,6 @@ class SimplePress extends Source
         }
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -203,8 +174,6 @@ class SimplePress extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -223,8 +192,6 @@ class SimplePress extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $conv_Map = [

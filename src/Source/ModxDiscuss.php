@@ -31,40 +31,16 @@ class ModxDiscuss extends Source
         ]
     ];
 
-    /**
-     * You can use this to require certain tables and columns be present.
-     *
-     * This can be useful for verifying data integrity. Don't specify more columns
-     * than your porter actually requires to avoid forwards-compatibility issues.
-     *
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
-        'categories' => [], // This just requires the 'forum' table without caring about columns.
+        'categories' => [],
         'boards' => [],
         'posts' => [],
         'threads' => [],
         'users' => ['user', 'username', 'email', 'createdon', 'gender',
             'birthdate', 'location', 'confirmed', 'last_login', 'last_active',
-            'title', 'avatar', 'show_email'], // Require specific cols on 'users'
+            'title', 'avatar', 'show_email'],
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->userMeta();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $this->export(
@@ -89,8 +65,6 @@ class ModxDiscuss extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         // Roles do not exist in Discuss. Really simple matchup.
@@ -104,8 +78,6 @@ class ModxDiscuss extends Source
         );
     }
 
-    /**
-     */
     protected function userMeta(): void
     {
         $this->export(
@@ -140,8 +112,6 @@ class ModxDiscuss extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $this->export(
@@ -152,7 +122,7 @@ class ModxDiscuss extends Source
                     name as `Name`,
                     description as `Description`,
                     'Heading' as `DisplayAs`,
-                rank as `Sort`
+                    rank as `Sort`
                 from :_boards
                 union
                 select
@@ -166,8 +136,6 @@ class ModxDiscuss extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -197,8 +165,6 @@ class ModxDiscuss extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $this->export(

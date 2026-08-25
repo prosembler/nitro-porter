@@ -64,49 +64,14 @@ class Vanilla1 extends Source
         ]
     ];
 
-    /**
-     * Forum-specific export format
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->conversations();
-        $this->comments();
-        $this->attachments();
-    }
-
-    /**
-     * @param string $absPath
-     * @return false|string
-     */
-    public function stripMediaPath($absPath): false|string
+    public function stripMediaPath(mixed $absPath): false|string
     {
         if (($pos = strpos($absPath, '/uploads/')) !== false) {
             return substr($absPath, $pos + 9);
         }
-
         return $absPath;
     }
 
-    /**
-     * @param mixed $value
-     * @return bool
-     */
-    public function forceBool($value): bool
-    {
-        if ($value) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -121,8 +86,6 @@ class Vanilla1 extends Source
         $this->export('User', "SELECT * FROM :_User", $user_Map);  // ":_" will be replaced by database prefix
     }
 
-    /**
-     */
     protected function roles(): void
     {
         // Since the zero role is a valid role in Vanilla 1 then we'll have to reassign it.
@@ -161,8 +124,6 @@ class Vanilla1 extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -173,8 +134,6 @@ class Vanilla1 extends Source
         $this->export('Category', "select CategoryID, Name, Description from :_Category", $category_Map);
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -220,8 +179,6 @@ class Vanilla1 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -248,8 +205,6 @@ class Vanilla1 extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         // These mapping tables are used to group comments that a) are in the same discussion
@@ -429,8 +384,6 @@ class Vanilla1 extends Source
         $this->query("drop table z_pmgroup");
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         if ($this->hasInputSchema('Attachment')) {

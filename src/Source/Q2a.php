@@ -37,20 +37,6 @@ class Q2a extends Source
         'users' => [],
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->discussions();
-        $this->comments();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $this->export(
@@ -69,8 +55,6 @@ class Q2a extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
@@ -88,8 +72,6 @@ class Q2a extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $this->export('Category', "select 1 as CategoryID, 'Legacy' as Name");
@@ -120,8 +102,6 @@ class Q2a extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $this->export(

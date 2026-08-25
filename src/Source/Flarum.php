@@ -63,12 +63,10 @@ class Flarum extends Source
             $this->badges(); // 17development/flarum-user-badges
         }
         if ($this->hasInputSchema('recipients')) {
-            $this->privateMessages(); // fof/byobu
+            $this->conversations(); // fof/byobu
         }
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -89,8 +87,6 @@ class Flarum extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -115,8 +111,6 @@ class Flarum extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -135,8 +129,6 @@ class Flarum extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -167,8 +159,6 @@ class Flarum extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         $map = [
@@ -181,8 +171,6 @@ class Flarum extends Source
         $this->export('UserDiscussion', $query, $map);
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -211,8 +199,6 @@ class Flarum extends Source
         );
     }
 
-    /**
-     */
     protected function badges(): void
     {
         // Badges
@@ -238,9 +224,7 @@ class Flarum extends Source
         $this->export('UserBadge', $query, $map);
     }
 
-    /**
-     */
-    protected function privateMessages(): void
+    protected function conversations(): void
     {
         // Messages
         $map = [

@@ -139,8 +139,6 @@ class Waterhole extends Target
         $this->comments();
     }
 
-    /**
-     */
     protected function users(): void
     {
         $structure = [
@@ -224,8 +222,6 @@ class Waterhole extends Target
         $this->import('group_user', $query, $structure, $map);
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $structure = [
@@ -247,8 +243,6 @@ class Waterhole extends Target
         $this->import('channels', $query, $structure, $map);
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $structure = $this->getStructurePosts();
@@ -274,8 +268,6 @@ class Waterhole extends Target
         $this->import('posts', $query, $structure, $map, $filters);
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $map = [

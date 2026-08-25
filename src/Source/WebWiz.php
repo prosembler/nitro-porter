@@ -30,23 +30,6 @@ class WebWiz extends Source
         ]
     ];
 
-    /**
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->usermeta();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->conversations();
-    }
-
-    /**
-     */
     public function conversations(): void
     {
         $this->exportConversationTemps();
@@ -105,8 +88,6 @@ class WebWiz extends Source
         );
     }
 
-    /**
-     */
     protected function exportConversationTemps(): void
     {
         $sql = "
@@ -116,22 +97,12 @@ class WebWiz extends Source
                 User_ID int,
                 primary key(PM_ID, User_ID)
             );
-            insert ignore z_pmto (
-                PM_ID,
-                User_ID
-            )
-            select
-                PM_ID,
-                Author_ID
+            insert ignore z_pmto (PM_ID, User_ID)
+            select PM_ID, Author_ID
             from :_PMMessage;
 
-            insert ignore z_pmto (
-                PM_ID,
-                User_ID
-            )
-            select
-                PM_ID,
-                From_ID
+            insert ignore z_pmto (PM_ID, User_ID)
+            select PM_ID, From_ID
             from :_PMMessage;
 
             drop table if exists z_pmto2;
@@ -141,13 +112,8 @@ class WebWiz extends Source
                 primary key (PM_ID)
             );
 
-            replace z_pmto2 (
-                PM_ID,
-                UserIDs
-            )
-            select
-                PM_ID,
-                group_concat(User_ID order by User_ID)
+            replace z_pmto2 ( PM_ID, UserIDs)
+            select PM_ID, group_concat(User_ID order by User_ID)
             from z_pmto
             group by PM_ID;
 
@@ -160,14 +126,8 @@ class WebWiz extends Source
                 Group_ID int unsigned
             );
 
-            insert z_pmtext (
-                PM_ID,
-                Title,
-                Title2
-            )
-            select
-                PM_ID,
-                PM_Tittle,
+            insert z_pmtext (PM_ID, Title, Title2)
+            select  PM_ID, PM_Tittle,
                 case when PM_Tittle like 'Re:%' then trim(substring(PM_Tittle, 4)) else PM_Tittle end as Title2
             from :_PMMessage;
 
@@ -186,15 +146,8 @@ class WebWiz extends Source
                 UserIDs varchar(250)
             );
 
-            insert z_pmgroup (
-                Group_ID,
-                Title,
-                UserIDs
-            )
-            select
-                min(pm.PM_ID),
-                pm.Title2,
-                t2.UserIDs
+            insert z_pmgroup (Group_ID, Title, UserIDs)
+            select min(pm.PM_ID), pm.Title2, t2.UserIDs
             from z_pmtext pm
             join z_pmto2 t2
                 on pm.PM_ID = t2.PM_ID
@@ -211,8 +164,6 @@ class WebWiz extends Source
         $this->dbInput()->unprepared($sql);
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -245,8 +196,6 @@ class WebWiz extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -271,8 +220,6 @@ class WebWiz extends Source
         );
     }
 
-    /**
-     */
     protected function usermeta(): void
     {
         $this->export(
@@ -286,8 +233,6 @@ class WebWiz extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -318,8 +263,6 @@ class WebWiz extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -351,8 +294,6 @@ class WebWiz extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [

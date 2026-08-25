@@ -46,19 +46,6 @@ class Mbox extends Source
     ];
 
     /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->setup(); // Here be dragons.
-        $this->users();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-    }
-
-    /**
      * Grab the email from the User field.
      */
     public function parseEmail(string $email): string
@@ -90,23 +77,17 @@ class Mbox extends Source
         return trim($body[0]);
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [];
         $this->export(
             'User',
-            "select u.*,
-                    NOW() as DateInserted,
-                    'Reset' as HashMethod
+            "select u.*, NOW() as DateInserted, 'Reset' as HashMethod
                 from :_mbox_user u",
             $user_Map
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [];
@@ -117,8 +98,6 @@ class Mbox extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -132,8 +111,6 @@ class Mbox extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -148,8 +125,6 @@ class Mbox extends Source
         );
     }
 
-    /**
-     */
     protected function setup(): void
     {
         // Temporary user table

@@ -40,22 +40,6 @@ class BbPress2 extends Source
         'users' => ['ID', 'user_login', 'user_pass', 'user_email', 'user_registered'],
     ];
 
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->query("drop table if exists z_user;"); // Cleanup
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $this->query("drop table if exists z_user;");
@@ -121,8 +105,6 @@ class BbPress2 extends Source
         $this->export('User', "select * from z_user;", $user_Map);
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
@@ -163,8 +145,6 @@ class BbPress2 extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -185,8 +165,6 @@ class BbPress2 extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -213,8 +191,6 @@ class BbPress2 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [

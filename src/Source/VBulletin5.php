@@ -64,9 +64,6 @@ class VBulletin5 extends VBulletin
         'usertitle' => [],
     ];
 
-    /**
-     *
-     */
     public function run(): void
     {
         // Grab all of the ranks.
@@ -274,8 +271,6 @@ class VBulletin5 extends VBulletin
         $this->query($sql);
     }
 
-    /**
-     */
     protected function pollsV5(): void
     {
         $poll_Map = [
@@ -347,9 +342,6 @@ class VBulletin5 extends VBulletin
         );
     }
 
-    /**
-     * @param mixed $ranks
-     */
     public function usersV5(mixed $ranks): void
     {
         $cdn = '';
@@ -423,8 +415,6 @@ class VBulletin5 extends VBulletin
         //ipdata - contains all IP records for user actions: view,visit,register,logon,logoff
     }
 
-    /**
-     */
     public function rolesV5(): void
     {
         $role_Map = [
@@ -462,9 +452,6 @@ class VBulletin5 extends VBulletin
         $this->query("DROP TABLE IF EXISTS VbulletinRoles");
     }
 
-    /**
-     * @return void
-     */
     public function ranksV5(): void
     {
         $rank_Map = [
@@ -503,10 +490,7 @@ class VBulletin5 extends VBulletin
         );
     }
 
-    /**
-     * @return array|void
-     */
-    public function categoryV5()
+    public function categoryV5(): array
     {
         $channels = [];
         $categoryIDs = [];
@@ -580,10 +564,7 @@ class VBulletin5 extends VBulletin
         return [$categoryIDs, $privateMessagesID];
     }
 
-    /**
-     * @param mixed $categoryIDs
-     */
-    public function commentsV5($categoryIDs): void
+    public function commentsV5(mixed $categoryIDs): void
     {
         // Detect inner comments (Can happen if a plugin is used)
         $innerCommentQuery = "select
@@ -662,10 +643,7 @@ class VBulletin5 extends VBulletin
         }
     }
 
-    /**
-     * @param mixed $categoryIDs
-     */
-    public function attachmentsV5($categoryIDs): void
+    public function attachmentsV5(mixed $categoryIDs): void
     {
         $instance = $this;
         $media_Map = [
@@ -718,10 +696,7 @@ class VBulletin5 extends VBulletin
         // left join :_contenttype c on n.contenttypeid = c.contenttypeid
     }
 
-    /**
-     * @param mixed $privateMessagesID
-     */
-    public function conversationsV5($privateMessagesID): void
+    public function conversationsV5(int $privateMessagesID): void
     {
         $conversation_Map = [
             'nodeid' => 'ConversationID',

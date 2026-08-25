@@ -51,25 +51,6 @@ class Xenforo extends Source
         'fileTransferSupport' => true,
     ];
 
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->signatures();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->conversations();
-        $this->attachments();
-    }
-
-    /**
-     */
     public function signatures(): void
     {
         $sql = "select
@@ -88,8 +69,6 @@ class Xenforo extends Source
         $this->export('UserMeta', $sql);
     }
 
-    /**
-     */
     protected function users(): void
     {
         $map = [
@@ -131,8 +110,6 @@ class Xenforo extends Source
         $this->export('User', $query, $map, $filter);
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -150,7 +127,6 @@ class Xenforo extends Source
             'user_id' => 'UserID',
             'user_group_id' => 'RoleID'
         ];
-
         $this->export(
             'UserRole',
             "select user_id, user_group_id
@@ -164,8 +140,6 @@ class Xenforo extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -188,8 +162,6 @@ class Xenforo extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -221,8 +193,6 @@ class Xenforo extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -267,8 +237,7 @@ class Xenforo extends Source
      *
      * Xenforo faithfully reimplemented vBulletin's worst ideas here, probably a misguided security effort.
      * Most other platforms don't jank filenames like this, so rebuild Path as {id}-{filename} to avoid conflicts.
-     *@see self::attachmentsMap() for the `FileTransfer` data to complete the file renaming.
-     *
+     * @see self::attachmentsMap() for the `FileTransfer` data to complete the file renaming.
      */
     protected function attachments(): void
     {
@@ -323,8 +292,6 @@ class Xenforo extends Source
         $this->export('Media', $query, $map, $filters);
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $conversation_Map = [

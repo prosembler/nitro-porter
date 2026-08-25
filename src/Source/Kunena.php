@@ -33,17 +33,6 @@ class Kunena extends Source
         ]
     ];
 
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->bookmarks();
-        $this->attachments();
-    }
-
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
      */

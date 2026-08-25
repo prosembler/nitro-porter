@@ -49,37 +49,6 @@ class PunBb extends Source
     protected string $cdn = '';
 
     /**
-     * @var array Required tables => columns
-     */
-    public array $sourceTables = [];
-
-    /**
-     * Forum-specific export format
-     *
-     */
-    public function run(): void
-    {
-        $this->cdn = ''; //$this->param('cdn', '');
-        /*if ($avatarPath = $this->param('avatars-source', false)) {
-            if (!$avatarPath = realpath($avatarPath)) {
-                echo "Unable to access path to avatars: $avatarPath\n";
-                exit(1);
-            }
-            $this->avatarPath = $avatarPath;
-        }*/
-
-        $this->users();
-        $this->roles();
-        $this->signatures();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->tags();
-        $this->attachments();
-    }
-
-    /**
      * Take the user ID, avatar type value and generate a path to the avatar file.
      *
      * @param mixed $value Row field value.
@@ -106,12 +75,10 @@ class PunBb extends Source
             default:
                 return null;
         }
-
         $avatarFilename = "{$this->avatarPath}/{$value}.$extension";
 
         if (file_exists($avatarFilename)) {
             $avatarBasename = basename($avatarFilename);
-
             return "{$this->cdn}punbb/avatars/$avatarBasename";
         } else {
             return null;
@@ -120,15 +87,8 @@ class PunBb extends Source
 
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     * @see    Migration::writeTableToFile
-     *
      */
-    public function filterThumbnailData($value, $field, $row): ?string
+    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
     {
         if (strpos(strtolower($row['file_mime_type']), 'image/') === 0) {
             return $value;
@@ -137,8 +97,6 @@ class PunBb extends Source
         }
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         if ($this->hasInputSchema('attach_files')) {
@@ -167,8 +125,6 @@ class PunBb extends Source
         }
     }
 
-    /**
-     */
     protected function tags(): void
     {
         if ($this->hasInputSchema('tags')) {
@@ -186,8 +142,6 @@ class PunBb extends Source
         }
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -214,8 +168,6 @@ class PunBb extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -248,8 +200,6 @@ class PunBb extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -280,8 +230,6 @@ class PunBb extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -304,8 +252,6 @@ class PunBb extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -329,8 +275,6 @@ class PunBb extends Source
         );
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [

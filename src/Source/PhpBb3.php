@@ -372,8 +372,6 @@ class PhpBb3 extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         $this->export(

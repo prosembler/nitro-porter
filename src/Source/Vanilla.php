@@ -47,8 +47,6 @@ class Vanilla extends Source
      */
     public array $sourceTables = [];
 
-    /**
-     */
     public function run(): void
     {
         // Core tables essentially map to our intermediate format as-is.
@@ -82,8 +80,6 @@ class Vanilla extends Source
         $this->polls();
     }
 
-    /**
-     */
     public function users(): void
     {
         $filters = [

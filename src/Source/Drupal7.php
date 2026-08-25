@@ -33,36 +33,14 @@ class Drupal7 extends Source
         ]
     ];
 
-    protected string $path;
+    protected string $path = '/uploads/';
 
     public int $imageCount;
 
     /**
+     * Convert "posts" that are base64-encoded attachments into files.
      */
-    public function run(): void
-    {
-        $this->path = '/uploads/'; //$this->param('attach-target', null) . '/uploads/';
-        /*$origin = ''; //$this->param('attach-source', null);
-        if ($origin && !is_dir($origin)) {
-            mkdir($origin);
-        }*/
-
-        $this->users();
-        $this->signatures();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->attachments();
-    }
-
-    /**
-     * @param string $value
-     * @param string $field
-     * @param array $row
-     * @return mixed
-     */
-    public function convertBase64Attachments($value, $field, $row): mixed
+    public function convertBase64Attachments(mixed $value, string $field, array $row): mixed
     {
         $this->imageCount = 1;
         $postId = $row['CommentID'] ?? $row['DiscussionID'];
@@ -83,8 +61,6 @@ class Drupal7 extends Source
         return $value;
     }
 
-    /**
-     */
     protected function users(): void
     {
         $this->export(
@@ -104,8 +80,6 @@ class Drupal7 extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $this->export(
@@ -126,8 +100,6 @@ class Drupal7 extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
@@ -142,8 +114,6 @@ class Drupal7 extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $this->export(
@@ -160,8 +130,6 @@ class Drupal7 extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussionMap = [
@@ -194,8 +162,6 @@ class Drupal7 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $commentMap = [
@@ -228,8 +194,6 @@ class Drupal7 extends Source
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $this->export(

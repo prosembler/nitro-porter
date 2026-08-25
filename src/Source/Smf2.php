@@ -27,15 +27,11 @@ class Smf2 extends Source
             'Roles' => 1,
             'Avatars' => 0,
             'PrivateMessages' => 1,
-            'Signatures' => 0,
             'Attachments' => 1,
             'Bookmarks' => 1,
         ]
     ];
 
-    /**
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
         'boards' => [],
         'messages' => [],
@@ -45,21 +41,6 @@ class Smf2 extends Source
         'membergroups' => [],
         'members' => ['id_member', 'member_name', 'passwd', 'email_address', 'date_registered']
     ];
-
-    /**
-     * Forum-specific export format.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->attachments();
-        $this->conversations();
-    }
 
     public function decodeNumericEntity(string $text): array|false|string|null
     {
@@ -73,16 +54,8 @@ class Smf2 extends Source
 
     /**
      * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @access public
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     *@see    Migration::writeTableToFile
-     *
      */
-    public function filterThumbnailData($value, $field, $row): ?string
+    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
     {
         $extension = pathinfo($row['Path'], PATHINFO_EXTENSION);
         $images = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
@@ -92,8 +65,6 @@ class Smf2 extends Source
         return null;
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -126,8 +97,6 @@ class Smf2 extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -144,14 +113,11 @@ class Smf2 extends Source
         $this->export('UserRole', "select * from :_members", $userRole_Map);
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
             'Name' => ['Column' => 'Name', 'Filter' => [$this, 'decodeNumericEntity']],
         ];
-
         $this->export(
             'Category',
             "select
@@ -173,8 +139,6 @@ class Smf2 extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [
@@ -218,8 +182,6 @@ class Smf2 extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [
@@ -242,8 +204,6 @@ class Smf2 extends Source
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $media_Map = [
@@ -276,8 +236,6 @@ class Smf2 extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         $conversation_Map = [

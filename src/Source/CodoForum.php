@@ -42,22 +42,6 @@ class CodoForum extends Source
         'posts' => ['post_id', 'topic_id', 'uid', 'imessage'],
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->userMeta();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $this->export(
@@ -74,8 +58,6 @@ class CodoForum extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
@@ -97,8 +79,6 @@ class CodoForum extends Source
         );
     }
 
-    /**
-     */
     protected function userMeta(): void
     {
         $this->export(
@@ -112,8 +92,6 @@ class CodoForum extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $this->export(
@@ -125,8 +103,6 @@ class CodoForum extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $this->export(
@@ -142,8 +118,6 @@ class CodoForum extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $this->export(

@@ -36,102 +36,51 @@ class NodeBb extends Source
         ]
     ];
 
-    /**
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->signatures();
-
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->polls();
-        $this->tags();
-        $this->bookmarks();
-        $this->conversations();
-        $this->reactions();
-    }
-
-    /**
-     * @param string $time
-     * @return false|string|null
-     */
-    public function tsToDate($time): false|string|null
+    public function tsToDate(mixed $time): false|string|null
     {
         if (!$time) {
             return null;
         }
-
         return gmdate('Y-m-d H:i:s', (int) $time / 1000);
     }
 
-    /**
-     * @param string $slug
-     * @return array|string|string[]|null
-     */
-    public function removeNumId($slug): array|string|null
+    public function removeNumId(mixed $slug): array|string|null
     {
         $regex = '/(\d*)\//';
         return preg_replace($regex, '', $slug);
     }
 
-    /**
-     * @param string $key
-     * @return mixed
-     */
-    public function roleNameFromKey($key): mixed
+    public function roleNameFromKey(mixed $key): mixed
     {
         $regex = '/\w*:([\w|\s|-]*):/';
         preg_match($regex, $key, $matches);
-
         return $matches[1] ?? '';
     }
 
-    /**
-     * @param string $key
-     * @return mixed
-     */
-    public function idFromKey($key): mixed
+    public function idFromKey(mixed $key): mixed
     {
         $regex = '/\w*:(\d*):/';
         preg_match($regex, $key, $matches);
-
         return $matches[1] ?? '';
     }
 
-    /**
-     * @param mixed $value
-     * @return int
-     */
-    public function makeNullZero($value): int
+    public function makeNullZero(mixed $value): int
     {
         if (!$value) {
             return 0;
         }
-
         return $value;
     }
 
-    /**
-     * @param mixed $value
-     * @return string|null
-     */
-    public function isPoll($value): ?string
+    public function isPoll(mixed $value): ?string
     {
         if ($value) {
             return 'poll';
         }
-
         return null;
     }
 
-    /**
-     * @param mixed $reactions
-     * @return string|null
-     */
-    public function serializeReactions($reactions): ?string
+    public function serializeReactions(mixed $reactions): ?string
     {
         if ($reactions == '0:0') {
             return null;
@@ -153,8 +102,6 @@ class NodeBb extends Source
         return $attributes;
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
@@ -180,8 +127,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $role_Map = [
@@ -210,8 +155,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function signatures(): void
     {
         $userMeta_Map = [
@@ -240,8 +183,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [
@@ -261,8 +202,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         if (!$this->indexExists('z_idx_topic', ':_topic')) {
@@ -287,9 +226,7 @@ class NodeBb extends Source
         "
         );
         $this->query(
-            "insert ignore z_discussionids (
-                tid
-            )
+            "insert ignore z_discussionids (tid)
             select mainPid
             from :_topic
             where mainPid is not null
@@ -354,7 +291,6 @@ class NodeBb extends Source
             ) as reactions"
         );
 
-        //Discussions
         $discussion_Map = [
             'tid' => 'DiscussionID',
             'cid' => 'CategoryID',
@@ -372,7 +308,6 @@ class NodeBb extends Source
             'attributes' => ['Column' => 'Attributes', 'Filter' => [$this, 'serializeReactions']],
             'poll' => ['Column' => 'Type', 'Filter' => [$this, 'isPoll']]
         ];
-
         $this->export(
             'Discussion',
             "select p.tid, cid, title, content, p.uid, locked, pinned, p.timestamp,
@@ -392,8 +327,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $this->query("drop table if exists z_comments;");
@@ -412,25 +345,14 @@ class NodeBb extends Source
                 primary key(pid)
             );"
         );
-
         $this->query(
-            "insert ignore z_comments (
-                pid,
-                content,
-                uid,
-                tid,
-                timestamp,
-                edited,
-                editor,
-                votes
-            )
+            "insert ignore z_comments (pid, content, uid, tid, timestamp, edited, editor, votes)
             select p.pid, p.content, p.uid, p.tid, p.timestamp, p.edited, p.editor, p.votes
             from :_post p
             left join z_discussionids t
             on t.tid = p.pid
             where p.deleted != 1 and t.tid is null;"
         );
-
         $this->query(
             "update z_comments as c
             join z_reactiontotals r
@@ -460,8 +382,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function polls(): void
     {
         $poll_Map = [
@@ -518,7 +438,6 @@ class NodeBb extends Source
         if (!$this->indexExists('z_idx_topic_key', ':_topic')) {
             $this->query("create index z_idx_topic_key on :_topic (_key);");
         }
-
         $tag_Map = [
             'slug' => 'Name',
             'fullname' => 'FullName',
@@ -576,8 +495,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         if (!$this->indexExists('z_idx_message_key', ':_message')) {
@@ -593,18 +510,12 @@ class NodeBb extends Source
             );"
         );
         $this->query(
-            "insert ignore z_pmto (
-                pmid,
-                userid
-            )
+            "insert ignore z_pmto (pmid, userid)
             select substring_index(_key, ':', -1), fromuid
             from :_message;"
         );
         $this->query(
-            "insert ignore z_pmto (
-                pmid,
-                userid
-            )
+            "insert ignore z_pmto (pmid, userid)
             select substring_index(_key, ':', -1), touid
             from :_message;"
         );
@@ -619,10 +530,7 @@ class NodeBb extends Source
             );"
         );
         $this->query(
-            "replace z_pmto2 (
-                pmid,
-                userids
-            )
+            "replace z_pmto2 (pmid, userids)
             select pmid, group_concat(userid order by userid)
             from z_pmto
             group by pmid;"
@@ -645,14 +553,12 @@ class NodeBb extends Source
             from z_pmto2
             group by userids;"
         );
-
         $this->query(
             "update z_pmto2 as p
             left join z_pmgroup g
             on p.userids = g.userids
             set p.groupid = g.firstmessageid;"
         );
-
         $this->query(
             "update z_pmto as p
             left join z_pmto2 p2
@@ -711,8 +617,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         $userDiscussion_Map = [
@@ -720,7 +624,6 @@ class NodeBb extends Source
             '_key' => ['Column' => 'DiscussionID', 'Filter' => [$this, 'idFromKey']],
             'bookmarked' => 'Bookmarked'
         ];
-
         $this->export(
             'UserDiscussion',
             "select members, _key, 1 as bookmarked
@@ -731,8 +634,6 @@ class NodeBb extends Source
         );
     }
 
-    /**
-     */
     protected function reactions(): void
     {
         if (!$this->indexExists('z_idx_topic_mainpid', ':_topic')) {

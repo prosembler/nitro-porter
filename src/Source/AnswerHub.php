@@ -34,62 +34,17 @@ class AnswerHub extends Source
     ];
 
     /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->tags();
-        $this->attachments();
-    }
-
-    /**
-     * Generate an email for users who do not have one.
-     *
-     * @param mixed $value Value of the current row
-     * @param string $field Name associated with the current field value
-     * @param array $row Full data row columns
-     * @return string Email
-     */
-    public function generateEmail($value, $field, $row): string
-    {
-        $email = $value;
-        if (empty($email)) {
-            $domain = 'example.com'; //$this->param('noemaildomain');
-            $slug = preg_replace('#[^a-z0-9-_.]#i', '', $row['Name']);
-
-            if (!strlen($slug)) {
-                $slug = $row['UserID'];
-            }
-            $email = "$slug@$domain";
-        }
-
-        return $email;
-    }
-
-    /**
-     * @param string $value
-     * @param string $field
-     * @param array $row
-     * @return mixed
+     * Filter: Get the filename from a path.
      */
     public function getFileName(string $value, string $field, array $row): mixed
     {
-        $arr = explode('/', $value);
-        return end($arr);
+        return pathinfo($value, PATHINFO_FILENAME);
     }
 
-    /**
-     */
     protected function users(): void
     {
         $user_Map = [
-            'c_email' => ['Column' => 'Email', 'Filter' => [$this, 'generateEmail']],
+            'c_email' => ['Column' => 'Email', 'Filter' => [$this, 'BlankEmails']],
         ];
         $this->export(
             'User',
@@ -111,23 +66,18 @@ class AnswerHub extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $result = $this->query("select c_reserved as lastID
             from id_generators
             where c_identifier = 'AUTHORITABLE'");
+        $lastID = 0;
         if ($result && $row = $result->nextResultRow()) {
             $lastID = $row['lastID'];
         }
-        if (!isset($lastID)) {
-            die('Something went wrong :S' . PHP_EOL);
-        }
         $this->export(
             'Role',
-            "
-            select
+            "select
                 groups.c_id as RoleID,
                 groups.c_name as Name,
                 groups.c_description as Description
@@ -151,8 +101,6 @@ class AnswerHub extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
         $category_Map = [];
@@ -172,8 +120,6 @@ class AnswerHub extends Source
         );
     }
 
-    /**
-     */
     protected function discussions(): void
     {
         $discussion_Map = [];
@@ -222,8 +168,6 @@ class AnswerHub extends Source
         );
     }
 
-    /**
-     */
     protected function comments(): void
     {
         $comment_Map = [];
@@ -258,8 +202,6 @@ class AnswerHub extends Source
         );
     }
 
-    /**
-     */
     protected function tags(): void
     {
         $this->export(
@@ -285,8 +227,6 @@ class AnswerHub extends Source
         );
     }
 
-    /**
-     */
     protected function attachments(): void
     {
         $media_Map = [

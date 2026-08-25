@@ -33,47 +33,13 @@ class JForum extends Source
         ]
     ];
 
-    /**
-     * You can use this to require certain tables and columns be present.
-     *
-     * This can be useful for verifying data integrity. Don't specify more columns
-     * than your porter actually requires to avoid forwards-compatibility issues.
-     *
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
-        'forums' => [], // This just requires the 'forum' table without caring about columns.
+        'forums' => [],
         'posts' => [],
         'topics' => [],
-        'users' => ['user_id', 'username', 'user_email'], // Require specific cols on 'users'
+        'users' => ['user_id', 'username', 'user_email'],
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles();
-        $this->userMeta();
-
-        $this->categories();
-        if ($this->hasInputSchema(':_posts_text')) {
-            $postTextColumm = 't.post_text as Body';
-            $postTextSource = 'left join :_posts_text t on p.post_id = t.post_id';
-        } else {
-            $postTextColumm = 'p.post_text as Body';
-            $postTextSource = '';
-        }
-        $this->discussions($postTextColumm, $postTextSource);
-        $this->comments($postTextColumm, $postTextSource);
-        $this->bookmarks();
-        $this->conversations();
-    }
-
-    /**
-     */
     protected function users(): void
     {
         $this->export(
@@ -94,33 +60,22 @@ class JForum extends Source
         );
     }
 
-    /**
-     */
     protected function roles(): void
     {
         $this->export(
             'Role',
-            "
-            select
-                g.group_id as RoleID,
-                g.group_name as Name,
-                g.group_description as Description
+            "select g.group_id as RoleID, g.group_name as Name, g.group_description as Description
             from :_groups as g"
         );
 
         // User Role.
         $this->export(
             'UserRole',
-            "
-            select
-                u.user_id as UserID,
-                u.group_id as RoleID
+            "select u.user_id as UserID, u.group_id as RoleID
             from :_user_groups as u"
         );
     }
 
-    /**
-     */
     protected function userMeta(): void
     {
         $this->export(
@@ -162,8 +117,6 @@ class JForum extends Source
         );
     }
 
-    /**
-     */
     protected function categories(): void
     {
 // _categories is tier 1, _forum is tier 2.
@@ -190,12 +143,16 @@ class JForum extends Source
         );
     }
 
-    /**
-     * @param string $postTextColumm
-     * @param string $postTextSource
-     */
-    protected function discussions(string $postTextColumm, string $postTextSource): void
+    protected function discussions(): void
     {
+        if ($this->hasInputSchema(':_posts_text')) {
+            $postTextColumm = 't.post_text as Body';
+            $postTextSource = 'left join :_posts_text t on p.post_id = t.post_id';
+        } else {
+            $postTextColumm = 'p.post_text as Body';
+            $postTextSource = '';
+        }
+
         $discussion_Map = [
             'topic_title' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
         ];
@@ -221,12 +178,16 @@ class JForum extends Source
         );
     }
 
-    /**
-     * @param string $postTextColumm
-     * @param string $postTextSource
-     */
-    protected function comments(string $postTextColumm, string $postTextSource): void
+    protected function comments(): void
     {
+        if ($this->hasInputSchema(':_posts_text')) {
+            $postTextColumm = 't.post_text as Body';
+            $postTextSource = 'left join :_posts_text t on p.post_id = t.post_id';
+        } else {
+            $postTextColumm = 'p.post_text as Body';
+            $postTextSource = '';
+        }
+
         $this->export(
             'Comment',
             "select
@@ -245,8 +206,6 @@ class JForum extends Source
         );
     }
 
-    /**
-     */
     protected function bookmarks(): void
     {
         // Guessing table is called "_watch" because they are all bookmarks.
@@ -266,8 +225,6 @@ class JForum extends Source
         );
     }
 
-    /**
-     */
     protected function conversations(): void
     {
         // Thread using tmp table based on the pair of users talking.
@@ -348,16 +305,10 @@ class JForum extends Source
         // UserConversation
         $this->export(
             'UserConversation',
-            "select
-                    ConversationID,
-                    LowUserID as UserID,
-                    now() as DateLastViewed
+            "select  ConversationID, LowUserID as UserID, now() as DateLastViewed
                 from z_conversation
                 union
-                select
-                    ConversationID,
-                    HighUserID as UserID,
-                    now() as DateLastViewed
+                select  ConversationID, HighUserID as UserID, now() as DateLastViewed
                 from z_conversation"
         );
 

@@ -12,7 +12,7 @@ class BlankEmails extends Filter
     public function __invoke(): mixed
     {
         if (empty($this->value)) {
-            $value = 'blank_email_' . $this->row['UserID'];
+            $value = 'blank_email_' . $this->row['UserID'] . '@example.com';
         }
         return $value ?? $this->value;
     }

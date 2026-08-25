@@ -27,6 +27,7 @@ We greatly appreciate [feedback](https://github.com/prosembler/nitro-porter/disc
 ## Targets (software you're moving to) 📥
 
 Nitro Porter supports [4 targets](https://nitroporter.org/targets) today:
+
 [![Flarum](docs/assets/logos/flarum-300x100.png)](https://flarum.org)
 [![NodeBB](docs/assets/logos/nodebb-300x100.png)](https://nodebb.org)
 [![Vanilla](docs/assets/logos/vanilla-300x100.png)](https://github.com/prosembler/vanilla)
@@ -35,6 +36,7 @@ Nitro Porter supports [4 targets](https://nitroporter.org/targets) today:
 ## Sources (software you're using now) 📤
 
 Nitro Porter supports [37 sources](https://nitroporter.org/sources) today, including:
+
 ![AnswerHub](docs/assets/logos/answerhub-150x50.jpg)
 ![ASPPlayground.NET](docs/assets/logos/aspplayground-150x50.png)
 ![bbPress](docs/assets/logos/bbpress-150x50.png)
@@ -60,6 +62,7 @@ Nitro Porter supports [37 sources](https://nitroporter.org/sources) today, inclu
 ## What gets migrated, exactly? 🚥
 
 All sources & targets support migrating:
+
 * users & roles
 * discussions (or _threads_) & posts (or _comments_)
 * categories (or _subforums_, _channels_, etc.)

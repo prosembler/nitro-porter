@@ -9,9 +9,6 @@ abstract class Origin extends Package
     /** @var array */
     protected array $config = [];
 
-    /** @var array */
-    protected array $schema = [];
-
     /** @var Storage\Https Where the origin data is from (read-only HTTPS). */
     protected Storage\Https $originStorage;
 
@@ -24,10 +21,10 @@ abstract class Origin extends Package
     public function __construct(
         protected Storage\Database $outputStorage, // Where data is being written.
         protected Storage\Database $extractStorage, // Second connection for simultaneous read/write.
-        string $connectionAlias,
+        public string $packageName,
     ) {
-        $this->config = Config::getInstance()->getConnectionAlias($connectionAlias);
-        $this->schema = Schema::load(strtolower(__CLASS__));
+        $this->config = Config::getInstance()->getConnectionAlias($packageName); // Bit of a hack.
+        $this->schema = Schema::load(strtolower($packageName));
     }
 
     public function addHttps(Storage\Https $originStorage): void
@@ -43,11 +40,6 @@ abstract class Origin extends Package
     protected function outputQB(): Builder
     {
         return new Builder($this->outputStorage->getHandle());
-    }
-
-    protected function getSchema(string $name): array
-    {
-        return $this->schema[$name] ?? [];
     }
 
     /**

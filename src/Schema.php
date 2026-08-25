@@ -4,13 +4,22 @@ namespace Porter;
 
 class Schema
 {
+    /** @var array|string[] Files with schema arrays in /schemas. */
+    public const array VALID_SCHEMAS = [
+        'agorakit',
+        'discord',
+        'discourse',
+        'flarum',
+        'porter',
+        'waterhole',
+    ];
+
     /**
      * Retrieve an array from named file in `/schemas`.
      */
     public static function load(string $name): array
     {
-        $data = ['porter', 'discord'];
-        if (in_array($name, $data, true)) {
+        if (in_array($name, self::VALID_SCHEMAS, true)) {
             return include(ROOT_DIR . '/schemas/' . $name . '.php');
         } else {
             return [];

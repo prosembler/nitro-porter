@@ -7,7 +7,6 @@
 
 namespace Porter\Target;
 
-use Porter\Filter\DeletedNameDuplicates;
 use Porter\Log;
 use Porter\Formatter;
 use Porter\Target;
@@ -27,21 +26,16 @@ class Flarum extends Target
         'attachmentPath' => 'assets/files/imported',
         'features' => [
             'Users' => 1,
-            'Passwords' => 1,
+            'Roles' => 1,
+            'Avatars' => 1,
             'Categories' => 'tags',
             'Discussions' => 1,
             'Comments' => 1,
             'Polls' => 'fof/polls',
-            'Roles' => 1,
-            'Avatars' => 1,
             'PrivateMessages' => 'fof/byobu',
             'Attachments' => 'fof/uploads',
             'Bookmarks' => 'subscriptions',
             'Badges' => 'v17development/flarum-user-badges',
-            'UserNotes' => 0,
-            'Ranks' => 0,
-            'Groups' => 0,
-            'Tags' => 0,
             'Reactions' => 'fof/reactions',
         ]
     ];
@@ -50,202 +44,6 @@ class Flarum extends Target
         'hasDiscussionBody' => false,
         'fileTransferSupport' => true,
     ];
-
-    protected const array SCHEMA_USERS = [
-        'id' => 'int',
-        'username' => 'varchar(100)',
-        'email' => 'varchar(100)',
-        'is_email_confirmed' => 'tinyint',
-        'password' => 'varchar(100)',
-        'avatar_url' => 'varchar(100)',
-        'joined_at' => 'datetime',
-        'last_seen_at' => 'datetime',
-        'discussion_count' => 'int',
-        'comment_count' => 'int',
-    ];
-
-    protected const array SCHEMA_ROLES = [
-        'id' => 'int',
-        'name_singular' => 'varchar(100)',
-        'name_plural' => 'varchar(100)',
-        'color' => 'varchar(20)',
-        'icon' => 'varchar(100)',
-        'is_hidden' => 'tinyint',
-    ];
-
-    protected const array SCHEMA_USER_ROLES = [
-        'user_id' => 'int',
-        'group_id' => 'int',
-    ];
-
-    protected const array SCHEMA_CATEGORIES = [
-        'id' => 'int',
-        'name' => 'varchar(100)',
-        'slug' => 'varchar(100)',
-        'description' => 'text',
-        'parent_id' => 'int',
-        'position' => 'int',
-        'discussion_count' => 'int',
-        'is_hidden' => 'tinyint',
-        'is_restricted' => 'tinyint',
-    ];
-
-    /**
-     * @var array Table structure for `posts`.
-     * @see \Porter\Postscript\Flarum::numberPosts() for 'keys' requirement.
-     */
-    protected const array SCHEMA_POSTS = [
-        'id' => 'int',
-        'discussion_id' => 'int',
-        'user_id' => 'int',
-        'created_at' => 'datetime',
-        'edited_at' => 'datetime',
-        'edited_user_id' => 'int',
-        'type' => 'varchar(100)',
-        'content' => 'longText',
-        'number' => 'int',
-        'keys' => [
-            'FLA_posts_discussion_id_number_unique' => [
-                'type' => 'unique',
-                'columns' => ['discussion_id', 'number'],
-            ],
-            'FLA_posts_id_primary' => [
-                'type' => 'primary',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
-    /**
-     * @var array Table structure for 'discussions`.
-     * @see \Porter\Postscript\Flarum::numberPosts() for 'keys' requirement.
-     */
-    protected const array SCHEMA_DISCUSSIONS = [
-        'id' => 'int',
-        'user_id' => 'int',
-        'title' => 'varchar(200)',
-        'slug' => 'varchar(200)',
-        'created_at' => 'datetime',
-        'first_post_id' => 'int',
-        'last_post_id' => 'int',
-        'last_posted_at' => 'datetime',
-        'last_posted_user_id' => 'int',
-        'post_number_index' => 'int',
-        'is_private' => 'tinyint', // fof/byobu (PMs)
-        'is_sticky' => 'tinyint', // flarum/sticky
-        'is_locked' => 'tinyint', // flarum/lock
-        //'votes' => 'int', // fof/polls
-        //'hotness' => 'double', // fof/gamification
-        //'view_count' => 'int', // flarumite/simple-discussion-views
-        //'best_answer_notified' => 'tinyint', // fof/best-answer
-        'keys' => [
-            'FLA_discussions_id_primary' => [
-                'type' => 'primary',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_DISCUSSION_TAGS = [
-        'discussion_id' => 'int',
-        'tag_id' => 'int',
-    ];
-
-    protected const array SCHEMA_BOOKMARKS = [
-        'discussion_id' => 'int',
-        'user_id' => 'int',
-        'last_read_at' => 'datetime',
-        'subscription' => [null, 'follow', 'ignore'],
-        'last_read_post_number' => 'int',
-        'keys' => [
-            'FLA_discussion_user_discussion_id_foreign' => [
-                'type' => 'index',
-                'columns' => ['discussion_id'],
-            ],
-        ],
-    ];
-
-    protected const array SCHEMA_ATTACHMENTS = [
-        'id' => 'int',
-        'actor_id' => 'int',
-        'discussion_id' => 'int',
-        'post_id' => 'int',
-        'base_name' => 'varchar(255)', // "download as"
-        'path' => 'varchar(255)', // from /forumroot/assets/files
-        'url' => 'varchar(255)',
-        'type' => 'varchar(255)', // MIME
-        'size'  => 'int', // bytes
-        'created_at' => 'datetime',
-        'upload_method' => 'varchar(255)', // Probably just 'local'
-        'tag' => 'varchar(255)', // Required; generates preview in Profile -> "My Media"
-    ];
-
-    protected const array SCHEMA_BADGES = [
-        'id' => 'int',
-        'name' => 'varchar(200)',
-        'image' => 'text',
-        'description' => 'text',
-        'badge_category_id' => 'int',
-        'points' => 'int',
-        'created_at' => 'datetime',
-        'is_visible' => 'tinyint',
-    ];
-
-    protected const array SCHEMA_USER_BADGES = [
-        'badge_id' => 'int',
-        'user_id' => 'int',
-        'assigned_at' => 'datetime',
-        'description' => 'text',
-    ];
-
-    protected const array SCHEMA_REACTIONS = [
-        'id' => 'int',
-        'identifier' => 'varchar(200)',
-        'type' => 'varchar(200)',
-        'enabled' => 'tinyint',
-        'display' => 'varchar(200)',
-    ];
-
-    protected const array SCHEMA_POST_REACTIONS = [
-        'id' => 'int',
-        'post_id' => 'int',
-        'user_id' => 'int',
-        'reaction_id' => 'int',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-    ];
-
-    protected const array SCHEMA_POLLS = [
-        'id' => 'int',
-        'question' => 'varchar(200)',
-        'discussion_id' => 'int',
-        'post_id' => 'int',
-        'user_id' => 'int',
-        'public_poll' => 'tinyint', // Map to "Anonymous" somehow?
-        'end_date' => 'datetime', // Using date created here will close all polls, but work fine.
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'vote_count' => 'int',
-        'settings' => 'text',
-    ];
-
-    protected const array SCHEMA_POLL_OPTIONS = [
-        'id' => 'int',
-        'answer' => 'varchar(200)',
-        'poll_id' => 'int',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'vote_count' => 'int',
-    ];
-
-    protected const array SCHEMA_POLL_VOTES = [
-            //id
-            'poll_id' => 'int',
-            'option_id' => 'int',
-            'user_id' => 'int',
-            'created_at' => 'timestamp',
-            'updated_at' => 'timestamp',
-        ];
 
     /** @var int Offset for inserting OP content into the posts table. */
     protected int $discussionPostOffset = 0;
@@ -301,7 +99,7 @@ class Flarum extends Target
      */
     protected function getDiscussionSchema(): array
     {
-        $structure = self::SCHEMA_DISCUSSIONS;
+        $structure = $this->getSchema('discussions');
 
         // fof/gamification — no data, just prevent failure (no default values are set)
         if ($this->hasOutputSchema('discussions', ['votes'])) {
@@ -343,7 +141,7 @@ class Flarum extends Target
             ->select()
             ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
 
-        $this->import('users', $query, self::SCHEMA_USERS, $map, $filters);
+        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
     }
 
     /**
@@ -351,15 +149,14 @@ class Flarum extends Target
      *
      * This compensates by shifting all RoleIDs +4, rendering any old 'Member' or 'Guest' role useless & deprecated.
      * @see https://docs.flarum.org/extend/permissions/
-     *
      */
     protected function roles(): void
     {
         // Verify support.
         if (!$this->hasPortSchema('UserRole')) {
             Log::comment('Skipping import: Roles (Source lacks support)');
-            $this->importEmpty('groups', self::SCHEMA_ROLES);
-            $this->importEmpty('group_user', self::SCHEMA_ROLES);
+            $this->importEmpty('groups', $this->getSchema('groups'));
+            $this->importEmpty('group_user', $this->getSchema('group_user'));
             return;
         }
 
@@ -375,7 +172,7 @@ class Flarum extends Target
             ->selectRaw('COALESCE(Name, CONCAT("role", RoleID)) as name_plural') // Cannot be null.
             // Hiding roles is an uncommon feature; hide none.
             ->selectRaw('0 as is_hidden');
-        $this->import('groups', $query, self::SCHEMA_ROLES);
+        $this->import('groups', $query, $this->getSchema('groups'));
 
         // User Roles.
         $map = [
@@ -385,7 +182,7 @@ class Flarum extends Target
         $query = $this->porterQB()->from('UserRole')
             ->select(['UserID'])
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
-        $this->import('group_user', $query, self::SCHEMA_USER_ROLES, $map);
+        $this->import('group_user', $query, $this->getSchema('group_user'), $map);
 
         // Add defaults.
         $this->dbOutput()->table('groups')
@@ -440,7 +237,7 @@ class Flarum extends Target
             ->selectRaw("0 as is_restricted")
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
 
-        $this->import('tags', $query, self::SCHEMA_CATEGORIES, $map, $filters);
+        $this->import('tags', $query, $this->getSchema('tags'), $map, $filters);
     }
 
     /**
@@ -504,7 +301,7 @@ class Flarum extends Target
                     ->leftJoin('Category', 'Discussion.CategoryID', '=', 'Category.CategoryID')
                     ->whereNotNull('ParentCategoryID')
             );
-        $this->import('discussion_tag', $query, self::SCHEMA_DISCUSSION_TAGS, $map, $filters);
+        $this->import('discussion_tag', $query, $this->getSchema('discussion_tag'), $map, $filters);
     }
 
     /**
@@ -527,7 +324,7 @@ class Flarum extends Target
             ->select()
             ->selectRaw("if (Bookmarked > 0, 'follow', null) as subscription")
             ->where('UserID', '>', 0); // Vanilla can have zeroes here, can't remember why.
-        $this->import('discussion_user', $query, self::SCHEMA_BOOKMARKS, $map);
+        $this->import('discussion_user', $query, $this->getSchema('discussion_user'), $map);
     }
 
     /**
@@ -590,7 +387,7 @@ class Flarum extends Target
             $query->union($discussions);
         }
 
-        $this->import('posts', $query, self::SCHEMA_POSTS, $map, $filters);
+        $this->import('posts', $query, $this->getSchema('posts'), $map, $filters);
     }
 
     /**
@@ -639,7 +436,7 @@ class Flarum extends Target
                 else 'file'
                 end as tag");
 
-        $this->import('fof_upload_files', $query, self::SCHEMA_ATTACHMENTS, $map);
+        $this->import('fof_upload_files', $query, $this->getSchema('fof_upload_files'), $map);
     }
 
     /**
@@ -671,7 +468,7 @@ class Flarum extends Target
         $query = $this->porterQB()->from('Badge')
             ->select()
             ->selectRaw('1 as badge_category_id');
-        $this->import('badges', $query, self::SCHEMA_BADGES, $map);
+        $this->import('badges', $query, $this->getSchema('badges'), $map);
 
         // User Badges
         $map = [
@@ -681,7 +478,7 @@ class Flarum extends Target
             'DateCompleted' => 'assigned_at',
         ];
         $query = $this->porterQB()->from('UserBadge')->select('*');
-        $this->import('badge_user', $query, self::SCHEMA_USER_BADGES, $map);
+        $this->import('badge_user', $query, $this->getSchema('badge_user'), $map);
 
         // Add default badge category for all imported badges.
         if ($this->hasOutputSchema('badge_category')) {
@@ -722,7 +519,7 @@ class Flarum extends Target
             ->selectRaw('"{}" as settings') // cannot be null
             // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');
-        $this->import('polls', $query, self::SCHEMA_POLLS, $map, $filters);
+        $this->import('polls', $query, $this->getSchema('polls'), $map, $filters);
 
         // Poll Options
         $map = [
@@ -734,7 +531,7 @@ class Flarum extends Target
             'CountVotes' => 'vote_count',
         ];
         $query = $this->porterQB()->from('PollOption')->select('*');
-        $this->import('poll_options', $query, self::SCHEMA_POLL_OPTIONS, $map);
+        $this->import('poll_options', $query, $this->getSchema('poll_options'), $map);
 
         // Poll Votes
         $map = [
@@ -747,7 +544,7 @@ class Flarum extends Target
                 'PollOption.PollID as poll_id',
                 'PollOption.DateInserted as created_at', // Total hack for approximate vote dates.
                 'PollOption.DateUpdated as updated_at']);
-        $this->import('poll_votes', $query, self::SCHEMA_POLL_VOTES, $map);
+        $this->import('poll_votes', $query, $this->getSchema('poll_votes'), $map);
     }
 
     /**
@@ -772,7 +569,7 @@ class Flarum extends Target
             ->select('*')
             ->selectRaw('COALESCE(Active, 1) as enabled')
             ->selectRaw('"emoji" as type');
-        $this->import('reactions', $query, self::SCHEMA_REACTIONS, $map);
+        $this->import('reactions', $query, $this->getSchema('reactions'), $map);
 
         // Post Reactions
         $map = [
@@ -809,7 +606,7 @@ class Flarum extends Target
             $query->union($discussionReactions);
         }
 
-        $this->import('post_reactions', $query, self::SCHEMA_POST_REACTIONS, $map);
+        $this->import('post_reactions', $query, $this->getSchema('post_reactions'), $map);
     }
 
     /**
@@ -881,7 +678,7 @@ class Flarum extends Target
             ->selectRaw('1 as is_private')
             ->selectRaw('"comment" as type');
 
-        $this->import('posts', $query, self::SCHEMA_POSTS, $map, $filters);
+        $this->import('posts', $query, $this->getSchema('posts'), $map, $filters);
 
         // Recipients
         $structure = [

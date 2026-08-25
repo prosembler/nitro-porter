@@ -42,90 +42,6 @@ class Agorakit extends Target
         'hasDiscussionBody' => true,
     ];
 
-    protected const array SCHEMA_USERS = [
-        'id' => 'int',
-        'name' => 'varchar(100)',
-        'username' => 'varchar(100)',
-        'email' => 'varchar(100)',
-        'verified' => 'tinyint',
-        'password' => 'varchar(100)',
-        'created_at' => 'datetime',
-        'admin' => 'tinyint',
-    ];
-
-    protected const array SCHEMA_DISCUSSIONS = [
-        'id' => 'int',
-        'group_id' => 'int',
-        'user_id' => 'int',
-        'status' => 'int',
-        'name' => 'varchar(100)',
-        'body' => 'text',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-        'total_comments' => 'int',
-    ];
-    protected const array SCHEMA_COMMENTS = [
-        'id' => 'int',
-        'discussion_id' => 'int',
-        'user_id' => 'int',
-        'body' => 'text',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-    ];
-
-    protected const array SCHEMA_CATEGORIES = [
-        'id' => 'int',
-        'name' => 'varchar(100)',
-        'slug' => 'varchar(100)',
-        'description' => 'text',
-        'parent_id' => 'int',
-        'position' => 'int',
-        'discussion_count' => 'int',
-        'is_hidden' => 'tinyint',
-        'is_restricted' => 'tinyint',
-    ];
-
-    protected const array SCHEMA_ROLES = [
-        'id' => 'int',
-        'name' => 'varchar(100)',
-        'body' => 'text',
-    ];
-
-    protected const array SCHEMA_USER_ROLES = [
-        'user_id' => 'int',
-        'group_id' => 'int',
-    ];
-
-    protected const array SCHEMA_ATTACHMENTS = [
-        'id' => 'int',
-        'parent_id' => 'int',
-        'group_id' => 'int',
-        'user_id' => 'int',
-        'item_type' => 'int',
-        'filesize' => 'int',
-        'status' => 'int',
-        'name' => 'varchar(100)',
-        'mime' => 'varchar(100)',
-        'path' => 'text',
-        'original_filename' => 'text',
-        'original_extension' => 'text',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-    ];
-
-    protected const array SCHEMA_REACTIONS = [
-        'id' => 'int',
-        'user_id' => 'int',
-        'reactable_id' => 'int',
-        'reactable_type' => 'varchar(100)',
-        'type' => 'varchar(100)',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-    ];
-
     /**
      * Check for issues that will break the import.
      */
@@ -147,9 +63,8 @@ class Agorakit extends Target
             'Admin' => 'admin',
         ];
         $filters = [];
-        $query = $this->porterQB()->from('User')
-            ->select();
-        $this->import('users', $query, self::SCHEMA_USERS, $map, $filters);
+        $query = $this->porterQB()->from('User')->select();
+        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
     }
 
     /**
@@ -159,18 +74,16 @@ class Agorakit extends Target
     {
         // Roles.
         $map = [];
-        $query = $this->porterQB()->from('Role')
-            ->select();
-        $this->import('groups', $query, self::SCHEMA_ROLES, $map);
+        $query = $this->porterQB()->from('Role')->select();
+        $this->import('groups', $query, $this->getSchema('groups'), $map);
 
         // User Role.
         $map = [
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $this->porterQB()->from('UserRole')
-            ->select();
-        $this->import('membership', $query, self::SCHEMA_USER_ROLES, $map);
+        $query = $this->porterQB()->from('UserRole')->select();
+        $this->import('membership', $query, $this->getSchema('membership'), $map);
     }
 
     protected function categories(): void
@@ -186,10 +99,9 @@ class Agorakit extends Target
         $filters = [
             'CountDiscussions' => 'emptyToZero',
         ];
-        $query = $this->porterQB()->from('Category')
-            ->select()
+        $query = $this->porterQB()->from('Category')->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('tags', $query, self::SCHEMA_CATEGORIES, $map, $filters);
+        $this->import('tags', $query, $this->getSchema('tags'), $map, $filters);
     }
 
     protected function discussions(): void
@@ -205,9 +117,8 @@ class Agorakit extends Target
             'CountComments' => 'total_comments',
             //'Announce'/'Closed' => 'status',
         ];
-        $query = $this->porterQB()->from('Discussion')
-            ->select();
-        $this->import('discussions', $query, self::SCHEMA_DISCUSSIONS, $map);
+        $query = $this->porterQB()->from('Discussion')->select();
+        $this->import('discussions', $query, $this->getSchema('discussions'), $map);
     }
 
     /**
@@ -223,9 +134,8 @@ class Agorakit extends Target
             'DateUpdated' => 'updated_at',
             'Body' => 'body'
         ];
-        $query = $this->porterQB()->from('Comment')
-            ->select();
-        $this->import('posts', $query, self::SCHEMA_COMMENTS, $map);
+        $query = $this->porterQB()->from('Comment')->select();
+        $this->import('posts', $query, $this->getSchema('posts'), $map);
     }
 
     /**
@@ -242,11 +152,10 @@ class Agorakit extends Target
             'Name' => 'type', // Expects /images/reactions/{filename}.png.
             'DateInserted' => 'created_at',
         ];
-        $query = $this->porterQB()->from('UserTag ut')
+        $query = $this->porterQB()->from('UserTag ut')->select()
             ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
-            ->select()
             ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
-        $this->import('reactions', $query, self::SCHEMA_REACTIONS, $map);
+        $this->import('reactions', $query, $this->getSchema('reactions'), $map);
     }
 
     /**
@@ -270,7 +179,7 @@ class Agorakit extends Target
             //'group_id',
         ];
         $query = $this->porterQB()->from('Media')->select();
-        $this->import('files', $query, self::SCHEMA_ATTACHMENTS, $map);
+        $this->import('files', $query, $this->getSchema('files'), $map);
     }
 
     /**

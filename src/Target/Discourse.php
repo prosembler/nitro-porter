@@ -41,131 +41,6 @@ class Discourse extends Target
         'hasDiscussionBody' => false,
     ];
 
-    protected const array SCHEMA_USERS = [
-        'id' => 'int4',
-        'username' => 'varchar(60)',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-        'name' => 'varchar',
-        'last_posted_at' => 'timestamp',
-        'active' => 'bool',
-        'username_lower' => 'varchar(60)',
-        'last_seen_at' => 'timestamp',
-        'admin' => 'bool',
-        'approved' => 'bool',
-        'trust_level' => 'int4',
-        'approved_by_id' => 'int',
-        'approved_at' => 'timestamp',
-        'first_seen_at' => 'timestamp',
-    ];
-
-    protected const array SCHEMA_DISCUSSIONS = [
-        'id' => 'int4',
-        'title' => 'varchar',
-        'last_posted_at' => 'timestamp',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-        'views' => 'int4',
-        'posts_count' => 'int4',
-        'user_id' => 'int4',
-        'last_post_user_id' => 'int4',
-        'highest_post_number' => 'int4',
-        'category_id' => 'int',
-        'closed' => 'bool',
-        'archived' => 'bool',
-        'pinned_at' => 'timestamp',
-        'slug' => 'varchar',
-        'fancy_title' => 'varchar',
-        'pinned_globally' => 'bool',
-    ];
-    protected const array SCHEMA_COMMENTS = [
-        'id' => 'int4',
-        'user_id' => 'int4',
-        'topic_id' => 'int4',
-        'post_number' => 'int4',
-        'raw' => 'text',
-        'cooked' => 'text',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-        'reply_to_post_number' => 'int4',
-        'deleted_at' => 'timestamp',
-        'score' => 'float8',
-        'post_type' => 'tinyint',
-        'sort_order' => 'int4',
-        'user_deleted' => 'bool',
-        'cook_method' => 'int4', // 1
-    ];
-
-    protected const array SCHEMA_CATEGORIES = [
-        'id' => 'int4',
-        'name' => 'varchar',
-        'topic_id' => 'int4',
-        'parent_category_id' => 'int4',
-        'topic_count' => 'int',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-        'user_id' => 'int4',
-        'slug' => 'varchar',
-        'description' => 'text',
-        'post_count' => 'int4',
-        'latest_post_id' => 'int4',
-        'latest_topic_id' => 'int4',
-        'position' => 'int4',
-        'sort_order' => 'int4',
-        'emoji' => 'varchar',
-    ];
-
-    protected const array SCHEMA_ROLES = [
-        'id' => 'int4',
-        'name' => 'varchar',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-        'user_count' => 'int4',
-        'full_name' => 'varchar',
-        'visibility_level' => 'int4',
-    ];
-
-    protected const array SCHEMA_USER_ROLES = [
-        'user_id' => 'int4',
-        'group_id' => 'int4',
-    ];
-
-    protected const array SCHEMA_ATTACHMENTS = [
-        'id' => 'int4',
-        'user_id' => 'int4',
-        'original_filename' => 'varchar',
-        'filesize' => 'int8',
-        'width' => 'int4',
-        'height' => 'int4',
-        'url' => 'varchar',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-        'sha1' => 'varchar(40)',
-        'origin' => 'varchar(2000)',
-        'extension' => 'varchar(10)',
-        'animated' => 'bool',
-    ];
-
-    protected const array SCHEMA_REACTIONS = [
-        'id' => 'int4',
-        'user_id' => 'int4',
-        'post_id' => 'int4',
-        'reaction_type' => 'int4',
-        'reaction_value' => 'varchar',
-        'reaction_users_count' => 'int',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-    ];
-
-    protected const array SCHEMA_REACTION_USERS = [
-        'id' => 'int4',
-        'user_id' => 'int4',
-        'post_id' => 'int4',
-        'reaction_id' => 'int4',
-        'created_at' => 'timestamp',
-        'updated_at' => 'timestamp',
-    ];
-
     /**
      * Check for issues that will break the import.
      */
@@ -181,7 +56,6 @@ class Discourse extends Target
             'Name' => 'username',
             'DateInserted' => 'created_at',
             'DateUpdated' => 'updated_at',
-            //name', //??
             //'last_posted_at', //not in Porter
             //'Deleted' => 'active',
             //'username_lower',
@@ -192,7 +66,7 @@ class Discourse extends Target
         $filters = [];
         $query = $this->porterQB()->from('User')
             ->select();
-        $this->import('users', $query, self::SCHEMA_USERS, $map, $filters);
+        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
     }
 
     /**
@@ -209,7 +83,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('Role')
             ->select();
-        $this->import('groups', $query, self::SCHEMA_ROLES, $map);
+        $this->import('groups', $query, $this->getSchema('groups'), $map);
 
         // User Role.
         $map = [
@@ -218,7 +92,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('UserRole')
             ->select();
-        $this->import('group_users', $query, self::SCHEMA_USER_ROLES, $map);
+        $this->import('group_users', $query, $this->getSchema('group_users'), $map);
     }
 
     protected function categories(): void
@@ -241,7 +115,7 @@ class Discourse extends Target
         $query = $this->porterQB()->from('Category')
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('categories', $query, self::SCHEMA_CATEGORIES, $map, $filters);
+        $this->import('categories', $query, $this->getSchema('categories'), $map, $filters);
     }
 
     /**
@@ -267,7 +141,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('Discussion')
             ->select();
-        $this->import('topics', $query, self::SCHEMA_DISCUSSIONS, $map);
+        $this->import('topics', $query, $this->getSchema('topics'), $map);
     }
 
     /**
@@ -287,7 +161,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('Comment')
             ->select();
-        $this->import('posts', $query, self::SCHEMA_COMMENTS, $map);
+        $this->import('posts', $query, $this->getSchema('posts'), $map);
     }
 
     protected function reactions(): void
@@ -304,7 +178,7 @@ class Discourse extends Target
             ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
             ->select()
             ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
-        $this->import('discourse_reactions_reactions', $query, self::SCHEMA_REACTIONS, $map);
+        $this->import('discourse_reactions_reactions', $query, $this->getSchema('discourse_reactions_reactions'), $map);
 
 
         //$this->import('discourse_reactions_reaction_users', $query, self::SCHEMA_REACTION_USER, $map);
@@ -329,7 +203,7 @@ class Discourse extends Target
             //'animated',
         ];
         $query = $this->porterQB()->from('Media')->select();
-        $this->import('uploads', $query, self::SCHEMA_ATTACHMENTS, $map);
+        $this->import('uploads', $query, $this->getSchema('uploads'), $map);
     }
 
     protected function avatars(): void

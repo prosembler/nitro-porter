@@ -81,6 +81,9 @@ abstract class Package
 
     protected bool $transferFiles = false;
 
+    /** @var array */
+    protected array $schema = [];
+
     /** Main process. Run the MANIFEST methods if not overridden. */
     public function run(): void
     {
@@ -111,6 +114,11 @@ abstract class Package
     public static function getSupport(): array
     {
         return static::SUPPORTED;
+    }
+
+    protected function getSchema(string $name): array
+    {
+        return $this->schema[$name] ?? [];
     }
 
     /**

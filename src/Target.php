@@ -10,8 +10,12 @@ abstract class Target extends Package
     /** @var DataConnection  */
     public DataConnection $connection;
 
-    public function __construct(public ?Storage $porterStorage = null, public ?Storage $outputStorage = null)
-    {
+    public function __construct(
+        public ?Storage $porterStorage = null,
+        public ?Storage $outputStorage = null,
+        public string $packageName = '',
+    ) {
+        $this->schema = Schema::load(strtolower($packageName));
     }
 
     /**

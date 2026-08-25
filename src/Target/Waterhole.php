@@ -8,8 +8,6 @@
 
 namespace Porter\Target;
 
-use Porter\Filter\BlankEmails;
-use Porter\Filter\DeletedNameDuplicates;
 use Porter\Formatter;
 use Porter\Log;
 use Porter\Target;
@@ -21,7 +19,6 @@ class Waterhole extends Target
         'defaultTablePrefix' => '',
         'features' => [
             'Users' => 1,
-            'Passwords' => 1,
             'Categories' => 'channels',
             'Discussions' => 1,
             'Comments' => 1,
@@ -45,54 +42,12 @@ class Waterhole extends Target
     ];
 
     /**
-     * @var array Table structure for `comments`.
-     */
-    protected const array DB_STRUCTURE_COMMENTS = [
-        'id' => 'bigint',
-        'post_id' => 'bigint',
-        'parent_id' => 'bigint',
-        'user_id' => 'bigint',
-        'body' => 'mediumtext',
-        'created_at' => 'timestamp',
-        'edited_at' => 'timestamp',
-        'reply_count' => 'int',
-        'score' => 'int',
-    ];
-
-    /**
-     * @var array Table structure for 'posts`.
-     */
-    protected const array DB_STRUCTURE_POSTS = [
-        'id' => 'bigint',
-        'channel_id' => 'bigint',
-        'user_id' => 'bigint',
-        'title' => 'varchar(255)',
-        'slug' => 'varchar(255)',
-        'body' => 'mediumtext',
-        'created_at' => 'timestamp',
-        'edited_at' => 'timestamp',
-        'last_activity_at' => 'timestamp',
-        'comment_count' => 'int',
-        'score' => 'int',
-        'is_locked' => 'tinyint',
-    ];
-
-    /**
      * Check for issues that will break the import.
-     *
      */
     public function validate(): void
     {
         $this->uniqueUserNames();
         $this->uniqueUserEmails();
-    }
-
-    /**
-     * @return string[]
-     */
-    protected function getStructurePosts(): array
-    {
-        return self::DB_STRUCTURE_POSTS;
     }
 
     /**
@@ -125,32 +80,15 @@ class Waterhole extends Target
     }
 
     /**
-     * Main import process.
+     * Ignore constraints on tables that block import.
      */
-    public function run(): void
+    public function setup(): void
     {
-        // Ignore constraints on tables that block import.
         $this->ignoreOutputDuplicates('users');
-
-        $this->users();
-        $this->roles(); // 'Groups' in Waterhole
-        $this->categories(); // 'Channels' in Waterhole
-        $this->discussions(); // 'Posts' in Waterhole
-        $this->comments();
     }
 
     protected function users(): void
     {
-        $structure = [
-            'id' => 'bigint',
-            'name' => 'varchar(255)',
-            'email' => 'varchar(255)',
-            'email_verified_at' => 'timestamp',
-            'password' => 'varchar(255)',
-            'avatar' => 'varchar(255)',
-            'created_at' => 'timestamp',
-            'last_seen_at' => 'timestamp',
-        ];
         $map = [
             'UserID' => 'id',
             'Name' => 'name',
@@ -166,8 +104,7 @@ class Waterhole extends Target
             'Email' => 'BlankEmails',
         ];
         $query = $this->porterQB()->from('User')->select();
-
-        $this->import('users', $query, $structure, $map, $filters);
+        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
     }
 
     /**
@@ -178,58 +115,37 @@ class Waterhole extends Target
      */
     protected function roles(): void
     {
-        $structure = [
-            'id' => 'bigint',
-            'name' => 'varchar(255)',
-            'color' => 'varchar(255)',
-            'icon' => 'varchar(255)',
-            'is_public' => 'tinyint',
-        ];
-        $map = [
-            'RoleID' => 'id',
-            'Name' => 'name',
-        ];
-
         // Verify support.
         if (!$this->hasOutputSchema('UserRole')) {
             Log::comment('Skipping import: Roles (Source lacks support)');
-            $this->importEmpty('groups', $structure);
-            $this->importEmpty('group_user', $structure);
+            $this->importEmpty('groups', $this->getSchema('groups'));
+            $this->importEmpty('group_user', $this->getSchema('group_user'));
             return;
         }
 
         // Delete orphaned user role associations (deleted users).
         $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
+        $map = [
+            'RoleID' => 'id',
+            'Name' => 'name',
+        ];
         $query = $this->porterQB()->from('Role')
             ->select()
             ->selectRaw('0 as is_public');
-
-        $this->import('groups', $query, $structure, $map);
+        $this->import('groups', $query, $this->getSchema('groups'), $map);
 
         // User Role.
-        $structure = [
-            'user_id' => 'bigint',
-            'group_id' => 'bigint',
-        ];
         $map = [
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $this->porterQB()->from('UserRole')
-            ->select();
-
-        $this->import('group_user', $query, $structure, $map);
+        $query = $this->porterQB()->from('UserRole')->select();
+        $this->import('group_user', $query, $this->getSchema('group_user'), $map);
     }
 
     protected function categories(): void
     {
-        $structure = [
-            'id' => 'bigint',
-            'name' => 'varchar(255)',
-            'slug' => 'varchar(255)',
-            'description' => 'text',
-        ];
         $map = [
             'CategoryID' => 'id',
             'Name' => 'name',
@@ -239,13 +155,11 @@ class Waterhole extends Target
         $query = $this->porterQB()->from('Category')
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-
-        $this->import('channels', $query, $structure, $map);
+        $this->import('channels', $query, $this->getSchema('channels'), $map);
     }
 
     protected function discussions(): void
     {
-        $structure = $this->getStructurePosts();
         $map = [
             'DiscussionID' => 'id',
             'CategoryID' => 'channel_id',
@@ -259,13 +173,11 @@ class Waterhole extends Target
         $filters = [
             'slug' => 'FormatUrl',
         ];
-
         // CountComments needs to be double-mapped so it's included as an alias also.
         $query = $this->porterQB()->from('Discussion')
             ->select()
             ->selectRaw('DiscussionID as slug');
-
-        $this->import('posts', $query, $structure, $map, $filters);
+        $this->import('posts', $query, $this->getSchema('posts'), $map, $filters);
     }
 
     protected function comments(): void
@@ -286,7 +198,6 @@ class Waterhole extends Target
                 'DateUpdated',
                 'Body',
                 'Format']);
-
-        $this->import('comments', $query, self::DB_STRUCTURE_COMMENTS, $map);
+        $this->import('comments', $query, $this->getSchema('comments'), $map);
     }
 }

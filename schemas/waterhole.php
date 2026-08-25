@@ -1,0 +1,56 @@
+<?php
+
+return [
+    'comments' => [
+        'id' => 'bigint',
+        'post_id' => 'bigint',
+        'parent_id' => 'bigint',
+        'user_id' => 'bigint',
+        'body' => 'mediumtext',
+        'created_at' => 'timestamp',
+        'edited_at' => 'timestamp',
+        'reply_count' => 'int',
+        'score' => 'int',
+    ],
+    'posts' => [
+        'id' => 'bigint',
+        'channel_id' => 'bigint',
+        'user_id' => 'bigint',
+        'title' => 'varchar(255)',
+        'slug' => 'varchar(255)',
+        'body' => 'mediumtext',
+        'created_at' => 'timestamp',
+        'edited_at' => 'timestamp',
+        'last_activity_at' => 'timestamp',
+        'comment_count' => 'int',
+        'score' => 'int',
+        'is_locked' => 'tinyint',
+    ],
+    'users' => [
+        'id' => 'bigint',
+        'name' => 'varchar(255)',
+        'email' => 'varchar(255)',
+        'email_verified_at' => 'timestamp',
+        'password' => 'varchar(255)',
+        'avatar' => 'varchar(255)',
+        'created_at' => 'timestamp',
+        'last_seen_at' => 'timestamp',
+    ],
+    'groups' => [
+        'id' => 'bigint',
+        'name' => 'varchar(255)',
+        'color' => 'varchar(255)',
+        'icon' => 'varchar(255)',
+        'is_public' => 'tinyint',
+    ],
+    'group_user' => [
+        'user_id' => 'bigint',
+        'group_id' => 'bigint',
+    ],
+    'channels' => [
+        'id' => 'bigint',
+        'name' => 'varchar(255)',
+        'slug' => 'varchar(255)',
+        'description' => 'text',
+    ],
+];

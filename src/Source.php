@@ -75,8 +75,11 @@ abstract class Source extends Package
      */
     protected DbFactory $legacyDatabase;
 
-    public function __construct(public ?Storage $inputStorage = null, public ?Storage $porterStorage = null)
-    {
+    public function __construct(
+        public ?Storage $inputStorage = null,
+        public ?Storage $porterStorage = null,
+        public string $packageName = '',
+    ) {
         $this->porterStructure = Schema::load('porter');
     }
 

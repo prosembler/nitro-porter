@@ -13,8 +13,11 @@ use Staudenmeir\LaravelCte\Query\Builder;
  */
 abstract class Postscript extends Package
 {
-    public function __construct(protected ?Storage $outputStorage = null, protected ?Storage $postscriptStorage = null)
-    {
+    public function __construct(
+        protected ?Storage $outputStorage = null,
+        protected ?Storage $postscriptStorage = null,
+        public string $packageName = '',
+    ) {
     }
 
     /**

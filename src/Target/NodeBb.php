@@ -26,7 +26,6 @@ class NodeBb extends Target
         'attachmentPath' => 'public/uploads/files',
         'features' => [
             'Users' => 1,
-            'Passwords' => 1,
             'Categories' => 1,
             'Discussions' => 1,
             'Comments' => 1,
@@ -35,7 +34,6 @@ class NodeBb extends Target
             'Attachments' => 1,
             'Polls' => 0,
             'PrivateMessages' => 0,
-            'Signatures' => 0,
             'Bookmarks' => 0,
             'Badges' => 0,
             'Tags' => 0,
@@ -1219,7 +1217,7 @@ class NodeBb extends Target
     }
 
     /**
-     * Current time in milliseconds since epoch.
+     * Current time in m illiseconds since epoch.
      *
      * @return int
      */

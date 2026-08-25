@@ -282,6 +282,14 @@ class Flarum extends Target
         $this->ignoreOutputDuplicates('users');
     }
 
+    protected function cleanup(): void
+    {
+        // Empty access tokens for a fresh forum.
+        if ($this->dbOutput()->getSchemaBuilder()->hasTable('access_tokens')) {
+            $this->dbOutput()->table('access_tokens')->truncate();
+        }
+    }
+
     protected function precontent(): void
     {
         // Singleton factory; depends on Users being done.
@@ -378,6 +386,16 @@ class Flarum extends Target
             ->select(['UserID'])
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
         $this->import('group_user', $query, self::SCHEMA_USER_ROLES, $map);
+
+        // Add defaults.
+        $this->dbOutput()->table('groups')
+            ->insertOrIgnore([
+                ['id' => 1, 'name_singular' => 'Admin', 'name_plural' => 'Admins', 'is_hidden' => 0],
+                ['id' => 2, 'name_singular' => 'Guest', 'name_plural' => 'Guests', 'is_hidden' => 0],
+                ['id' => 3, 'name_singular' => 'Member', 'name_plural' => 'Members', 'is_hidden' => 0],
+                // Not strictly necessary, just safer because Mod-level permissions may be in `group_user` already.
+                ['id' => 4, 'name_singular' => 'Mod', 'name_plural' => 'Mods', 'is_hidden' => 0],
+            ]);
 
         // Superadmin promotion.
         $this->promote();
@@ -509,7 +527,6 @@ class Flarum extends Target
             ->select()
             ->selectRaw("if (Bookmarked > 0, 'follow', null) as subscription")
             ->where('UserID', '>', 0); // Vanilla can have zeroes here, can't remember why.
-
         $this->import('discussion_user', $query, self::SCHEMA_BOOKMARKS, $map);
     }
 
@@ -654,7 +671,6 @@ class Flarum extends Target
         $query = $this->porterQB()->from('Badge')
             ->select()
             ->selectRaw('1 as badge_category_id');
-
         $this->import('badges', $query, self::SCHEMA_BADGES, $map);
 
         // User Badges
@@ -665,8 +681,15 @@ class Flarum extends Target
             'DateCompleted' => 'assigned_at',
         ];
         $query = $this->porterQB()->from('UserBadge')->select('*');
-
         $this->import('badge_user', $query, self::SCHEMA_USER_BADGES, $map);
+
+        // Add default badge category for all imported badges.
+        if ($this->hasOutputSchema('badge_category')) {
+            $this->dbOutput()
+                ->table('badge_category')
+                ->insertOrIgnore(['id' => 1, 'name' => 'Imported Badges', 'created_at' => date('Y-m-d h:m:s')]);
+            Log::comment('Added badge category "Imported Badges".');
+        }
     }
 
     /**

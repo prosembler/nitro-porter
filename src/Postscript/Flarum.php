@@ -29,14 +29,10 @@ class Flarum extends Postscript
      */
     public function run(): void
     {
-        $this->buildUserMentions();
         $this->numberPosts();
+        $this->buildUserMentions();
         $this->buildPostMentions(); // Must be AFTER `numberPosts()`
         $this->setLastRead();
-        $this->addDefaultGroups();
-        $this->addDefaultBadgeCategory();
-        //$this->promoteAdmin();
-        $this->resetAccessTokens();
     }
 
     /**
@@ -44,7 +40,7 @@ class Flarum extends Postscript
      */
     protected function buildUserMentions(): void
     {
-        $tableName = 'post_mentions_user';
+        // Start timer.
         $start = microtime(true);
 
         // Prepare mentions table.
@@ -57,7 +53,7 @@ class Flarum extends Postscript
             ->select(['id', 'discussion_id', 'content']);
 
         $info = new StorageInfo(
-            name: $tableName,
+            name: 'post_mentions_user',
             memory: memory_get_usage(), // Posts all in memory.
             startTime: $start,
         );
@@ -83,7 +79,6 @@ class Flarum extends Postscript
                 ], $info);
             }
         }
-
         // Insert remaining mentions.
         $info = $this->outputStorage()->stream([], $info, true);
 
@@ -98,21 +93,18 @@ class Flarum extends Postscript
      * The `posts.number` field is `1` for the OP and sequentially increments by `created_at` order.
      * The `discussions.post_number_index` is the NEXT number to set for `posts.number`.
      * That means it should be set to the current post count +1.
-     *
      */
     protected function numberPosts(): void
     {
         // Start timer.
         $start = microtime(true);
-        $rows = 0;
         Log::comment("Building 'post number' info for discussions...");
 
         // Get discussion id list (avoiding empty discussions) from output.
-        $posts = $this->postQB()->from('posts')
-            ->distinct()
-            ->get('discussion_id');
+        $posts = $this->postQB()->from('posts')->distinct()->get('discussion_id');
         $memory = memory_get_usage();
 
+        $rows = 0;
         foreach ($posts as $post) {
             // Update posts with their number, per discussion.
             $prx = $this->dbPostscript()->getTablePrefix();
@@ -130,13 +122,12 @@ class Flarum extends Postscript
         }
 
         // Report.
-        $info = new StorageInfo(
+        Log::storage('build', new StorageInfo(
             name: 'discussions.post_number_index',
             memory: $memory,
             rows: $rows,
             startTime: $start,
-        );
-        Log::storage('build', $info);
+        ));
     }
 
     /**
@@ -148,8 +139,6 @@ class Flarum extends Postscript
     {
         // Start timer.
         $start = microtime(true);
-        $failures = 0;
-        $info = new StorageInfo();
 
         // Prepare mentions table.
         $this->outputStorage()->prepare('post_mentions_post', self::DB_STRUCTURE_POST_MENTIONS_POST);
@@ -171,6 +160,8 @@ class Flarum extends Postscript
         $memory = memory_get_usage();
 
         // Find & record mentions in batches.
+        $failures = 0;
+        $info = new StorageInfo();
         foreach ($posts->cursor() as $post) {
             if (empty($post->content)) {
                 continue;
@@ -212,7 +203,6 @@ class Flarum extends Postscript
                 ], $info);
             }
         }
-
         // Insert remaining mentions.
         $info = $this->outputStorage()->stream([], $info, true);
 
@@ -222,13 +212,12 @@ class Flarum extends Postscript
         }
 
         // Report.
-        $info = new StorageInfo(
+        Log::storage('build', new StorageInfo(
             name: 'mentions_post',
             memory: $memory,
             rows: $info->rows,
             startTime: $start,
-        );
-        Log::storage('build', $info);
+        ));
     }
 
     /**
@@ -243,7 +232,7 @@ class Flarum extends Postscript
      * @return bool Whether the post mention was repaired.
      * @see QuoteEmbed — '<POSTMENTION discussionid="" displayname="{author}" id="{postid}" number="">'
      */
-    protected function repairPostMention(int $postid, string $content, int $quoteID, string $quoteType): bool
+    private function repairPostMention(int $postid, string $content, int $quoteID, string $quoteType): bool
     {
         // Prep a secondary connection for updating markup (main one will be running unbuffered query).
         $db = $this->dbPostscript();
@@ -291,7 +280,6 @@ class Flarum extends Postscript
 
     /**
      * Flarum won't even show your bookmarks without last_read_post_number being populated. What a diva!
-     *
      */
     protected function setLastRead(): void
     {
@@ -300,85 +288,29 @@ class Flarum extends Postscript
             return;
         }
 
-        // Start timer.
-        $start = microtime(true);
-        $rows = 0;
-        Log::comment("Building 'last read' info for user bookmarks...");
-
         // Calculate & set discussion_user.last_read_post_number.
-        $bookmarks = $this->postQB()
-            ->from('discussion_user', 'du')
+        Log::comment("Building 'last read' info for user bookmarks...");
+        $bookmarks = $this->postQB()->from('discussion_user', 'du')
             ->select(['du.user_id', 'du.discussion_id'])
             ->selectRaw('max(number) as last_number')
-            ->join(
-                'posts',
-                'posts.discussion_id',
-                '=',
-                'du.discussion_id',
-                'left'
-            )
+            ->join('posts', 'posts.discussion_id', '=', 'du.discussion_id', 'left')
             ->groupBy(['du.user_id', 'du.discussion_id'])
             ->get();
+        $start = microtime(true);
         $memory = memory_get_usage(); // @todo This is a memory bottleneck — can it be streamed?
         $px = $this->dbPostscript()->getTablePrefix();
+        $rows = 0;
         foreach ($bookmarks as $post) {
             $count = $this->dbPostscript()->affectingStatement("update {$px}discussion_user
                 set last_read_post_number = " . (int)$post->last_number . "
-                where user_id = " . $post->user_id . "
-                    and discussion_id = " . $post->discussion_id);
+                where user_id = " . $post->user_id . " and discussion_id = " . $post->discussion_id);
             $rows += $count;
         }
-
-        // Report.
-        $info = new StorageInfo(
+        Log::storage('build', new StorageInfo(
             name: 'discussion_user.last_read_post_number',
             memory: $memory,
             rows: $rows,
             startTime: $start,
-        );
-        Log::storage('build', $info);
-    }
-
-    /**
-     * Recreate the default groups (1 = Admins, 2 = Guests, 3 = Members).
-     *
-     */
-    protected function addDefaultGroups(): void
-    {
-        $this->dbPostscript()->table('groups')
-            ->insertOrIgnore([
-                ['id' => 1, 'name_singular' => 'Admin', 'name_plural' => 'Admins', 'is_hidden' => 0],
-                ['id' => 2, 'name_singular' => 'Guest', 'name_plural' => 'Guests', 'is_hidden' => 0],
-                ['id' => 3, 'name_singular' => 'Member', 'name_plural' => 'Members', 'is_hidden' => 0],
-                // Not strictly necessary, just safer because Mod-level permissions may be in `group_user` already.
-                ['id' => 4, 'name_singular' => 'Mod', 'name_plural' => 'Mods', 'is_hidden' => 0],
-            ]);
-    }
-
-    /**
-     * Add the default badge category.
-     *
-     * Badges are automatically added to badge_category_id = 1 during import.
-     *
-     */
-    protected function addDefaultBadgeCategory(): void
-    {
-        if ($this->hasOutputSchema('badge_category')) {
-            $this->dbPostscript()
-                ->table('badge_category')
-                ->insertOrIgnore(['id' => 1, 'name' => 'Imported Badges', 'created_at' => date('Y-m-d h:m:s')]);
-            Log::comment('Added  badge category "Imported Badges".');
-        }
-    }
-
-    /**
-     * Empty access tokens for a fresh forum.
-     *
-     */
-    protected function resetAccessTokens(): void
-    {
-        if ($this->dbPostscript()->getSchemaBuilder()->hasTable('access_tokens')) {
-            $this->dbPostscript()->table('access_tokens')->truncate();
-        }
+        ));
     }
 }

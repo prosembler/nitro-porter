@@ -20,29 +20,29 @@ class Factory
      *
      * Uses sub-factories to more explicitly define return types.
      */
-    protected static function package(string $type, string $name, ?Storage $input, ?Storage $output): mixed
+    protected static function package(string $type, string $packageName, ?Storage $input, ?Storage $output): mixed
     {
         if (!in_array($type, ['Origin', 'Source', 'Target', 'Postscript'])) {
             Log::comment("Invalid package type.");
         }
-        $class = "\Porter\\" . $type . "\\" . ucwords($name);
+        $class = "\Porter\\" . $type . "\\" . ucwords($packageName);
         if (!class_exists($class)) {
-            Log::comment("No {$type} package found for {$name}");
+            Log::comment("No {$type} package found for {$packageName}");
         }
 
-        return (class_exists($class)) ? new $class($input, $output, $name) : null;
+        return (class_exists($class)) ? new $class($input, $output, $packageName) : null;
     }
 
     /**
      * Get Origin if it exists.
      */
     public static function origin(
-        string $origin,
+        string $originName,
         ?Storage $input = null,
         ?Storage $extract = null,
         ?Storage $https = null,
     ): ?Origin {
-        $origin = Factory::package('Origin', $origin, $input, $extract);
+        $origin = Factory::package('Origin', $originName, $input, $extract);
         if (is_a($https, Storage\Https::class)) {
             $origin->addHttps($https);
         }
@@ -53,13 +53,13 @@ class Factory
      * Get Source if it exists.
      */
     public static function source(
-        string $source,
+        string $sourceName,
         ?Storage $input = null,
         ?Storage $porter = null,
         string $dataTypes = '',
         string $inputName = ''
     ): ?Source {
-        $source = Factory::package('Source', $source, $input, $porter);
+        $source = Factory::package('Source', $sourceName, $input, $porter);
 
         // Set constraints.
         $source->limitTables($dataTypes);
@@ -77,9 +77,9 @@ class Factory
     /**
      * Get Target if it exists.
      */
-    public static function target(string $target, ?Storage $porter = null, ?Storage $output = null): ?Target
+    public static function target(string $targetName, ?Storage $porter = null, ?Storage $output = null): ?Target
     {
-        return Factory::package('Target', $target, $porter, $output);
+        return Factory::package('Target', $targetName, $porter, $output);
     }
 
     /**

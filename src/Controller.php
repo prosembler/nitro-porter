@@ -171,31 +171,28 @@ class Controller
      */
     public function pull(Request $request): void
     {
-        // Break down the Request.
+        // Collect request.
         $originName = $request->getOrigin();
         $inputName = $request->getInput();
 
-        // Create new migration artifacts.
+        // Build artifacts.
         $inputStorage = Factory::storage($inputName);
         $extractStorage = Factory::storage($inputName);
         $originStorage = Factory::storage($originName);
         $origin = Factory::origin($originName, $inputStorage, $extractStorage, $originStorage);
 
-        // Report on request.
+        // Report request.
         Log::comment("NITRO PORTER PULLING...");
         Log::comment("Pulling " . $originName . " into " . $inputName);
 
-        // Setup.
-        set_time_limit(0);
-
         // Report start.
-        $start = microtime(true);
         Log::comment("\n" . sprintf(
             '[ STARTED at %s ]',
             date('H:i:s e')
         ) . "\n");
 
-        // Do the pull.
+        // Main workflow.
+        $start = microtime(true);
         $origin->run();
 
         // Report finished.

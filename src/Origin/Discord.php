@@ -361,6 +361,7 @@ class Discord extends Origin
 
     /**
      * Do 1 cycle through all channels to get a batch of messages.
+     *
      * Endpoint default `limit` is 50; max is 100. Use `before` to page backwards.
      *  > Returns an array of message objects from newest to oldest on success.
      * @see https://discord.com/developers/docs/resources/message
@@ -405,27 +406,17 @@ class Discord extends Origin
             }
             $info = $this->pull($endpoint, $this->getSchema('messages'), 'discord_messages', null, $query, $map);
 
-            // Attachments.
+            // Extract: Attachments, Polls, Authors, & Reactions (with any non-guild emoji).
             $this->extractAttachments($info->content);
-
-            // Reactions & non-guild emoji used in them.
             $userReactionsQueue[$channelId] = $this->extractReactions($info->content);
-
-            // Non-guild authors.
-            $this->extractAuthors($info->content);
-
-            // Polls.
+            $this->extractAuthors($info->content); // Catches non-guild users.
             $this->extractPolls($info->content, $channelId);
 
-            // Note completed channels.
+            // Update status.
             if (0 === $info->rows) {
-                // Change status to 'done' if no more rows found.
-                $finished[$channelId] = true;
-                //Log::comment("> channel $channelId has no messages past {$channels[$channelId]}, skipping.");
+                $finished[$channelId] = true; // Change status to 'done' if no more rows found.
             }
-
             if (isset($info->getLast()['id'])) {
-                // Update offset & report where we are.
                 $id = $channels[$channelId] = $info->getLast()['id']; // Should be oldest message.
                 $time = $info->getLast()['timestamp'] ?? '';
                 Log::comment("> last_msg=$id @ " . $time);
@@ -553,7 +544,6 @@ class Discord extends Origin
         // Store collected lists.
         $this->extractEmoji($emojiList);
         $this->extract('discord_reactions', $this->getSchema('reactions'), $reactList);
-
         Log::comment("> " . count($userReactionQueue) . " reactions queued");
         return $userReactionQueue;
     }
@@ -598,7 +588,6 @@ class Discord extends Origin
             $pass++;
         } while (count($queue));
     }
-
 
     /**
      * Get & store data for non-standard, non-guild emojis to fill in gaps.

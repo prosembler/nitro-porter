@@ -31,8 +31,8 @@ class PullCommand extends Command
             $this->set('origin', $io->prompt('Origin package alias (see `porter list origins`)'));
         }
 
-        if (!$this->input && !Config::getInstance()->get('input_alias')) {
-            $this->set('input', $io->prompt('Input connection alias (see config.php)'));
+        if (!$this->inputstore && !Config::getInstance()->get('input_alias')) {
+            $this->set('inputstore', $io->prompt('Input connection alias (see config.php)'));
         }
     }
 
@@ -45,7 +45,7 @@ class PullCommand extends Command
     {
         $request = (new Request(
             originPackage: $this->origin,
-            inputStorage: $this->input,
+            inputStorage: $this->inputstore,
         ));
 
         (new \Porter\Controller())->pull($request);

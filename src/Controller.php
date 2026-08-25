@@ -1,9 +1,5 @@
 <?php
 
-/**
- *
- */
-
 namespace Porter;
 
 /**
@@ -24,7 +20,6 @@ class Controller
         if (!$captureOnly) {
             $source->porterStorage->begin();
         }
-
         $source->run();
         if (method_exists($source, 'validate')) {
             $source->validate(); // New; no need for $port & not required via abstract for bc.
@@ -37,9 +32,8 @@ class Controller
      */
     protected function doImport(?Target $target): void
     {
-        // Nothing to do if there's no Target.
         if (empty($target)) {
-            return;
+            return; // Nothing to do if there's no Target.
         }
         $target->outputStorage->begin();
         $target->validate();
@@ -55,9 +49,8 @@ class Controller
      */
     protected function doPostscript(?Postscript $postscript): void
     {
-        // Nothing to do if there's no Postscript.
         if (empty($postscript)) {
-            return;
+            return; // Nothing to do if there's no Postscript.
         }
         $postscript->run();
     }
@@ -77,15 +70,11 @@ class Controller
      * Do some intelligent configuration of the migration process.
      *
      * This is the ONLY opportunity for the source & target to "coordinate."
-     *
-     * @param Source $source
-     * @param ?Target $target
      */
     protected function setFlags(Source $source, ?Target $target): void
     {
-        // Nothing to negotiate if there's no Target.
         if (empty($target)) {
-            return;
+            return; // Nothing to negotiate if there's no Target.
         }
 
         // If both the source and target don't store content/body on the discussion/thread record,
@@ -166,7 +155,6 @@ class Controller
     /**
      * Data pull from origin workflow.
      *
-     * @param Request $request
      * @throws \Exception
      */
     public function pull(Request $request): void
@@ -184,8 +172,6 @@ class Controller
         // Report request.
         Log::comment("NITRO PORTER PULLING...");
         Log::comment("Pulling " . $originName . " into " . $inputName);
-
-        // Report start.
         Log::comment("\n" . sprintf(
             '[ STARTED at %s ]',
             date('H:i:s e')

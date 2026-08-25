@@ -18,45 +18,45 @@ class Schema
     }
 
     /**
-     * Prepare a row of data for storage.
+     * Prepare a record for storage.
      *
      * Beware sensitive order of operations.
      *
-     * @param array $row Data to operate on.
-     * @param array $structure [fieldName => type]
-     * @param array $map [fieldName => newName]
-     * @param array $filters [fieldName => callable]
-     * @return array Normalized row of data.
+     * @param array $row Record to operate on.
+     * @param array $schema fieldName => type
+     * @param array $map fieldName => newName
+     * @param array $filters fieldName => callable|Filter
+     * @return array Normalized record.
      */
-    public static function normalizeRow(array $row, array $structure, array $map, array $filters): array
+    public static function normalizeRow(array $row, array $schema, array $map, array $filters): array
     {
-        $row = self::filterData($row, $filters);
-        $row = self::mapData($row, $map);
-        $row = self::structureData($row, $structure);
-        $row = self::flattenData($row);
-        $row = self::encodeData($row);
-        return self::nullData($row);
+        $row = self::filter($row, $filters);
+        $row = self::map($row, $map);
+        $row = self::enforceSchema($row, $schema);
+        $row = self::flatten($row);
+        $row = self::encode($row);
+        return self::nullEmpty($row);
     }
 
     /**
-     * Enforce which keys are present in $row to match $structure.
+     * Enforce which keys are present in $row to match $schema.
      */
-    private static function structureData(array $row, array $structure): array
+    private static function enforceSchema(array $row, array $schema): array
     {
         // $structure['keys'] is only for prepare(); ignore here.
-        unset($structure['keys']);
+        unset($schema['keys']);
 
         // Drop columns not in the structure.
-        $row = array_intersect_key($row, $structure);
+        $row = array_intersect_key($row, $schema);
 
         // Add missing keys.
-        return array_merge(array_fill_keys(array_keys($structure), null), $row);
+        return array_merge(array_fill_keys(array_keys($schema), null), $row);
     }
 
     /**
      * Convert all empty strings to null.
      */
-    private static function nullData(array $row): array
+    private static function nullEmpty(array $row): array
     {
         return array_map(function ($value) {
             return ('' === $value) ? null : $value;
@@ -70,7 +70,7 @@ class Schema
      * @param array $filters List of column => callable.
      * @return array
      */
-    private static function filterData(array $row, array $filters): array
+    private static function filter(array $row, array $filters): array
     {
         foreach ($filters as $columnName => $filterName) {
             if (is_callable($filterName)) {
@@ -98,7 +98,7 @@ class Schema
      * 3) `src.sub` => `dest` — maps JSON array key `sub` in $row key `src` to column `dest.
      *      Ex: ['src.name' => 'dest'] takes JSON in `src` field and gets property `name`.
      */
-    private static function mapData(array $row, array $map): array
+    private static function map(array $row, array $map): array
     {
         // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
@@ -124,7 +124,7 @@ class Schema
     /**
      * Convert non-UTF-8 encodings to UTF-8 as needed.
      */
-    private static function encodeData(array $row): array
+    private static function encode(array $row): array
     {
         return array_map(function ($value) {
             $doEncode = $value && function_exists('mb_detect_encoding') &&
@@ -142,7 +142,7 @@ class Schema
     /**
      * Convert arrays & objects to flat text (JSON).
      */
-    private static function flattenData(array $row): array
+    private static function flatten(array $row): array
     {
         foreach ($row as &$value) {
             if (is_iterable($value)) {

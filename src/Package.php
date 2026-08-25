@@ -29,6 +29,8 @@ abstract class Package
         'renumberIndices' => false,
     ];
 
+    public const TYPES = ['origins', 'sources', 'targets'];
+
     /** @var array|string[] Auto-run() this list of methods unless overwritten per-package. */
     protected const array MANIFEST = [
         // prepare
@@ -91,14 +93,13 @@ abstract class Package
     /**
      * Retrieve an array from named file in `/data`.
      */
-    public static function list(string $name): array
+    public static function list(?string $name = null): array
     {
-        $data = ['origins', 'sources', 'targets'];
-        if (in_array($name, $data, true)) {
-            $packages = include(ROOT_DIR . '/packages.php');
+        $packages = include(ROOT_DIR . '/packages.php');
+        if (!empty($name) && in_array($name, Package::TYPES, true)) {
             return $packages[$name] ?? [];
         } else {
-            return [];
+            return $packages;
         }
     }
 

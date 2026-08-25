@@ -52,38 +52,39 @@ class Support
         if (self::$instance == null) {
             self::$instance = new Support();
         }
-
         return self::$instance;
     }
 
-    /**
-     * @return array
-     */
     public function getOrigins(): array
     {
         return $this->origins;
     }
 
-    /**
-     * @return array
-     */
     public function getSources(): array
     {
         return $this->sources;
     }
 
-    /**
-     * @return array
-     */
     public function getTargets(): array
     {
         return $this->targets;
     }
 
     /**
-     * @param array $origins
+     * Accepts the contents of packages.php.
      */
-    public function setOrigins(array $origins): void
+    public function set(array $packages): void
+    {
+        foreach (Package::TYPES as $type) {
+            if (!empty($packages[$type])) {
+                $method = 'set' . ucfirst($type);
+                $this->$method($packages[$type]);
+            }
+        }
+    }
+
+    /** @see self::set() */
+    private function setOrigins(array $origins): void
     {
         foreach ($origins as $name) {
             $classname = '\Porter\Origin\\' . $name;
@@ -93,13 +94,8 @@ class Support
         }
     }
 
-    /**
-     * Accepts the `SUPPORTED` array from each package to build a list.
-     *
-     * @param array $sources
-     * @return void
-     */
-    public function setSources(array $sources): void
+    /** @see self::set() */
+    private function setSources(array $sources): void
     {
         foreach ($sources as $name) {
             $classname = '\Porter\Source\\' . $name;
@@ -109,13 +105,8 @@ class Support
         }
     }
 
-    /**
-     * Accepts the `SUPPORTED` array from each package to build a list.
-     *
-     * @param array $targets
-     * @return void
-     */
-    public function setTargets(array $targets): void
+    /** @see self::set() */
+    private function setTargets(array $targets): void
     {
         // Hardcode Vanilla file support (all = yes).
         $this->targets['file'] = [
@@ -136,11 +127,6 @@ class Support
 
     /**
      * Get the data support status for a single platform feature.
-     *
-     * @param array $supported
-     * @param string $package
-     * @param string $feature
-     * @param bool $notes
      * @return string Yes or No.
      */
     public function getFeatureStatus(array $supported, string $package, string $feature, bool $notes = true): string
@@ -170,9 +156,7 @@ class Support
     }
 
     /**
-     * @param string $name
-     * @param array $info
-     * @return array
+     * Build an array-based matrix of feature support.
      */
     public function getFeatureTable(string $name, array $info): array
     {
@@ -196,8 +180,6 @@ class Support
      *    - 0 if unsupported
      *    - 1 if supported
      *    - string if supported, with notes or caveats
-     *
-     * @return array
      */
     public function getAllFeatures(): array
     {

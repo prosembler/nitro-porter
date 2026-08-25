@@ -65,216 +65,6 @@ class Discord extends Origin
         15 => 'GUILD_FORUM',
     ];
 
-    protected const array SCHEMA_USERS = [
-        'new_id' => 'increments',
-        'nick' => 'varchar(100)',
-        'avatar' => 'varchar(100)',
-        'roles' => 'text',
-        'joined_at' => 'datetime',
-        'premium_since' => 'datetime',
-        // Under 'user' object
-        'id' => 'bigint',
-        'username' => 'varchar(100)',
-        'discriminator' => 'varchar(100)',
-        'global_name' => 'varchar(100)',
-        'global_avatar' => 'varchar(100)',
-        'email' => 'varchar(100)',
-        'bot' => 'tinyint',
-        'verified' => 'tinyint',
-        'keys' => [
-            'discord_users_id_index' => [
-                'type' => 'unique',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_REACTIONS = [
-        'message_id' => 'bigint',
-        'emoji_id' => 'bigint',
-        'emoji_name' => 'varchar(100)',
-        'count' => 'int',
-        'keys' => [
-            'discord_reactions_index' => [
-                'type' => 'unique',
-                'columns' => ['message_id', 'emoji_id', 'emoji_name'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_USER_REACTIONS = [
-        'message_id' => 'bigint',
-        'emoji_id' => 'bigint',
-        'user_id' => 'bigint',
-        'emoji_name' => 'varchar(100)',
-        'keys' => [
-            'discord_user_reactions_index' => [
-                'type' => 'unique',
-                'columns' => ['message_id', 'user_id', 'emoji_id', 'emoji_name'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_ROLES = [
-        'new_id' => 'increments',
-        'id' => 'bigint',
-        'name' => 'varchar(100)',
-        'position' => 'int',
-        'managed' => 'tinyint',
-        'mentionable' => 'tinyint',
-        'keys' => [
-            'discord_roles_id_index' => [
-                'type' => 'unique',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_EMOJIS = [
-        'new_id' => 'increments',
-        'id' => 'bigint',
-        'name' => 'varchar(100)',
-        'user' => 'text', // author
-        'animated' => 'tinyint',
-        'keys' => [
-            'discord_emojis_id_index' => [
-                'type' => 'unique',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_POLLS = [
-        'new_id' => 'increments',
-        'id' => 'bigint',
-        'is_final' => 'tinyint',
-        'question' => 'text',
-        'emoji' => 'bigint',
-        'expiry' => 'datetime',
-        'allow_multiselect' => 'tinyint',
-        'keys' => [
-            'discord_polls_id_index' => [
-                'type' => 'unique',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_POLL_ANSWERS = [
-        'new_id' => 'increments',
-        'poll_id' => 'bigint',
-        'answer_id' => 'bigint', // Non-unique.
-        'count' => 'int',
-        'emoji_id' => 'bigint',
-        'text' => 'text',
-        'keys' => [
-            'discord_answers_index' => [
-                'type' => 'unique',
-                'columns' => ['poll_id', 'answer_id'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_POLL_USER_ANSWERS = [
-        'poll_id' => 'bigint',
-        'answer_id' => 'bigint',
-        'user_id' => 'bigint',
-        'keys' => [
-            'discord_user_answers_index' => [
-                'type' => 'unique',
-                'columns' => ['poll_id', 'answer_id', 'user_id'],
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_CHANNELS = [
-        'new_id' => 'increments',
-        'id' => 'bigint',
-        'type' => 'int', //@todo key?
-        'guild_id' => 'bigint',
-        'position' => 'varchar(100)',
-        'name' => 'text',
-        'topic' => 'text',
-        'last_message_id' => 'bigint',
-        'parent_id' => 'bigint',
-        'message_count' => 'int',
-        // thread-only
-        'owner_id' => 'bigint',
-        'member_count' => 'int',
-        'thread_metadata' => 'text',
-        'keys' => [
-            'discord_channels_id_index' => [
-                'type' => 'unique',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
-    /**
-     * @var array Name => column type
-     */
-    protected const array SCHEMA_MESSAGES = [
-        'new_id' => 'increments',
-        'id' => 'bigint',
-        'channel_id' => 'bigint',
-        'content' => 'text',
-        'timestamp' => 'datetime',
-        'edited_timestamp' => 'datetime',
-        'pinned' => 'tinyint',
-        'type' => 'int',
-        // OBJECTS
-        'referenced_message' => 'text',
-        'message_reference' => 'text',
-        'thread' => 'text',
-        'author' => 'text',
-        'authorid' => 'bigint', // Derived from author.id — flattened to allow Source to filter.
-        // OBJECTS[]
-        'poll' => 'text', // @see https://discord.com/developers/docs/resources/poll#poll-object
-        'attachments' => 'text', // @see https://discord.com/developers/docs/resources/message#attachment-object
-        'embeds' => 'text', // @see https://discord.com/developers/docs/resources/message#embed-object
-        'reactions' => 'text', // @see https://discord.com/developers/docs/resources/message#reaction-object
-        'sticker_items' => 'text',
-        'mentions' => 'text',
-        'mention_roles' => 'text',
-        'mention_channels' => 'text',
-        'keys' => [
-            //  Index any keys that may require renumbering (for auto-joins).
-            'discord_messages_id_index' => [
-                'type' => 'unique',
-                'columns' => ['id'],
-            ],
-            // Covering index for resuming message pulls [select id where channel_id=x order by timestamp].
-            'discord_messages_resuming_index' => [
-                'type' => 'index',
-                'columns' => ['channel_id', 'timestamp'], // 'id' (pk) is implicitly in index
-            ]
-        ],
-    ];
-
-    protected const array SCHEMA_USERROLES = [
-        'user_id' => 'bigint',
-        'role_id' => 'bigint',
-    ];
-
-    protected const array SCHEMA_ATTACHMENTS = [
-        'new_id' => 'increments',
-        'id' => 'bigint',
-        'message_id' => 'bigint',
-        'filename' => 'text',
-        'url' => 'text',
-        'size' => 'bigint',
-        'width' => 'int',
-        'height' => 'int',
-        'content_type' => 'varchar(100)',
-        'download_path' => 'text', // where we put the file; not in Discord's response
-        'keys' => [
-            'discord_attachments_id_index' => [
-                'type' => 'unique',
-                'columns' => ['id'],
-            ]
-        ],
-    ];
-
     protected const array MAP_USERS = [
         'user' => [ // obj.param => flatName
             'id' => 'id',
@@ -362,7 +152,7 @@ class Discord extends Origin
     {
         $query = ['limit' => '1000']; // @todo Loop to find remaining users.
         $endpoint = "guilds/" . $this->getGuildId() . "/members";
-        $info = $this->pull($endpoint, self::SCHEMA_USERS, 'discord_users', null, $query, self::MAP_USERS);
+        $info = $this->pull($endpoint, $this->getSchema('users'), 'discord_users', null, $query, self::MAP_USERS);
         $this->guildUsers = array_column($info->content, 'id');
         $this->extractUserRoles($info->content);
     }
@@ -371,7 +161,7 @@ class Discord extends Origin
     protected function roles(): void
     {
         $endpoint = "guilds/" . $this->getGuildId();
-        $this->pull($endpoint, self::SCHEMA_ROLES, 'discord_roles', 'roles');
+        $this->pull($endpoint, $this->getSchema('roles'), 'discord_roles', 'roles');
     }
 
     /**
@@ -386,7 +176,7 @@ class Discord extends Origin
                 $userRoles[] = ['user_id' => $id, 'role_id' => $roleID];
             }
         }
-        $this->extract('discord_user_roles', self::SCHEMA_USERROLES, $userRoles);
+        $this->extract('discord_user_roles', $this->getSchema('user_roles'), $userRoles);
     }
 
     /**
@@ -428,7 +218,7 @@ class Discord extends Origin
             }
         }
         $errors += $this->originStorage->asyncDownload($files); // Final batch.
-        $this->extract('discord_attachments', self::SCHEMA_ATTACHMENTS, $data);
+        $this->extract('discord_attachments', $this->getSchema('attachments'), $data);
     }
 
     /**
@@ -449,7 +239,7 @@ class Discord extends Origin
     protected function emojis(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/emojis";
-        $info = $this->pull($endpoint, self::SCHEMA_EMOJIS, 'discord_emojis');
+        $info = $this->pull($endpoint, $this->getSchema('emojis'), 'discord_emojis');
         $this->guildEmojis = array_column($info->content, 'id');
     }
 
@@ -518,7 +308,7 @@ class Discord extends Origin
     protected function channels(): void
     {
         $endpoint = "guilds/" . $this->getGuildId() . "/channels";
-        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels');
+        $this->pull($endpoint, $this->getSchema('channels'), 'discord_channels');
     }
 
     /**
@@ -530,13 +320,13 @@ class Discord extends Origin
     {
         // Active threads.
         $endpoint = "guilds/" . $this->getGuildId() . "/threads/active";
-        $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
+        $this->pull($endpoint, $this->getSchema('channels'), 'discord_channels', 'threads');
 
         // Archived threads.
         $channelIds = $this->getTextChannels(array_diff(self::TEXT_CHANNEL_TYPES, ['PUBLIC_THREAD'])); // No threads.
         foreach ($channelIds as $channelId) {
             $endpoint = "channels/$channelId/threads/archived/public";
-            $this->pull($endpoint, self::SCHEMA_CHANNELS, 'discord_channels', 'threads');
+            $this->pull($endpoint, $this->getSchema('channels'), 'discord_channels', 'threads');
         }
     }
 
@@ -618,7 +408,7 @@ class Discord extends Origin
             if (is_numeric($channels[$channelId]) && $channels[$channelId]) {
                 $query['before'] = $channels[$channelId];
             }
-            $info = $this->pull($endpoint, self::SCHEMA_MESSAGES, 'discord_messages', null, $query, $map);
+            $info = $this->pull($endpoint, $this->getSchema('messages'), 'discord_messages', null, $query, $map);
 
             // Attachments.
             $this->extractAttachments($info->content);
@@ -679,7 +469,7 @@ class Discord extends Origin
 
         // Insert missing users.
         $missingUsers = array_intersect_key($users, $missingUserIDs);
-        $info = $this->extract('discord_users', self::SCHEMA_USERS, $missingUsers);
+        $info = $this->extract('discord_users', $this->getSchema('users'), $missingUsers);
 
         // Log actions & mark users as "found".
         if (!empty($info->rows)) { // Missing users were inserted.
@@ -767,7 +557,7 @@ class Discord extends Origin
 
         // Store collected lists.
         $this->extractEmoji($emojiList);
-        $this->extract('discord_reactions', self::SCHEMA_REACTIONS, $reactList);
+        $this->extract('discord_reactions', $this->getSchema('reactions'), $reactList);
 
         Log::comment("> " . count($userReactionQueue) . " reactions queued");
         return $userReactionQueue;
@@ -791,7 +581,7 @@ class Discord extends Origin
                 $urlEmojiId = rawurlencode($reaction['url']);
                 $info = $this->pull(
                     endpoint: "/channels/$channelId/messages/{$reaction['msg']}/reactions/$urlEmojiId",
-                    fields: self::SCHEMA_USER_REACTIONS,
+                    fields: $this->getSchema('user_reactions'),
                     tableName: 'discord_user_reactions',
                     map: ['id' => 'user_id'],
                     storeAll: [ // Added feature for this use case.
@@ -826,7 +616,7 @@ class Discord extends Origin
         }
         $this->guildEmojis = $this->guildEmojis + $missingEmojiIDs; // Update in-memory list.
         $emojiData = array_diff_key($emojis, array_combine($this->guildEmojis, $this->guildEmojis));
-        $this->extract('discord_emojis', self::SCHEMA_EMOJIS, $emojiData); // Store new emoji.
+        $this->extract('discord_emojis', $this->getSchema('emojis'), $emojiData); // Store new emoji.
         Log::comment("> non-guild emoji(s) added: " . implode(',', $missingEmojiIDs));
     }
 
@@ -890,7 +680,7 @@ class Discord extends Origin
                 // Pull user-answers. We only need `user_id` from the API.
                 $this->pull(
                     endpoint: "/channels/$channelId/polls/$msgId/answers/" . $answer['answer_id'],
-                    fields: self::SCHEMA_POLL_USER_ANSWERS,
+                    fields: $this->getSchema('poll_user_answers'),
                     tableName: 'discord_poll_user_answers',
                     key: 'users',
                     map: ['id' => 'user_id'],
@@ -900,8 +690,8 @@ class Discord extends Origin
         }
 
         // Store collected lists.
-        $this->extract('discord_polls', self::SCHEMA_POLLS, $pollData);
-        $this->extract('discord_poll_answers', self::SCHEMA_POLL_ANSWERS, $answerData);
+        $this->extract('discord_polls', $this->getSchema('polls'), $pollData);
+        $this->extract('discord_poll_answers', $this->getSchema('poll_user_answers'), $answerData);
     }
 
     /**

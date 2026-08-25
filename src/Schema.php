@@ -9,7 +9,7 @@ class Schema
      */
     public static function load(string $name): array
     {
-        $data = ['porter'];
+        $data = ['porter', 'discord'];
         if (in_array($name, $data, true)) {
             return include(ROOT_DIR . '/schemas/' . $name . '.php');
         } else {

@@ -117,10 +117,6 @@ class Controller
      */
     public function run(Request $request): void
     {
-        $start = microtime(true); // Start the timer.
-        set_time_limit(0); // Disable PHP time limit.
-        ini_set('memory_limit', '256M'); // Override memory limit to be high enough.
-
         // Collect request.
         $sourceName = $request->getSource();
         $targetName = $request->getTarget();
@@ -131,7 +127,7 @@ class Controller
         $targetPrefix = $request->getOutputTablePrefix();
         $dataTypes = $request->getDatatypes();
 
-        // Log request.
+        // Report request.
         Log::comment("NITRO PORTER RUNNING...");
         Log::comment("Porting " . $sourceName . " to " . $targetName);
         Log::comment("Input: " . $inputName . ' (' . (empty($sourcePrefix) ? 'no prefix' : $sourcePrefix) . ')');
@@ -150,6 +146,7 @@ class Controller
         $fileTransfer = Factory::fileTransfer($source, $target, $porterName);
 
         // Main workflow.
+        $start = microtime(true); // Start the timer.
         $this->setFlags($source, $target);
         $this->doExport($source, ($outputName === 'sql'));
         $this->doImport($target);

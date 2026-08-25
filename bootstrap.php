@@ -3,6 +3,8 @@
 // Environment.
 const APP_VERSION = '4.1';
 const ROOT_DIR = __DIR__;
+set_time_limit(0); // Disable PHP time limit.
+ini_set('memory_limit', '256M'); // Override memory limit to be high enough.
 error_reporting(E_ALL & ~E_DEPRECATED);
 if (ini_get('date.timezone') == '') {
     date_default_timezone_set('America/Detroit');

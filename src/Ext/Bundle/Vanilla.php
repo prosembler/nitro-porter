@@ -6,7 +6,7 @@
 * @license   http://www.opensource.org/licenses/mit-license.php The MIT License
 */
 
-namespace Porter\Bundle;
+namespace Porter\Ext\Bundle;
 
 abstract class Vanilla extends \s9e\TextFormatter\Bundle
 {

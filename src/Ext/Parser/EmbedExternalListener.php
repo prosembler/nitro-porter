@@ -1,6 +1,6 @@
 <?php
 
-namespace Porter\Parser;
+namespace Porter\Ext\Parser;
 
 use nadar\quill\BlockListener;
 

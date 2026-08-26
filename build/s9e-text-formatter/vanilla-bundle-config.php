@@ -30,4 +30,4 @@ $configurator->HTMLElements->allowElement('img');
 $configurator->HTMLElements->allowElement('div');
 
 // Save it as new Vanilla bundle in the Porter\Bundle namespace.
-$configurator->saveBundle('Porter\\Bundle\\Vanilla', __DIR__ . '/../../src/Bundle/Vanilla.php');
+$configurator->saveBundle('Porter\\Ext\\Bundle\\Vanilla', __DIR__ . '/../../src/Bundle/Vanilla.php');

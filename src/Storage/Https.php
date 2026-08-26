@@ -2,8 +2,8 @@
 
 namespace Porter\Storage;
 
-use Porter\Https\DiscordRetryStrategy;
 use Porter\DataConnection;
+use Porter\Ext\Https\DiscordRetryStrategy;
 use Porter\Log;
 use Porter\Storage;
 use Porter\StorageInfo;

@@ -2,9 +2,9 @@
 
 use nadar\quill\Lexer as Quill;
 use PHPUnit\Framework\TestCase;
-use Porter\Bundle\Vanilla as Vanilla;
+use Porter\Ext\Bundle\Vanilla as Vanilla;
+use Porter\Ext\Parser\Flarum\ImageEmbed;
 use Porter\Formatter;
-use Porter\Parser\Flarum\ImageEmbed;
 use s9e\TextFormatter\Bundles\Fatdown as Markdown;
 
 final class ParserTest extends TestCase
@@ -21,7 +21,7 @@ final class ParserTest extends TestCase
             '"loaderData":{"type":"image"}}}},{"insert":"\n"}]'; // post id 953302
         $stored = '{"ops":' . $stored . '}'; // Fix the JSON.
         $lexer = new Quill($stored);
-        $lexer->registerListener(new \Porter\Parser\Flarum\ImageEmbed());
+        $lexer->registerListener(new \Porter\Ext\Parser\Flarum\ImageEmbed());
         $result = $lexer->render();
         $expected = '<UPL-IMAGE-PREVIEW url="https://example.com/uploads/779/8C8NUCDYD6ZW.png">' .
             '[upl-image-preview url=https://example.com/uploads/779/8C8NUCDYD6ZW.png]</UPL-IMAGE-PREVIEW>';

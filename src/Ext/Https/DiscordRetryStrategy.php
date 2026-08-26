@@ -1,6 +1,6 @@
 <?php
 
-namespace Porter\Https;
+namespace Porter\Ext\Https;
 
 use Symfony\Component\HttpClient\Response\AsyncContext;
 use Symfony\Component\HttpClient\Retry\GenericRetryStrategy;

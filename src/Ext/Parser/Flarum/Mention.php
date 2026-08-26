@@ -1,6 +1,6 @@
 <?php
 
-namespace Porter\Parser\Flarum;
+namespace Porter\Ext\Parser\Flarum;
 
 use nadar\quill\InlineListener;
 use nadar\quill\Line;

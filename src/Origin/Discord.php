@@ -36,7 +36,7 @@ use Porter\Origin;
  *
  * 429 response code will have Retry-After header & retry_after in JSON body.
  * @see https://discord.com/developers/docs/topics/rate-limits#rate-limits
- * @see \Porter\Https\DiscordRetryStrategy
+ * @see \Porter\Ext\Https\DiscordRetryStrategy
  */
 class Discord extends Origin
 {

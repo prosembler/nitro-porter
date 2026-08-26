@@ -1,11 +1,11 @@
 <?php
 
-namespace Porter\Parser\Flarum;
+namespace Porter\Ext\Parser\Flarum;
 
 use nadar\quill\Lexer;
 use nadar\quill\Line;
+use Porter\Ext\Parser\EmbedExternalListener;
 use Porter\Formatter;
-use Porter\Parser\EmbedExternalListener;
 
 /**
  * Convert a Quill (Vanilla) external embed of a quote.

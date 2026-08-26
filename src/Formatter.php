@@ -3,7 +3,7 @@
 namespace Porter;
 
 use nadar\quill\Lexer as Quill;
-use Porter\Bundle\Vanilla as Vanilla;
+use Porter\Ext\Bundle\Vanilla as Vanilla;
 use s9e\TextFormatter\Bundles\Fatdown as Markdown;
 use s9e\TextFormatter\Bundles\Forum as BBCode;
 
@@ -480,22 +480,22 @@ class Formatter
         $lexer = new Quill($text);
 
         // Custom mention handler.
-        $lexer->registerListener(new Parser\Flarum\Mention());
+        $lexer->registerListener(new Ext\Parser\Flarum\Mention());
 
         // Custom emoji handler.
-        $lexer->registerListener(new Parser\Emoji());
+        $lexer->registerListener(new Ext\Parser\Emoji());
 
         // Custom image embed handler for `embed-external`.
-        $lexer->registerListener(new Parser\Flarum\ImageEmbed());
+        $lexer->registerListener(new Ext\Parser\Flarum\ImageEmbed());
 
         // Custom link handler for `embed-external`.
-        $lexer->registerListener(new Parser\Flarum\LinkEmbed());
+        $lexer->registerListener(new Ext\Parser\Flarum\LinkEmbed());
 
         // Custom Spotify link handler for `embed-external`.
-        $lexer->registerListener(new Parser\Flarum\SpotifyEmbed());
+        $lexer->registerListener(new Ext\Parser\Flarum\SpotifyEmbed());
 
         // Custom quote handler for `embed-external`.
-        $lexer->registerListener(new Parser\Flarum\QuoteEmbed());
+        $lexer->registerListener(new Ext\Parser\Flarum\QuoteEmbed());
 
         return $lexer->render();
     }

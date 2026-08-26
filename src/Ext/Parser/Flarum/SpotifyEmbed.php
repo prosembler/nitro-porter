@@ -1,10 +1,10 @@
 <?php
 
-namespace Porter\Parser\Flarum;
+namespace Porter\Ext\Parser\Flarum;
 
 use nadar\quill\Lexer;
 use nadar\quill\Line;
-use Porter\Parser\EmbedExternalListener;
+use Porter\Ext\Parser\EmbedExternalListener;
 
 /**
  * Convert a Quill (Vanilla) external embed of a Spotify link.

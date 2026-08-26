@@ -2,8 +2,8 @@
 
 namespace Porter\Postscript;
 
+use Porter\Ext\Parser\Flarum\QuoteEmbed;
 use Porter\Log;
-use Porter\Parser\Flarum\QuoteEmbed;
 use Porter\Postscript;
 use Porter\StorageInfo;
 

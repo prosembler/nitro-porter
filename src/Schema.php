@@ -117,8 +117,8 @@ class Schema
 
             // Allow filling literals (e.g. 'Admin=0') with non-assoc keys (is_int() first to fail fast).
             if (is_int($src) && str_contains($dst, '=') && !str_starts_with($dst, '=')  && !str_ends_with($dst, '=')) {
-                $literal = explode('=', $dst);
-                $row[$literal[0]] = $literal[1]; // Already verified above these aren't empty.
+                list($key, $val) = explode('=', $dst);
+                $row[$key] = $val; // Already verified above these aren't empty.
                 continue;
             }
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace Porter\Command;
+namespace Porter\Ext\Command;
 
 use Ahc\Cli\Input\Command;
 use Ahc\Cli\Output\Writer;

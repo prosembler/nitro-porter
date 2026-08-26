@@ -6,10 +6,10 @@ require_once dirname(__DIR__) . '/bootstrap.php';
 $app = new Ahc\Cli\Application('Nitro Porter', 'v'.APP_VERSION);
 
 // Add commands.
-$app->add(new Porter\Command\ListCommand());
-$app->add(new Porter\Command\ShowCommand());
-$app->add(new Porter\Command\RunCommand());
-$app->add(new Porter\Command\PullCommand());
+$app->add(new \Porter\Ext\Command\ListCommand());
+$app->add(new \Porter\Ext\Command\ShowCommand());
+$app->add(new \Porter\Ext\Command\RunCommand());
+$app->add(new \Porter\Ext\Command\PullCommand());
 
 // Execute command.
 $app->handle($_SERVER['argv']);

@@ -100,26 +100,31 @@ class Schema
     /**
      * Rename keys as required by applying column $map to the data $row.
      *
-     * Uses:
+     * Use cases of $map:
      * 1) 'src' => 'dest' — maps key `src` in $row to column `dest`. Simplest and original use.
-     * 2) `src' => [] — maps array list in `src` up a level into $row ("flattens" up 1 level)
+     * 2) `src' => [] — maps array list in `src` up a level into $row ("flattens" up 1 level).
      *      Ex: API response {'foo':[],'meta':0} where 'foo' is the list to be stored, not the top-level metadata.
-     * 3) `src.sub` => `dest` — maps JSON array key `sub` in $row key `src` to column `dest.
-     *      Ex: ['src.name' => 'dest'] takes JSON in `src` field and gets property `name`.
-     * @todo One of those moments I wish I had a collections library in here.
+     * 3) `dest=1` — maps literal value on right side of `=` to the column `dest`.
      */
     private static function map(array $row, array $map): array
     {
-        foreach ($map as $src => $dest) {
+        foreach ($map as $src => $dst) {
             // Allow flattening of nested data (1 level).
-            if (is_array($dest)) {
-                $row = self::mapNestedData($row, $dest, $src);
+            if (is_array($dst)) {
+                $row = self::mapNestedData($row, $dst, $src);
                 continue; // No need to map again & do not unset so raw data can be preserved.
+            }
+
+            // Allow filling literals (e.g. 'Admin=0') with non-assoc keys (is_int() first to fail fast).
+            if (is_int($src) && str_contains($dst, '=') && !str_starts_with($dst, '=')  && !str_ends_with($dst, '=')) {
+                $literal = explode('=', $dst);
+                $row[$literal[0]] = $literal[1]; // Already verified above these aren't empty.
+                continue;
             }
 
             // Simple-map remaining values.
             if (!empty($row[$src])) {
-                $row[$dest] = $row[$src]; // Add column with new name.
+                $row[$dst] = $row[$src]; // Add column with new name.
                 unset($row[$src]); // Drop remapped column.
             }
         }

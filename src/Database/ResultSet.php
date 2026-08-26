@@ -7,25 +7,15 @@ namespace Porter\Database;
  */
 class ResultSet
 {
-    /** @var DbResource */
-    private DbResource $dbResource;
+    private PdoDB $db;
 
-    /**
-     * @param DbResource $dbResource
-     */
-    public function __construct(DbResource $dbResource)
+    public function __construct(PdoDB $dbResource)
     {
-        $this->dbResource = $dbResource;
+        $this->db = $dbResource;
     }
 
-    /**
-     * Iterate to new result row via dbResource.
-     *
-     * @param bool $assoc will return result row as an enumerated array if false.
-     * @return array|false
-     */
-    public function nextResultRow(bool $assoc = true): false|array
+    public function nextResultRow(): false|array
     {
-        return $this->dbResource->nextRow($assoc);
+        return $this->db->nextRow();
     }
 }

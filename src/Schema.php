@@ -106,10 +106,10 @@ class Schema
      *      Ex: API response {'foo':[],'meta':0} where 'foo' is the list to be stored, not the top-level metadata.
      * 3) `src.sub` => `dest` — maps JSON array key `sub` in $row key `src` to column `dest.
      *      Ex: ['src.name' => 'dest'] takes JSON in `src` field and gets property `name`.
+     * @todo One of those moments I wish I had a collections library in here.
      */
     private static function map(array $row, array $map): array
     {
-        // @todo One of those moments I wish I had a collections library in here.
         foreach ($map as $src => $dest) {
             // Allow flattening of nested data (1 level).
             if (is_array($dest)) {
@@ -118,13 +118,9 @@ class Schema
             }
 
             // Simple-map remaining values.
-            foreach ($row as $columnName => $value) {
-                if ($columnName === $src) {
-                    $row[$dest] = $value; // Add column with new name.
-                    if ($dest !== $columnName) {
-                        unset($row[$columnName]); // Remove old column.
-                    }
-                }
+            if (!empty($row[$src])) {
+                $row[$dest] = $row[$src]; // Add column with new name.
+                unset($row[$src]); // Drop remapped column.
             }
         }
         return $row;

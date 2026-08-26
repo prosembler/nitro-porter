@@ -6,6 +6,6 @@ parameters:
         - src
         - tests
     excludePaths:
-        - src/Command
+        - src/Ext/Command
     bootstrapFiles:
         - bootstrap.php

@@ -14,9 +14,17 @@ We greatly appreciate donated data from existing forums to improve the migration
 
 Did you successfully use Nitro Porter? [Start a discussion](https://github.com/prosembler/nitro-porter/discussions/new) to tell us all about it! What platforms were you migrating between and how much data was involved? Was it confusing at all?
 
-### Submit a fix or improvement
+### Submit a code fix or improvement
 
-Send a pull request with a proposed fix! It's greatly appreciated. Please document your understanding of the change, it makes review much easier! Try using [conventional commits](https://www.conventionalcommits.org) for a nicer changelog.
+Before sending a pull request with a proposed fix, please *document your understanding* of the change in the description.
+This project supports learning, so asking questions is also great. All of this makes review much easier!
+
+Please remember maintaining this code is not a job, nor is it anyone's duty to accept submitted code.
+We want to talk to other humans, not review generated slop because a bot said it was good.
+
+It would be lovely if you used the PSR-12 coding style, matched our other conventions, ran PHPStan, and added tests.
+You could similarly try using [conventional commits](https://www.conventionalcommits.org) for a nicer changelog.
+But if you don't know what any of that means, this is still a good place to ask & learn about it.
 
 ### Add support for a new source or target
 

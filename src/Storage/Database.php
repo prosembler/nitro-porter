@@ -268,22 +268,19 @@ class Database extends Storage
         // Build the closure using given structure.
         return function (Blueprint $table) use ($tableInfo) {
             // Allow keys to be passed in with special... key.
-            $keys = [];
-            if (array_key_exists('keys', $tableInfo)) {
-                $keys = $tableInfo['keys'];
-                unset($tableInfo['keys']);
-            }
+            $keys = $tableInfo['keys'] ?? [];
+            unset($tableInfo['keys']);
 
             // One statement per column to be created.
             foreach ($tableInfo as $columnName => $type) {
                 if (is_array($type)) {
                     // Handle enums first (blocking potential `strpos()` on an array).
                     $table->enum($columnName, $type)->nullable(); // $type == $options.
-                } elseif (strpos($type, 'varchar') === 0) {
+                } elseif (str_starts_with($type, 'varchar')) {
                     // Handle varchars.
                     $length = $this->getVarcharLength($type);
                     $table->string($columnName, $length)->nullable();
-                } elseif (strpos($type, 'varbinary') === 0) {
+                } elseif (str_starts_with($type, 'varbinary')) {
                     // Handle varbinary as blobs.
                     $table->binary($columnName)->nullable();
                 } elseif ($type === 'increments') {
@@ -297,16 +294,14 @@ class Database extends Storage
                 }
             }
 
-            // One statement per key to be created.
+            // Evaluate keys to be created.
             foreach ($keys as $keyName => $info) {
-                if ($info['type'] === 'unique') {
-                    $table->unique($info['columns'], $keyName);
-                } elseif ($info['type'] === 'index') {
-                    $table->index($info['columns'], $keyName);
-                } elseif ($info['type'] === 'primary') {
-                    $table->primary($info['columns'][0]);
-                }
-                // @todo Allow more key types as needed.
+                match ($info['type']) {
+                    'unique' => $table->unique($info['columns'], $keyName),
+                    'index' => $table->index($info['columns'], $keyName),
+                    'primary' => $table->primary($info['columns'][0]),
+                    default => '',
+                };
             }
         };
     }

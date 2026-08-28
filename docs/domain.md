@@ -34,7 +34,7 @@ Ordered logically to build a baseline understanding of the domain.
 <dd>The read-only data storage/connection for an Export or Import that contains/accesses
 the origin data being read (defined by a Source or Porter).</dd>
 
-<dt>Output</dt>
+<dt>Output</dt> 
 <dd>The write-enabled data storage/connection for an Export or Import that contains/accesses
 the transformed data being written (defined by Porter or a Target).</dd>
 
@@ -43,6 +43,9 @@ the transformed data being written (defined by Porter or a Target).</dd>
 
 <dt>Request</dt>
 <dd>A generic set of instructions for any migration (or subset thereof).</dd>
+
+<dt>Manifest</dt>
+<dd>A generic sequence of steps for migrations of an application category (e.g. "forum", "CMS", or "CRM").</dd>
 
 <dt>Migration</dt>
 <dd>Fulfills a Request to transform & transfer data using an Export, Import, & Postscript (or any subset thereof).

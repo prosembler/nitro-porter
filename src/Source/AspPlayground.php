@@ -12,19 +12,10 @@ use Porter\Source;
 
 class AspPlayground extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'ASP Playground',
         'defaultTablePrefix' => 'pgd_',
         'charsetTable' => 'Threads',
-        'features' => [
-            'Users' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Bookmarks' => 1,
-            'Polls' => 0, // Challenges noted inline below.
-            'PrivateMessages' => 0, // Don't appear to be threaded in a rational way (see table PMsg).
-        ]
     ];
 
     protected const array FLAGS = [

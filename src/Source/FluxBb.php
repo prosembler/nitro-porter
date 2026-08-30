@@ -12,25 +12,11 @@ use Porter\Source;
 
 class FluxBb extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'FluxBB 1',
         'defaultTablePrefix' => '',
         'charsetTable' => 'posts',
         'passwordHashMethod' => 'punbb', // FluxBB is a fork of punbb and the password works.
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 0,
-            'Signatures' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 0,
-            'Tags' => 1,
-        ]
     ];
 
     /**

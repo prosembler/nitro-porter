@@ -12,24 +12,10 @@ use Porter\Source;
 
 class Vanilla1 extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Vanilla 1',
         'defaultTablePrefix' => 'LUM_',
         'charsetTable' => 'Comment',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 0,
-            'PrivateMessages' => 1,
-            'Signatures' => 0,
-            'Attachments' => 1,
-            'Bookmarks' => 1,
-        ]
     ];
 
     /**
@@ -164,7 +150,10 @@ class Vanilla1 extends Source
                 WHERE coalesce(d.WhisperUserID, 0) = 0 and d.Active = 1",
             $discussion_Map
         );
+    }
 
+    protected function bookmarks(): void
+    {
         $this->export(
             'UserDiscussion',
             "SELECT

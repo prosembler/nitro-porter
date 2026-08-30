@@ -12,34 +12,19 @@ use Porter\Source;
 
 class Vanilla extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Vanilla 2+',
         'defaultTablePrefix' => 'GDN_',
         'charsetTable' => 'Comment',
         'passwordHashMethod' => 'Vanilla',
         'avatarsPrefix' => 'p',
         'avatarThumbnailsPrefix' => 'n',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 'Cloud only',
-            'Roles' => 1,
-            'Avatars' => 1,
-            'AvatarThumbnails' => 1,
-            'PrivateMessages' => 1,
-            'Signatures' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 1,
-            'Badges' => 'Cloud or YAGA',
-            'UserNotes' => 1,
-            'Ranks' => 'Cloud or YAGA',
-            'Groups' => 0, // @todo
-            'Tags' => 1,
-            'Reactions' => 'Cloud or YAGA',
-        ]
+    ];
+
+    public const array FEATURE_REQUIREMENTS = [
+        'Badges' => ['enabled' => 'Cloud or YAGA'],
+        'Ranks' => ['enabled' => 'Cloud or YAGA'],
+        'Reactions' => ['enabled' => 'Cloud or YAGA'],
     ];
 
     /**
@@ -47,37 +32,71 @@ class Vanilla extends Source
      */
     public array $sourceTables = [];
 
-    public function run(): void
+    public function categories(): void
     {
-        // Core tables essentially map to our intermediate format as-is.
-        $tables = [
-            //'Activity',
-            'Category',
-            'Comment',
-            'Conversation',
-            'ConversationMessage',
-            'Discussion',
-            'Media',
-            'Role',
-            'Tag',
-            'TagDiscussion',
-            'UserComment',
-            'UserConversation',
-            'UserDiscussion',
-            'UserMeta',
-            'UserRole',
-        ];
-        foreach ($tables as $tableName) {
-            if ($this->hasInputSchema($tableName)) {
-                $this->export($tableName, "select * from :_{$tableName}");
-            }
+        if ($this->hasInputSchema('Category')) {
+            $this->export('Category', $this->sourceQB()->select()->from('Category'));
         }
+    }
 
-        $this->users();
-        $this->badges();
-        $this->ranks();
-        $this->reactions();
-        $this->polls();
+    public function comments(): void
+    {
+        if ($this->hasInputSchema('Comment')) {
+            $this->export('Comment', $this->sourceQB()->select()->from('Comment'));
+        }
+    }
+
+    public function conversations(): void
+    {
+        if ($this->hasInputSchema('Conversation')) {
+            $this->export('Conversation', $this->sourceQB()->select()->from('Conversation'));
+            $this->export('ConversationMessage', $this->sourceQB()->select()->from('ConversationMessage'));
+            //UserConversation
+        }
+    }
+
+    public function discussions(): void
+    {
+        if ($this->hasInputSchema('Discussion')) {
+            $this->export('Discussion', $this->sourceQB()->select()->from('Discussion'));
+        }
+    }
+
+    public function attachments(): void
+    {
+        if ($this->hasInputSchema('Media')) {
+            $this->export('Media', $this->sourceQB()->select()->from('Media'));
+        }
+    }
+
+    public function roles(): void
+    {
+        if ($this->hasInputSchema('Role')) {
+            $this->export('Role', $this->sourceQB()->select()->from('Role'));
+            $this->export('UserRole', $this->sourceQB()->select()->from('UserRole'));
+        }
+    }
+
+    public function tags(): void
+    {
+        if ($this->hasInputSchema('Tag')) {
+            $this->export('Tag', $this->sourceQB()->select()->from('Tag'));
+            $this->export('TagDiscussion', $this->sourceQB()->select()->from('TagDiscussion'));
+        }
+    }
+
+    public function wallposts(): void
+    {
+        if ($this->hasInputSchema('UserComment')) {
+            $this->export('UserComment', $this->sourceQB()->select()->from('UserComment'));
+        }
+    }
+
+    public function bookmarks(): void
+    {
+        if ($this->hasInputSchema('UserDiscussion')) {
+            $this->export('UserDiscussion', $this->sourceQB()->select()->from('UserDiscussion'));
+        }
     }
 
     public function users(): void
@@ -85,7 +104,8 @@ class Vanilla extends Source
         $filters = [
             'Photo' => 'VanillaPhoto',
         ];
-        $this->export('User', "select * from :_User u", [], $filters);
+        $this->export('User', $this->sourceQB()->select()->from('User'), [], $filters);
+        $this->export('UserMeta', $this->sourceQB()->select()->from('UserMeta'));
     }
 
     /**
@@ -96,8 +116,8 @@ class Vanilla extends Source
     {
         if ($this->hasInputSchema('Badge')) {
             // Vanilla Cloud
-            $this->export('Badge', "select * from :_Badge");
-            $this->export('UserBadge', "select * from :_UserBadge");
+            $this->export('Badge', $this->sourceQB()->select()->from('Badge'));
+            $this->export('UserBadge', $this->sourceQB()->select()->from('UserBadge'));
         } elseif ($this->hasInputSchema('YagaBadge')) {
             // https://github.com/bleistivt/yaga
             $map = [
@@ -128,7 +148,7 @@ class Vanilla extends Source
     {
         if ($this->hasInputSchema('Rank')) {
             // Vanilla Cloud
-            $this->export('Rank', "select * from :_Rank");
+            $this->export('Rank', $this->sourceQB()->select()->from('Rank'));
         } elseif ($this->hasInputSchema('YagaRank')) {
             // https://github.com/bleistivt/yaga
             $map = [
@@ -136,7 +156,7 @@ class Vanilla extends Source
                 'Sort' => 'Level',
                 // Use 'Name' as both 'Name' and 'Label' (via SQL below)
             ];
-            $this->export('Rank', "select *, Name as Label from :_YagaRank", $map);
+            $this->export('Rank', $this->sourceQB()->select(['*', 'Name as Label'])->from('YagaRank'), $map);
         }
     }
 
@@ -148,9 +168,9 @@ class Vanilla extends Source
     {
         if ($this->hasInputSchema('ReactionType')) {
             // Vanilla Cloud & later open source
-            $this->export('ReactionType', "select * from :_ReactionType");
+            $this->export('ReactionType', $this->sourceQB()->select()->from('ReactionType'));
             //$ex->export('Reaction', "select * from :_Tag where Type='Reaction'");
-            $this->export('UserTag', "select * from :_UserTag");
+            $this->export('UserTag', $this->sourceQB()->select()->from('UserTag'));
         } elseif ($this->hasInputSchema('YagaReaction')) {
             // https://github.com/bleistivt/yaga
             // Shortcut use of Tag table by setting ActionID = TagID.
@@ -169,7 +189,7 @@ class Vanilla extends Source
                 'ParentScore' => 'Total',
                 'ActionID' => 'TagID',
             ];
-            $this->export('UserTag', "select * from :_YagaReaction", $map);
+            $this->export('UserTag', $this->sourceQB()->select()->from('YagaReaction'), $map);
         }
     }
 
@@ -181,9 +201,9 @@ class Vanilla extends Source
     {
         if ($this->hasInputSchema('Poll')) {
             // SaaS
-            $this->export('Poll', "select * from :_Poll");
-            $this->export('PollOption', "select * from :_PollOption");
-            $this->export('PollVote', "select * from :_PollVote");
+            $this->export('Poll', $this->sourceQB()->select()->from('Poll'));
+            $this->export('PollOption', $this->sourceQB()->select()->from('PollOption'));
+            $this->export('PollVote', $this->sourceQB()->select()->from('PollVote'));
         } elseif ($this->hasInputSchema('DiscussionPolls')) {
             // @todo https://github.com/hgtonight/Plugin-DiscussionPolls
             //$ex->export('Poll', "select * from :_DiscussionPollQuestions");

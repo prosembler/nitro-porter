@@ -14,27 +14,9 @@ use Porter\Target;
 
 class Waterhole extends Target
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Waterhole',
         'defaultTablePrefix' => '',
-        'features' => [
-            'Users' => 1,
-            'Categories' => 'channels',
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 0,
-            'Attachments' => 0,
-            'Bookmarks' => 0,
-            'Badges' => 0,
-            'UserNotes' => 0,
-            'Ranks' => 0,
-            'Groups' => 0,
-            'Tags' => 0,
-            'Reactions' => 0,
-        ]
     ];
 
     protected const array FLAGS = [

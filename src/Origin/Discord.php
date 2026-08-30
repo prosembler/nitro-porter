@@ -40,7 +40,7 @@ use Porter\Origin;
  */
 class Discord extends Origin
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Discord',
     ];
 

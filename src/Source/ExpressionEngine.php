@@ -12,24 +12,10 @@ use Porter\Source;
 
 class ExpressionEngine extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Expression Engine Discussion Forum',
         'defaultTablePrefix' => 'forum_',
         'charsetTable' => 'topics',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 0,
-            'PrivateMessages' => 1,
-            'Signatures' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 1,
-        ]
     ];
 
     /**

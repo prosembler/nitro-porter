@@ -16,23 +16,11 @@ class Smf1 extends Source
         'hasDiscussionBody' => true, // SMF stores the OP body in the discussion export.
     ];
 
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Simple Machines 1',
         'defaultTablePrefix' => 'smf_',
         'charsetTable' => 'messages',
         'passwordHashMethod' => 'Django',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 1,
-            'Attachments' => 1,
-        ]
     ];
 
     /**

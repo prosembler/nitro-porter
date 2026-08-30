@@ -12,21 +12,10 @@ use Porter\Source;
 
 class BbPress1 extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'bbPress 1',
         'defaultTablePrefix' => 'bb_',
         'charsetTable' => 'posts',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 0,
-            'PrivateMessages' => 1,
-        ]
     ];
 
     /**

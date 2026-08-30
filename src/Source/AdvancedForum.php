@@ -12,22 +12,10 @@ use Porter\Source;
 
 class AdvancedForum extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Advanced Forum 7.x-2.*',
         'defaultTablePrefix' => '',
         'charsetTable' => 'Comment',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 0,
-            'Signatures' => 1,
-        ]
     ];
 
     /**

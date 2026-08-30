@@ -16,24 +16,10 @@ use Porter\Log;
 
 class VBulletin5 extends VBulletin
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'vBulletin 5 Connect',
         'defaultTablePrefix' => 'vb_',
         'charsetTable' => 'node',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 1,
-            'Signatures' => 0,
-            'Attachments' => 1,
-            'Bookmarks' => 1,
-        ]
     ];
 
     /**

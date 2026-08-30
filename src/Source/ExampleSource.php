@@ -15,29 +15,19 @@ use Porter\Source;
  */
 class ExampleSource extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => '_Example', // Package name users will see.
         'defaultTablePrefix' => '', // Default table prefix this software uses, if you know it.
         'charsetTable' => 'comments',  // Usually put the comments table name here. Used to derive charset.
-        'features' => [  // Set features you support to 1 or a string (for support notes).
-            'Users' => 1,
-            'Roles' => 0,
-            'Categories' => 1, // May be a text note about support, like the name of a required plugin.
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Attachments' => 0,
-            'Avatars' => 0,
-            'Reactions' => 0,
-            'PrivateMessages' => 0,
-            'Polls' => 0,
-            'Badges' => 0,
-            'Bookmarks' => 0,
-            'Ranks' => 0,
-            'Groups' => 0,
-            'Tags' => 0,
-            'Signatures' => 0,
-            'UserNotes' => 0,
-        ]
+    ];
+
+    public const array FEATURE_REQUIREMENTS = [
+        'polls' => [
+            'enabled' => 'some/plugin', // Support notes of a required plugin or config.
+            'schema' => [ // Required for the feature to run.
+                'polls' => ['poll_id', 'poll_name'] // TableName => ColumnNames
+            ],
+        ],
     ];
 
     protected function users(): void

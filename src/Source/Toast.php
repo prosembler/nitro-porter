@@ -12,22 +12,10 @@ use Porter\Source;
 
 class Toast extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Toast',
         'defaultTablePrefix' => 'tstdb_',
         'charsetTable' => 'Post',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 0,
-            'PrivateMessages' => 0,
-            'Signatures' => 1,
-        ]
     ];
 
     protected function users(): void

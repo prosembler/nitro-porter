@@ -13,28 +13,11 @@ use Porter\Source;
 
 class PhpBb3 extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'phpBB 3',
         'defaultTablePrefix' => 'phpbb_',
         'charsetTable' => 'posts',
         'passwordHashMethod' => 'phpBB',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 1,
-            'Signatures' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 1,
-            'Badges' => 0,
-            'UserNotes' => 1,
-            'Ranks' => 1,
-        ]
     ];
 
     /**

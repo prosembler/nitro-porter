@@ -137,7 +137,7 @@ abstract class Target extends Package
      */
     public function getPath(string $type, string $addPath = 'none'): string
     {
-        $folder = trim(static::SUPPORTED[$type . 'Path']  ?? '', '/');
+        $folder = trim(static::INFO[$type . 'Path']  ?? '', '/');
         if ($addPath === 'full' && Config::getInstance()->get('target_root')) {
             $folder = rtrim(Config::getInstance()->get('target_root'), '/') . '/' . trim($folder, '/');
         } elseif ($addPath === 'web' && Config::getInstance()->get('target_webroot')) {

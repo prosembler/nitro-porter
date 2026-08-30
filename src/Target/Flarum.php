@@ -19,25 +19,21 @@ use Porter\Target;
  */
 class Flarum extends Target
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Flarum',
         'defaultTablePrefix' => 'FLA_',
         'avatarPath' => 'assets/avatars',
         'attachmentPath' => 'assets/files/imported',
-        'features' => [
-            'Users' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'Categories' => 'tags',
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 'fof/polls',
-            'PrivateMessages' => 'fof/byobu',
-            'Attachments' => 'fof/uploads',
-            'Bookmarks' => 'subscriptions',
-            'Badges' => 'v17development/flarum-user-badges',
-            'Reactions' => 'fof/reactions',
-        ]
+    ];
+
+    public const array FEATURE_REQUIREMENTS = [
+        'categories' => ['enabled' => 'tags'],
+        'polls' => ['enabled' => 'fof/polls'],
+        'conversations' => ['enabled' => 'fof/byobu'],
+        'attachments' => ['enabled' => 'fof/uploads'],
+        'bookmarks' => ['enabled' => 'subscriptions'],
+        'badges' => ['enabled' => 'v17development/flarum-user-badges'],
+        'reactions' => ['enabled' => 'fof/reactions'],
     ];
 
     protected const array FLAGS = [
@@ -413,7 +409,7 @@ class Flarum extends Target
             ->select()
             ->selectRaw('0 as discussion_id')
             ->selectRaw("concat('imported/', Path) as path")
-            ->selectRaw("concat('/" . self::SUPPORTED['attachmentPath'] . "/',
+            ->selectRaw("concat('/" . self::INFO['attachmentPath'] . "/',
                 trim(leading '/' from COALESCE(Path, ''))) as url") // @todo Only a relative URL so far.
             // Untangle the Media.ForeignID & Media.ForeignTable [comment, discussion, message]
             ->selectRaw("case

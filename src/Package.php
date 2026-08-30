@@ -2,9 +2,11 @@
 
 namespace Porter;
 
+use ReflectionClass;
+
 abstract class Package
 {
-    public const SUPPORTED = [
+    public const INFO = [
         'name' => '',
         'defaultTablePrefix' => '',
         'charsetTable' => '', // Source-only
@@ -15,7 +17,11 @@ abstract class Package
         'avatarThumbPath' => '',
         'attachmentPath' => '',
         'attachmentThumbPath' => '',
-        'features' => [],
+    ];
+
+    /** @var array Declare requirements for each feature to run. */
+    public const array FEATURE_REQUIREMENTS = [
+        //$featureName => ['enabled' => 'some/plugin','schema' => [$table => [$columns]],],
     ];
 
     /** @var array Settings that change Target behavior. */
@@ -52,7 +58,7 @@ abstract class Package
     public function run(): void
     {
         foreach (Support::list() as $step) { // @todo Add to packages via Factory::package().
-            if (method_exists($this, $step)) {
+            if (method_exists($this, $step)) { // @todo Check $this::FEATURE_REQUIREMENTS[$feature]['schema']
                 $this->$step();
             }
         }
@@ -71,13 +77,38 @@ abstract class Package
         }
     }
 
+    /** Retrieve metadata from the Package. */
+    public static function inspect(string $type, string $name): array
+    {
+        $class = '\Porter' . '\\' . ucfirst($type) . '\\' . $name;
+        if (class_exists($class, false)) {
+            $methods = new ReflectionClass(new $class())->getMethods();
+            $methods = array_column($methods, 'name');
+
+            if (defined($class . '::FEATURE_REQUIREMENTS')) {
+                $required = $class::FEATURE_REQUIREMENTS;
+            } else {
+                $required = array_filter($class::SUPPORTED['features'] ?? [], function ($item) {
+                    return !is_numeric($item);
+                });
+            }
+
+            return [
+                'features' => array_intersect($methods, Support::list()),
+                'required' => $required,
+                'info' => $class::INFO,
+            ];
+        }
+        return [];
+    }
+
     /**
      * Get support info of the target package.
      * @see Target::setSources()
      */
     public static function getSupport(): array
     {
-        return static::SUPPORTED;
+        return static::INFO;
     }
 
     protected function getSchema(string $name): array
@@ -90,7 +121,7 @@ abstract class Package
      */
     public static function getName(): string
     {
-        return static::SUPPORTED['name'];
+        return static::INFO['name'];
     }
 
     /**
@@ -98,7 +129,7 @@ abstract class Package
      */
     public static function getPrefix(): string
     {
-        return static::SUPPORTED['defaultTablePrefix'];
+        return static::INFO['defaultTablePrefix'];
     }
 
     /**

@@ -13,29 +13,11 @@ use Porter\Target;
  */
 class Agorakit extends Target
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Agorakit',
         'defaultTablePrefix' => '',
         'avatarPath' => 'storage/app/users',
         'attachmentPath' => 'storage/app/import',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Categories' => 1,
-            'Roles' => 1,
-            'Attachments' => 1,
-            'Avatars' => 1,
-            'Reactions' => 0, // Partial
-            // @todo Figure out support options.
-            'Tags' => 0,
-            'Groups' => 0,
-            'Bookmarks' => 0,
-            'Polls' => 0,
-            'Badges' => 0,
-            'PrivateMessages' => 0,
-        ]
     ];
 
     protected const array FLAGS = [
@@ -196,7 +178,7 @@ class Agorakit extends Target
      * Format: {approot}/storage/app/groups/{group_id}/files/{file_id}/{datestamp}-{originalname}
      * Use a generic 'imports' folder instead of attempting to divvy by group.
      * @see self::filemap()
-     * @see self::SUPPORTED [attachmentPath]
+     * @see self::INFO [attachmentPath]
      */
     protected function mapAttachments(string $fileTarget): int
     {
@@ -221,7 +203,7 @@ class Agorakit extends Target
      * Format: {approot}/storage/app/users/{user_id}/cover.jpg
      * We cannot convert to .jpg, so reuse existing file extension.
      * @see self::filemap()
-     * @see self::SUPPORTED [avatarPath]
+     * @see self::INFO [avatarPath]
      */
     protected function mapAvatars(string $fileTarget): int
     {

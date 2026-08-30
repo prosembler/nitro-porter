@@ -12,30 +12,11 @@ use Porter\Source;
 
 class PunBb extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'PunBB 1',
         'defaultTablePrefix' => 'punbb_',
         'charsetTable' => 'posts',
         'passwordHashMethod' => 'punbb',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 0,
-            'Signatures' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 0,
-            'Badges' => 0,
-            'UserNotes' => 0,
-            'Ranks' => 0,
-            'Groups' => 0,
-            'Tags' => 1,
-        ]
     ];
 
     /**

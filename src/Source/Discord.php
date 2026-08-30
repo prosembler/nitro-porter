@@ -16,22 +16,10 @@ use Porter\Source;
  */
 class Discord extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Discord',
         'defaultTablePrefix' => '',
         'charsetTable' => 'discord_messages',
-        'features' => [
-            'Users' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'Attachments' => 1,
-            'Emoji' => 1,
-            'Reactions' => 1,
-            'Polls' => 1,
-        ]
     ];
 
     /** @var int Milliseconds from Unix Epoch. */

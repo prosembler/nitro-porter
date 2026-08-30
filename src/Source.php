@@ -117,8 +117,8 @@ abstract class Source extends Package
     public static function getCharsetTable(): string
     {
         $charset = '';
-        if (isset(static::SUPPORTED['charsetTable'])) {
-            $charset = static::SUPPORTED['charsetTable'];
+        if (isset(static::INFO['charsetTable'])) {
+            $charset = static::INFO['charsetTable'];
         }
         return $charset;
     }
@@ -128,7 +128,7 @@ abstract class Source extends Package
      */
     public function getPath(string $type, bool $addFullPath = false): string
     {
-        $folder = rtrim(static::SUPPORTED[$type . 'Path'] ?? '', '/');
+        $folder = rtrim(static::INFO[$type . 'Path'] ?? '', '/');
         if ($addFullPath && Config::getInstance()->get('source_root')) {
             $folder = rtrim(Config::getInstance()->get('source_root'), '/') . '/' . trim($folder, '/');
         }

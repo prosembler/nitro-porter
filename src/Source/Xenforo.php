@@ -19,7 +19,7 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 class Xenforo extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Xenforo',
         'defaultTablePrefix' => 'xf_',
         'charsetTable' => 'post',
@@ -30,21 +30,6 @@ class Xenforo extends Source
         'avatarThumbPath' => 'data/avatars/m/',
         'attachmentPath' => 'internal_data/attachments/0/',
         'attachmentThumbPath' => 'data/attachments/0/',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0, // @todo
-            'Roles' => 1,
-            'Avatars' => 1,
-            'AvatarThumbnails' => 1,
-            'PrivateMessages' => 1,
-            'Signatures' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 0, // @todo
-        ]
     ];
 
     protected const array FLAGS = [

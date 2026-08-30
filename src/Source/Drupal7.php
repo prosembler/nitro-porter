@@ -14,23 +14,10 @@ class Drupal7 extends Source
 {
     public const string PATTERN = "~\"data:image/png;base64,(.*?)\"~";
 
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Drupal 7',
         'defaultTablePrefix' => '',
         'charsetTable' => 'comment',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 0,
-            'Signatures' => 1,
-            'Attachments' => 1,
-        ]
     ];
 
     protected string $path = '/uploads/';

@@ -4,6 +4,7 @@ namespace Porter\Ext\Command;
 
 use Ahc\Cli\Input\Command;
 use Ahc\Cli\Output\Writer;
+use Porter\Package;
 use Porter\Support;
 
 class ShowCommand extends Command
@@ -28,20 +29,19 @@ class ShowCommand extends Command
     public function execute(): void
     {
         // Validate type.
-        if (!in_array($this->type, ['source', 'target'])) {
+        $pluralType = $this->type . 's';
+        if (!in_array($pluralType, Package::TYPES)) {
             (new Writer())->bold->yellow->write('Invalid value for <type>');
             return;
         }
 
         // Validate name.
-        $info = ($this->type === 'source') ?  Support::getInstance()->getSources() :
-            Support::getInstance()->getTargets();
-        if (!array_key_exists($this->name, $info)) {
+        if (!in_array($this->name, Package::list($pluralType))) {
             (new Writer())->bold->yellow->write('Unknown package "' . $this->name . '" (case-sensitive).');
             return;
         }
 
-        $this->showFeatures($this->type, $this->name, $info);
+        $this->showFeatures($this->type, $this->name);
     }
 
     /**
@@ -49,12 +49,13 @@ class ShowCommand extends Command
      *
      * @param string $type
      * @param string $name
-     * @param array $info
+     * @param array $packageInfo
      */
-    public function showFeatures(string $type, string $name, array $info): void
+    public function showFeatures(string $type, string $name): void
     {
         $writer = new Writer();
-        $writer->bold->green->write("\n" . 'Support for ' . $type . ' ' . $info[$name]['name'] . "\n");
-        $writer->table(Support::getInstance()->getFeatureTable($name, $info), ['head' => 'bold']);
+        $packageInfo = Package::inspect($type, $name);
+        $writer->bold->green->write("\n" . 'Support for ' . $type . ' ' . $packageInfo['info']['name'] . "\n");
+        $writer->table(Support::getInstance()->getFeatureTable($packageInfo), ['head' => 'bold']);
     }
 }

@@ -16,25 +16,10 @@ use Porter\Source;
 
 class Mvc extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'MVC',
         'defaultTablePrefix' => '',
         'charsetTable' => 'Post',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 0,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 0,
-            'Signatures' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 0,
-            'Badges' => 1,
-            'Tags' => 1,
-        ]
     ];
 
     public array $sourceTables = [

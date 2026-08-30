@@ -12,27 +12,10 @@ use Porter\Source;
 
 class Yaf extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'YAF.NET',
         'defaultTablePrefix' => 'yaf_',
         'charsetTable' => 'Topic',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 0,
-            'PrivateMessages' => 1,
-            'Signatures' => 1,
-            'Attachments' => 0,
-            'Bookmarks' => 0,
-            'Badges' => 0,
-            'UserNotes' => 0,
-            'Ranks' => 1,
-        ]
     ];
 
     public static array $passwordFormats = [0 => 'md5', 1 => 'sha1', 2 => 'sha256', 3 => 'sha384', 4 => 'sha512'];

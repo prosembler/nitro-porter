@@ -12,22 +12,10 @@ use Porter\Source;
 
 class Drupal6 extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Drupal 6',
         'defaultTablePrefix' => '',
         'charsetTable' => 'comment',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 0,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 1,
-            'Signatures' => 1,
-        ]
     ];
 
     protected function users(): void

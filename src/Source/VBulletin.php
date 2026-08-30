@@ -36,59 +36,10 @@ use Porter\Source;
 
 class VBulletin extends Source
 {
-    public const SUPPORTED = [
+    public const INFO = [
         'name' => 'vBulletin 3 & 4',
         'defaultTablePrefix' => 'vb_',
         'charsetTable' => 'post',
-        /*'options' => [
-            'db-avatars' => [
-                'Enables exporting avatars from the database.',
-                'Sx' => '::',
-                'Default' => false,
-            ],
-            'db-files' => [
-                'Enables exporting attachments from database.',
-                'Sx' => '::',
-                'Default' => false,
-            ],
-            'files-only' => [
-                'Skip all exports except files stored in database.',
-                'Sx' => '::'
-            ],
-            'mindate' => [
-                'A date to import from. Like selective amnesia.'
-            ],
-            'forumid' => [
-                'Only export 1 forum (category) with given ID.'
-            ],
-            'files-source' => [
-                'Full path of file attachments to be renamed.',
-                'Sx' => '::'
-            ],
-            'separator' => [
-                'Character used to split the hash of attachments. ("" or "/")',
-                'Sx' => '::'
-            ],
-        ],*/
-        'features' => [
-            'Comments' => 1,
-            'Discussions' => 1,
-            'Users' => 1,
-            'Categories' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'Attachments' => 1,
-            'PrivateMessages' => 1,
-            'UserWall' => 1,
-            'UserNotes' => 1,
-            'Bookmarks' => 1,
-            'Passwords' => 1,
-            'Signatures' => 1,
-            'Ranks' => 1,
-            'Polls' => 1,
-            'Tags' => 1,
-            'Reactions' => 1,
-        ]
     ];
 
     protected const array FLAGS = [

@@ -13,28 +13,11 @@ use Porter\Target;
  */
 class Discourse extends Target
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Discourse',
         'defaultTablePrefix' => '',
         //'avatarPath' => '',
         //'attachmentPath' => '',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Categories' => 1,
-            'Roles' => 1,
-            'Attachments' => 1,
-            'Avatars' => 1,
-            'Reactions' => 1,
-            'Tags' => 0, //
-            'Bookmarks' => 0, //
-            'Polls' => 0, //
-            'Badges' => 0, //
-            'Groups' => 0,
-            'PrivateMessages' => 0,
-        ]
     ];
 
     protected const array FLAGS = [
@@ -217,7 +200,7 @@ class Discourse extends Target
     /**
      * Assign a new location for message file attachments.
      * @see self::filemap()
-     * @see self::SUPPORTED [attachmentPath]
+     * @see self::INFO [attachmentPath]
      */
     protected function mapAttachments(string $fileTarget): int
     {
@@ -239,7 +222,7 @@ class Discourse extends Target
     /**
      * Assign a new location for user photos / avatars.
      * @see self::filemap()
-     * @see self::SUPPORTED [avatarPath]
+     * @see self::INFO [avatarPath]
      */
     protected function mapAvatars(string $fileTarget): int
     {

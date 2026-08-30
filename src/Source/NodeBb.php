@@ -12,28 +12,11 @@ use Porter\Source;
 
 class NodeBb extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'NodeBB 0.*',
         'defaultTablePrefix' => 'gdn_',
         'charsetTable' => 'post',
         'passwordHashMethod' => 'Vanilla',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Polls' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'PrivateMessages' => 1,
-            'Signatures' => 1,
-            'Attachments' => 0,
-            'Bookmarks' => 1,
-            'UserNotes' => 1,
-            'Tags' => 1,
-            'Reactions' => 1,
-        ]
     ];
 
     public function tsToDate(mixed $time): false|string|null

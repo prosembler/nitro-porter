@@ -11,22 +11,19 @@ use Porter\Source;
 
 class Flarum extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'Flarum',
         'defaultTablePrefix' => 'FLA_',
         'charsetTable' => 'posts',
-        'features' => [  // Set features you support to 1 or a string (for support notes).
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Roles' => 1,
-            'Avatars' => 0,
-            'PrivateMessages' => 'fof/byobu',
-            'Bookmarks' => 'flarum/subscriptions',
-            'Badges' => '17development/flarum-user-badges',
-        ]
+    ];
+
+    public const array FEATURE_REQUIREMENTS = [
+        'conversations' => [
+            'enabled' => 'fof/byobu',
+            'schema' => ['recipients' => [], 'discussions' => ['is_private'],]
+        ],
+        'bookmarks' => ['enabled' => 'flarum/subscriptions'],
+        'badges' => ['enabled' => '17development/flarum-user-badges'],
     ];
 
     protected const array FLAGS = [

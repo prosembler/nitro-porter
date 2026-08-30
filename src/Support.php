@@ -120,7 +120,7 @@ class Support
     }
 
     /**
-     * Use the manifest list, but without hooks
+     * Use the manifest list, but without hooks.
      */
     public function getFeatures(): array
     {
@@ -130,48 +130,31 @@ class Support
 
     /**
      * Get the data support status for a single platform feature.
-     * @return string Yes or No.
+     * @return string 'Yes', 'No', or 'Requires X'.
      */
-    public function getFeatureStatus(array $supported, string $package, string $feature, bool $notes = true): string
+    public function getFeatureStatus(array $packageInfo, string $feature): string
     {
-        if (!isset($supported[$package]['features'])) {
-            return 'No';
-        }
-
-        $available = $supported[$package]['features'];
-
-        // Calculate feature availability.
-        $status = '';
-        if (isset($available[$feature])) {
-            if ($available[$feature] === 0) {
-                $status = 'No';
-            } elseif ($available[$feature]) {
-                // Say 'yes' for table shorthand
-                $status = 'Yes';
-                if ($notes && $available[$feature] !== 1) {
-                    // Send the text of the note
-                    $status = $available[$feature];
-                }
+        $status = 'No';
+        if (in_array($feature, $packageInfo['features'])) {
+            $status = 'Yes';
+            if (!empty($packageInfo['required'][$feature]['enabled'])) {
+                $status = 'Requires ' . $packageInfo['required'][$feature]['enabled']; // Send the text of the note
             }
         }
-
         return $status;
     }
 
     /**
      * Build an array-based matrix of feature support.
      */
-    public function getFeatureTable(string $name, array $info): array
+    public function getFeatureTable(array $packageInfo): array
     {
-        // Build feature list.
-        $features = $this->getFeatures();
-        $list = [];
-        foreach ($features as $feature) {
+        foreach ($this->getFeatures() as $feature) {
             $list[] = [
                 'feature' => preg_replace('/[A-Z]/', ' $0', $feature),
-                'support' =>  $this->getFeatureStatus($info, $name, $feature)
+                'support' =>  $this->getFeatureStatus($packageInfo, $feature),
             ];
         }
-        return $list;
+        return $list ?? [];
     }
 }

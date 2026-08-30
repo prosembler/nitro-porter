@@ -16,23 +16,11 @@ use Porter\Source;
  */
 class IpBoard4 extends Source
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'IP.Board 4',
         'defaultTablePrefix' => 'ibf_',
         'charsetTable' => 'forums_posts',
         'passwordHashMethod' => 'ipb',
-        'features' => [
-            'Users' => 1,
-            'Passwords' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Roles' => 1,
-            'PrivateMessages' => 1,
-            'Attachments' => 1,
-            'Bookmarks' => 0,
-            'Tags' => 0,
-        ]
     ];
 
     protected function conversations(): void

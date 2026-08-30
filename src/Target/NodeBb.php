@@ -19,26 +19,11 @@ use Porter\Target;
 
 class NodeBb extends Target
 {
-    public const array SUPPORTED = [
+    public const array INFO = [
         'name' => 'NodeBB 4.x',
         'defaultTablePrefix' => '',
         'avatarPath' => 'public/uploads/profile',
         'attachmentPath' => 'public/uploads/files',
-        'features' => [
-            'Users' => 1,
-            'Categories' => 1,
-            'Discussions' => 1,
-            'Comments' => 1,
-            'Roles' => 1,
-            'Avatars' => 1,
-            'Attachments' => 1,
-            'Polls' => 0,
-            'PrivateMessages' => 0,
-            'Bookmarks' => 0,
-            'Badges' => 0,
-            'Tags' => 0,
-            'Reactions' => 0,
-        ]
     ];
 
     protected const array FLAGS = [
@@ -1028,7 +1013,7 @@ class NodeBb extends Target
      * Unlike a SQL target the output store is MongoDB, so this updates `PORT_` on the porter
      * (SQL) connection.
      * @see self::filemap()
-     * @see self::SUPPORTED [attachmentPath]
+     * @see self::INFO [attachmentPath]
      */
     protected function mapAttachments(string $fileTarget): int
     {
@@ -1054,7 +1039,7 @@ class NodeBb extends Target
      * Unlike a SQL target the output store is MongoDB, so this updates `PORT_` on the porter
      * (SQL) connection. users() then reads the mapped path back to set the NodeBB `picture`.
      * @see self::filemap()
-     * @see self::SUPPORTED [avatarPath]
+     * @see self::INFO [avatarPath]
      */
     protected function mapAvatars(string $fileTarget): int
     {

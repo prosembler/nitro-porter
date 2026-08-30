@@ -33,37 +33,39 @@ abstract class Package
 
     /** @var array|string[] Auto-run() this list of methods unless overwritten per-package. */
     protected const array MANIFEST = [
-        // prepare
-        'setup', // HOOK
+        // Prepare
+        'setup', // Pre-migration actions.
         'filemap', // Map a file transfer.
-        // users
+
+        // Users
         'users',
         'roles',
         'badges',
         'ranks',
         'signatures',
-        // taxonomy
+        'avatars',
+
+        // Taxonomy
         'categories',
         'groups',
-        // content
-        'precontent', // HOOK
+        'tags',
+        'emojis',
+
+        // Content
+        'precontent', // Build references for content migration.
         'discussions',
         'comments',
-        'conversations',
-        'wallposts', // public profile posts
-        'usernotes', // private profile posts
-        // meta
-        'tags',
+        'conversations', // (private / direct messages)
+        'wallposts', // (public profile posts)
+        'usernotes', // (private profile posts)
+        'attachments',
         'reactions',
         'bookmarks',
         'polls',
-        // files
-        'avatars',
-        'attachments',
-        'emojis',
-        'filetransfer', // HOOK
-        // finalize
-        'cleanup', // HOOK
+
+        // Finalize
+        'filetransfer', // Do the file transfer.
+        'cleanup', // Post-migration actions.
     ];
 
     /**

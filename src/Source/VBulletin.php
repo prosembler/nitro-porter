@@ -190,7 +190,7 @@ class VBulletin extends Source
     /**
      * SQL to get the file extension from a string.
      */
-    public static function fileExtension($columnName): string
+    public static function fileExtension(string $columnName): string
     {
         return "right($columnName, instr(reverse($columnName), '.') - 1)";
     }
@@ -203,7 +203,7 @@ class VBulletin extends Source
      * @param bool $attachments   Whether to move attachments.
      * @param bool $customAvatars Whether to move avatars.
      */
-    public function doFileExport($attachments = true, $customAvatars = true): void
+    public function doFileExport(bool $attachments = true, bool $customAvatars = true): void
     {
         if ($attachments) {
             $identity = 'f.attachmentid';
@@ -274,7 +274,7 @@ class VBulletin extends Source
     /**
      * Convert database blobs into files.
      */
-    public function exportBlobs($sql, $blobColumn, $pathColumn, $thumbnail = false): void
+    public function exportBlobs(string $sql, string $blobColumn, string $pathColumn, int|bool $thumbnail = false): void
     {
         Log::comment('Exporting blobs...');
         $result = $this->query($sql);

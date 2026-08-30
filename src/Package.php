@@ -41,7 +41,6 @@ abstract class Package
         'roles',
         'badges',
         'ranks',
-        'usermeta',
         'signatures',
         // taxonomy
         'categories',

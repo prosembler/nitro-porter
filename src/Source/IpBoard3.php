@@ -587,7 +587,7 @@ EOT;
         $this->export('UserRole', $sql, $userRole_Map);
     }
 
-    protected function userMeta(): void
+    protected function signatures(): void
     {
         $userMeta_Map = [
             'UserID' => 'UserID',

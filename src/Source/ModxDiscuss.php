@@ -78,9 +78,9 @@ class ModxDiscuss extends Source
         );
     }
 
-    protected function userMeta(): void
+    protected function signatures(): void
     {
-        $this->export(
+        $this->export( // @todo split non-signature data to users()
             'UserMeta',
             "select
                     user as UserID,

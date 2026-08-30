@@ -79,7 +79,7 @@ class CodoForum extends Source
         );
     }
 
-    protected function userMeta(): void
+    protected function signatures(): void
     {
         $this->export(
             'UserMeta',

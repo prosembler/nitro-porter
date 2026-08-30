@@ -220,7 +220,7 @@ class WebWiz extends Source
         );
     }
 
-    protected function usermeta(): void
+    protected function signatures(): void
     {
         $this->export(
             'UserMeta',

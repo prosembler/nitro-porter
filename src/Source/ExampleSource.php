@@ -96,18 +96,17 @@ class ExampleSource extends Source
         );
     }
 
-    protected function userMeta(): void
+    protected function signatures(): void
     {
-        // This is an example of pulling Signatures into Vanilla's UserMeta table.
-        // This is often a good place for any extraneous data on the User table too.
-        // The Profile Extender addon uses the namespace "Profile.[FieldName]"
-        // You can add the appropriately-named fields after the migration.
-        // Profiles will auto-populate with the migrated data.
+        // Example of pulling Signatures into Vanilla's UserMeta table.
+        // You can add the appropriately-named fields after the migration in the dashboard
+        // and profiles will auto-populate with the migrated data.
 
         // When the query is longer, it's clearer to set it up THEN pass it to export().
         $query = $this->sourceQB()->from('tblAuthor')
             ->selectSub('Author_ID', 'UserID') // Use selectSub() to alias within the query.
             ->selectSub('Signature', 'Value')
+            // The Profile Extender addon uses the namespace "Profile.[FieldName]"
             ->selectRaw("'Plugin.Signatures.Sig' as Name") // Use selectRaw() for more elaborate SQL.
             ->whereRaw("Signature <> ''");
 

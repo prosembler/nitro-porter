@@ -1,10 +1,14 @@
 # User Guide
 
-!!! warning "**Localhost Development Only**: Don't use this in Production or anywhere publicly accessible."
+!!! warning "Localhost Development Only"
 
-!!! note "It's normal for a migration to take a while! You're learning a new tool, and you might find bugs from edge cases in you content or more recent changes in the source or target software.
-If you want free help, expect the back-and-forth to potentially take months depending on the scope of the issues and volunteer availability.
-If you're in a hurry, contract a developer to manage the process for you. As usual, mind the axiom: You can have it fast, good, or cheap — pick two."
+    Don't use this in Production or anywhere publicly accessible.
+
+!!! note "Approach with Patience"
+
+    It's normal for a migration to take a while! You're learning a new tool, and you might find bugs from edge cases in you content or more recent changes in the source or target software.
+    If you want free help, expect the back-and-forth to potentially take months depending on the scope of the issues and volunteer availability.
+    If you're in a hurry, contract a developer to manage the process for you. As usual, mind the axiom: You can have it fast, good, or cheap — pick two.
 
 ## Installation
 
@@ -26,7 +30,9 @@ Alternatively, connect a desktop app to MariaDB on `localhost:3308` with name & 
 
 ### Alternate install: Manual Localhost
 
-!!! info "Non-Docker Only: If using Docker (above), skip to Basic Usage (below). This requires a full PHP environment."
+!!! info "Non-Docker Only"
+
+    If using Docker (above), skip to Basic Usage (below). This option requires a full PHP environment.
 
 If you're doing many migrations or have huge datasets, you may which to avoid Docker. In this case, you need:
 

@@ -61,9 +61,9 @@ You will need to manually compress the generated folder into a ZIP.
 
 This is an advanced setup NOT required to contribute to the docs. It simply lets you run the documentation website on your localhost.
 
-Install MkDocs Material and necessary plugins.
-
 !!! info "On MacOS, use `pip3` instead of `pip`"
+
+Install MkDocs Material and necessary plugins.
 
     pip install -r requirements.txt
 

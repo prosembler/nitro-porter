@@ -19,9 +19,9 @@ abstract class Origin extends Package
      * @throws \Exception
      */
     public function __construct(
-        protected Storage\Database $outputStorage, // Where data is being written.
-        protected Storage\Database $extractStorage, // Second connection for simultaneous read/write.
-        public string $packageName,
+        protected ?Storage\Database $outputStorage = null, // Where data is being written.
+        protected ?Storage\Database $extractStorage = null, // Second connection for simultaneous read/write.
+        public string $packageName = '',
     ) {
         $this->config = Config::getInstance()->getConnectionAlias($packageName); // Bit of a hack.
         $this->schema = Schema::load(strtolower($packageName));

@@ -46,6 +46,7 @@ class Factory
         if (is_a($https, Storage\Https::class)) {
             $origin->addHttps($https);
         }
+        $origin->setConfig(Config::getInstance()->getConnectionAlias($originName)); // Bit of a hack.
         return $origin;
     }
 

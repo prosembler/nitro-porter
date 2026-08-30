@@ -23,8 +23,12 @@ abstract class Origin extends Package
         protected ?Storage\Database $extractStorage = null, // Second connection for simultaneous read/write.
         public string $packageName = '',
     ) {
-        $this->config = Config::getInstance()->getConnectionAlias($packageName); // Bit of a hack.
         $this->schema = Schema::load(strtolower($packageName));
+    }
+
+    public function setConfig(array $config): void
+    {
+        $this->config = $config;
     }
 
     public function addHttps(Storage\Https $originStorage): void

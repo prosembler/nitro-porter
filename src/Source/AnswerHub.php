@@ -19,15 +19,12 @@ class AnswerHub extends Source
         'charsetTable' => 'nodes',
         'features' => [
             'Users' => 1,
-            'Passwords' => 0,
             'Categories' => 1,
             'Discussions' => 1,
             'Comments' => 1,
             'Polls' => 0,
             'Roles' => 1,
             'Avatars' => 0,
-            'PrivateMessages' => 0,
-            'Signatures' => 0,
             'Attachments' => 1,
             'Tags' => 1,
         ]
@@ -43,228 +40,202 @@ class AnswerHub extends Source
 
     protected function users(): void
     {
-        $user_Map = [
-            'c_email' => ['Column' => 'Email', 'Filter' => [$this, 'BlankEmails']],
+        $map = [
+            'c_id' => 'UserID',
+            'c_name' => 'Name',
+            'c_email' => 'Email',
+            'c_creation_date' => 'DateInserted',
+            'c_birthday' => 'DateOfBirth',
+            'c_last_seen' => 'DateLastActive',
+            'Admin=0',
         ];
-        $this->export(
-            'User',
-            "select
-                    user.c_id as UserID,
-                    user.c_name as Name,
-                    sha2(concat(user.c_name, now()), 256) as Password,
-                    'Reset' as HashMethod,
-                    user.c_creation_date as DateInserted,
-                    user.c_birthday as DateOfBirth,
-                    user.c_last_seen as DateLastActive,
-                    user_email.c_email,
-                    0 as Admin
+        $filters = [
+            'c_email' => 'BlankEmails',
+        ];
+        $query = "select user.*, user_email.c_email
                 from :_authoritables as user
                      left join :_user_emails as user_email on user_email.c_user = user.c_id
                 where user.c_type = 'user'
-                    and user.c_name != '\$\$ANON_USER\$\$'",
-            $user_Map
-        );
+                    and user.c_name != '\$\$ANON_USER\$\$'";
+        $this->export('User', $query, $map, $filters);
     }
 
     protected function roles(): void
     {
-        $result = $this->query("select c_reserved as lastID
-            from id_generators
-            where c_identifier = 'AUTHORITABLE'");
-        $lastID = 0;
-        if ($result && $row = $result->nextResultRow()) {
-            $lastID = $row['lastID'];
-        }
-        $this->export(
-            'Role',
-            "select
-                groups.c_id as RoleID,
-                groups.c_name as Name,
-                groups.c_description as Description
-            from :_authoritables as groups
-            where groups.c_type = 'group'
-            union all
-            select
-                $lastID + 1,
-                'System Administrator',
-                'System users from AnswerHub'
-            from dual"
-        );
+        // Role.
+        $map = [
+            'c_id' => 'RoleID',
+            'c_name' => 'Name',
+            'c_description' => 'Description',
+        ];
+        $query = "select * from :_authoritables where c_type = 'group'";
+        $this->export('Role', $query, $map);
+
+        // Add a default role past existing IDs.
+        $result = $this->query("select c_reserved from id_generators where c_identifier = 'AUTHORITABLE'");
+        $lastID = ($result && $row = $result->nextResultRow()) ? $row['c_reserved'] : 0;
+        $this->dbPorter()->table('Role')->insertOrIgnore([
+            ['RoleID' => $lastID++, 'Name' => 'System Administrator', 'Description' => 'System users from AnswerHub']
+        ]);
 
         // User Role.
-        $this->export(
-            'UserRole',
-            "select
-                    user_role.c_groups as RoleID,
-                    user_role.c_members as UserID
-                from :_authoritable_groups as user_role"
-        );
+        $map = [
+            'c_groups' => 'RoleID',
+            'c_members' => 'UserID',
+        ];
+        $query = $this->sourceQB()->from('authoritable_groups')->select();
+        $this->export('UserRole', $query, $map);
     }
 
     protected function categories(): void
     {
-        $category_Map = [];
+        $map = [
+            'c_id' => 'CategoryID',
+            'c_name' => 'Name',
+        ];
         $this->export(
             'Category',
-            "select containers.c_id as CategoryID,
+            "select containers.*,
                     case
                         when parents.c_type = 'space' then containers.c_parent
-                        else null
-                    end as ParentCategoryID,
-                    containers.c_name as Name
-                from containers as containers
+                        else null end as ParentCategoryID,
+                from containers
                 left join containers as parents on parents.c_id = containers.c_parent
-                where containers.c_type = 'space'
-                    and containers.c_active = 1",
-            $category_Map
+                where containers.c_type = 'space' and containers.c_active = 1",
+            $map
         );
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [];
-        // The query works fine but it will probably be slow for big tables
-        $this->export(
-            'Discussion',
-            "select
-                questions.c_id as DiscussionID,
+        $map = [
+            'c_id' => 'DiscussionID',
+            'c_title' => 'Name',
+            'c_primaryContainer' => 'CategoryID',
+            'c_author' => 'InsertUserID',
+            'c_creation_date' => 'DateInserted',
+            'Format=Html',
+        ];
+        $query = "select questions.*,
                 if(questions.c_type = 'question', 'Question', NULL) as Type,
-                questions.c_primaryContainer as CategoryID,
-                questions.c_author as InsertUserID,
-                questions.c_creation_date as DateInserted,
-                questions.c_title as Name,
-                case
-                    when nr.c_body is not null and nr.c_body <> '' then nr.c_body
-                    when questions.c_body is not null and questions.c_body <> '' then questions.c_body
-                    else questions.c_title
-                end as Body,
-                'HTML' as Format,
+                COALESCE(NULLIF(nr.c_body, ''), NULLIF(questions.c_body, ''), questions.c_title ) as Body,
                 if(locate('[closed]', questions.c_normalized_state) > 0, 1, 0) as Closed,
                 if(questions.c_type = 'question',
-                if(count(answers.c_id) > 0,
-                    if (locate('[accepted]', group_concat(ifnull(answers.c_normalized_state, ''))) = 0,
-                        if (locate('[rejected]', group_concat(ifnull(answers.c_normalized_state, ''))) = 0,
-                            'Answered',
-                            'Rejected'
-                        ),
-                        'Accepted'
-                    ),
-                    'Unanswered'
-                ), null) as QnA
+                    if(count(answers.c_id) > 0,
+                        if (locate('[accepted]', group_concat(ifnull(answers.c_normalized_state, ''))) = 0,
+                            if (locate('[rejected]', group_concat(ifnull(answers.c_normalized_state, ''))) = 0,
+                                'Answered', 'Rejected'
+                            ), 'Accepted'
+                        ), 'Unanswered'
+                    ), null
+                ) as QnA
             from :_nodes as questions
-            left join (select c_node, c_body
+            left join (
+                select c_node, c_body
                 from :_node_revisions nr
-                where c_id in (
-                    select max(c_id) as id from :_node_revisions group by c_node)
+                where c_id in (select max(c_id) as id from :_node_revisions group by c_node)
             )  nr on nr.c_node = questions.c_id
-	        left join :_nodes as answers on
-                answers.c_parent = questions.c_id
-                and answers.c_type = 'answer'
-                and answers.c_visibility = 'full'
-            where questions.c_type in ('question', 'topic')
-                and questions.c_visibility = 'full'
-            group by questions.c_id",
-            $discussion_Map
-        );
+	        left join :_nodes as answers on answers.c_parent = questions.c_id
+                and answers.c_type = 'answer' and answers.c_visibility = 'full'
+            where questions.c_type in ('question', 'topic') and questions.c_visibility = 'full'
+            group by questions.c_id";
+        $this->export('Discussion', $query, $map);
     }
 
     protected function comments(): void
     {
-        $comment_Map = [];
+        $map = [
+            'c_id' => 'CommentID',
+            'c_parent' => 'DiscussionID',
+            'c_author' => 'InsertUserID',
+            'c_creation_date' => 'DateInserted',
+            'Format=Html',
+        ];
         $this->export(
             'Comment',
-            "select
-                answers.c_id as CommentID,
-                answers.c_parent as DiscussionID,
-                answers.c_author as InsertUserID,
-                if(nr.c_body is not null and nr.c_body <> '', nr.c_body, answers.c_body) as Body,
-                'Html' as Format,
-                answers.c_creation_date as DateInserted,
-                if(locate('[accepted]', answers.c_normalized_state) = 0,
-                    if(locate('[rejected]', answers.c_normalized_state) = 0,
-                        null,
-                        'Rejected'
-                    ),
+            "select answers.*,
+                COALESCE(NULLIF(nr.c_body, ''), answers.c_body) as Body,
+                if (
+                    locate('[accepted]', answers.c_normalized_state) = 0,
+                    if( locate('[rejected]', answers.c_normalized_state) = 0, null,'Rejected'),
                     'Accepted'
                 ) as QnA
             from :_nodes as answers
-            left join (select
-                c_node, c_body
-            from :_node_revisions nr
-            where c_id in (
-                select max(c_id) as id
-                from :_node_revisions
-                group by c_node)
-                )  nr on nr.c_id = answers.c_id
+            left join (
+                select c_node, c_body 
+                from :_node_revisions nr
+                where c_id in (select max(c_id) as id from :_node_revisions group by c_node)
+            )  nr on nr.c_id = answers.c_id
             where answers.c_type in ('answer', 'comment')
                   and answers.c_visibility = 'full'",
-            $comment_Map
+            $map
         );
     }
 
     protected function tags(): void
     {
-        $this->export(
-            'Tags',
-            "select
-                    c_id as TagID,
-                    c_plug as Name,
-                    c_title as FullName,
-                    c_creation_date as DateInserted
-                from :_nodes
-                where n.c_type = 'topic'"
-        );
+        // Tags.
+        $map = [
+            'c_id' => 'TagID',
+            'c_plug' => 'Name',
+            'c_title' => 'FullName',
+            'c_creation_date' => 'DateInserted',
+        ];
+        $query = $this->sourceQB()->from('nodes')->select()->where('c_type', '=', 'topic');
+        $this->export('Tags', $query, $map);
 
-        $this->export(
-            'TagDiscussion',
-            "select
-                    c_topics as TagID,
-                    c_nodes as DiscussionID,
-                    -1 as CategoryID,
-                    now() as DateInserted
-                from :_node_topics
-                where c_nodes in (select c_nodes from :_nodes where c_type = 'question')"
+        // TagDiscussion.
+        $map = [
+            'c_topics' => 'TagID',
+            'c_nodes' => 'DiscussionID',
+            'CategoryID=-1',
+        ];
+        $query = $this->sourceQB()->from('node_topics')->select()->whereIn(
+            'c_nodes',
+            function ($query) {
+                $query->select('c_nodes')->from('nodes')->where('c_type', '=', 'question');
+            }
         );
+        $this->export('TagDiscussion', $query, $map);
     }
 
     protected function attachments(): void
     {
-        $media_Map = [
-            'Name' => ['Column' => 'Name', 'Filter' => [$this, 'getFileName']],
+        $map = [
+            'c_id' => 'MediaID',
+            'c_name' => 'Name',
+            'c_mime_type' => 'Type',
+            'c_size' => 'Size',
+            'c_user' => 'InsertUserID',
+            'c_creation_date' => 'DateInserted',
+            'c_Node' => 'ForeignID',
         ];
-        $filters = [
-            'Type' => 'ExtToMime',
-        ];
-        $this->export(
-            'Media',
-            "select
-                    m.c_id as `MediaID`,
-                    m.c_name as `Name`,
+        $query = "select m.*, na.c_Node,
                     concat('attachments', m.c_name) as `Path`,
-                    m.c_mime_type as `Type`,
-                    m.c_size as `Size`,
-                    m.c_user as `InsertUserID`,
-                    m.c_creation_date as `DateInserted`,
-                    na.c_Node as `ForeignID`,
                     if(n.c_type = 'question', 'discussion', 'comment') as `ForeignTable`
                 from :_managed_files as m
                 join :_node_attachments na on na.c_attachments = m.c_id
-                join :_nodes n on na.c_Node = n.c_id
-                union
-                select
-                    s.c_id as `MediaID`,
+                join :_nodes n on na.c_Node = n.c_id";
+        $this->export('Media', $query, $map);
+
+        $map = [
+            'c_id' => 'MediaID',
+            'c_addedBy' => 'InsertUserID',
+            'c_creation_date' => 'DateInserted',
+            'c_node' => 'ForeignID',
+            'Size=1',
+        ];
+        $filters = [
+            'Type' => 'ExtToMime',
+            'Name' => [$this, 'getFileName'],
+        ];
+        $query = "select
                     s.c_url as `Name`,
                     s.c_url as `Path`,
                     s.c_url as `Type`,
-                    1 as `Size`,
-                    s.c_addedBy as `InsertUserID`,
-                    s.c_creation_date as `DateInserted`,
-                    s.c_node as `ForeignID`,
                     if(n.c_type = 'question', 'discussion', 'comment') as `ForeignTable`
                 from :_sources s
-                join :_nodes n on s.c_node = n.c_id",
-            $media_Map,
-            $filters
-        );
+                join :_nodes n on s.c_node = n.c_id";
+        $this->export('Media', $query, $map, $filters);
     }
 }

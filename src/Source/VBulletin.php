@@ -168,69 +168,27 @@ class VBulletin extends Source
         //'visitormessage'
     ];
 
-    /**
-     * Export each table one at a time.
-     *
-     */
     public function run(): void
     {
-        $minDiscussionID = 0;
-        $minDiscussionWhere = 0;
-
-        // Ranks
         $ranks = $this->ranks();
-
-        $this->users($ranks);
+        $this->users($ranks); // @todo Timing problem.
         $this->roles();
-        $this->userMeta('');
 
-        $this->discussions($minDiscussionID, '');
-        $this->comments($minDiscussionID, '');
+        $this->discussions();
+        $this->comments();
 
-        if ($this->hasInputSchema('threadread', ['readtime']) === true) {
-            $threadReadTime = 'from_unixtime(tr.readtime)';
-            $threadReadJoin = 'left join :_threadread as tr on tr.userid = st.userid and tr.threadid = st.threadid';
-        } else {
-            $threadReadTime = 'now()';
-            $threadReadJoin = null;
-        }
-
-        $this->export(
-            'UserDiscussion',
-            "
-            select
-                st.userid as UserID,
-                st.threadid as DiscussionID,
-                $threadReadTime as DateLastViewed,
-                '1' as Bookmarked
-            from :_subscribethread as st
-                $threadReadJoin
-                $minDiscussionWhere"
-        );
-
-        $this->wallPosts($minDiscussionID);
+        $this->bookmarks();
+        $this->wallPosts();
 
         $this->conversations();
         $this->polls();
-
-        // Media
-        if ($this->hasInputSchema('attachment') === true) {
-            $this->attachments($minDiscussionID);
-        }
-
+        $this->attachments();
         $this->tags();
-
-        // Reactions
-        if ($this->hasInputSchema('post_thanks') === true) {
-            $this->reactions();
-        }
+        $this->reactions();
     }
 
     /**
      * SQL to get the file extension from a string.
-     *
-     * @param  string $columnName
-     * @return string SQL.
      */
     public static function fileExtension($columnName): string
     {
@@ -315,11 +273,6 @@ class VBulletin extends Source
 
     /**
      * Convert database blobs into files.
-     *
-     * @param string $sql
-     * @param string $blobColumn
-     * @param string $pathColumn
-     * @param bool|int $thumbnail
      */
     public function exportBlobs($sql, $blobColumn, $pathColumn, $thumbnail = false): void
     {
@@ -383,20 +336,47 @@ class VBulletin extends Source
         Log::comment("$count Blobs.", false);
     }
 
+    public function bookmarks(): void
+    {
+        $minDiscussionWhere = 0;
+        if ($this->hasInputSchema('threadread', ['readtime']) === true) {
+            $threadReadTime = 'from_unixtime(tr.readtime)';
+            $threadReadJoin = 'left join :_threadread as tr on tr.userid = st.userid and tr.threadid = st.threadid';
+        } else {
+            $threadReadTime = 'now()';
+            $threadReadJoin = null;
+        }
+        $this->export(
+            'UserDiscussion',
+            "
+            select
+                st.userid as UserID,
+                st.threadid as DiscussionID,
+                $threadReadTime as DateLastViewed,
+                '1' as Bookmarked
+            from :_subscribethread as st
+                $threadReadJoin
+                $minDiscussionWhere"
+        );
+    }
+
     /**
      * Export the attachments as Media.
      *
      * In vBulletin 4.x, the filedata table was introduced.
      */
-    public function attachments(false|int $minDiscussionID = false): void
+    public function attachments(): void
     {
-        $instance = $this;
-
-        if ($minDiscussionID) {
-            $discussionWhere = "and t.threadid > $minDiscussionID";
-        } else {
-            $discussionWhere = '';
+        if ($this->hasInputSchema('attachment') !== true) {
+            return;
         }
+
+        $instance = $this;
+        //if ($minDiscussionID) {
+        //    $discussionWhere = "and t.threadid > $minDiscussionID";
+        //} else {
+        $discussionWhere = '';
+        //}
         $media_Map = [
             'attachmentid' => 'MediaID',
             'filename' => 'Name',
@@ -894,6 +874,9 @@ class VBulletin extends Source
 
     protected function reactions(): void
     {
+        if ($this->hasInputSchema('post_thanks') !== true) {
+            return;
+        }
         $this->export(
             'UserTag',
             "select
@@ -918,7 +901,7 @@ class VBulletin extends Source
         );
     }
 
-    protected function categories(string $forumWhere): void
+    protected function categories(): void
     {
         $category_Map = [
             'title' => ['Column' => 'Name', 'Filter' => [$this, 'htmlDecode']],
@@ -932,9 +915,7 @@ class VBulletin extends Source
                     f.parentid as ParentCategoryID,
                     f.title,
                     f.displayorder
-                from :_forum as f
-                where 1 = 1
-                $forumWhere",
+                from :_forum as f",
             $category_Map
         );
     }
@@ -1047,9 +1028,11 @@ class VBulletin extends Source
                 left join :_userban ub on u.userid = ub.userid and ub.liftdate <= now()",
             $user_Map
         );
+
+        $this->userMeta();
     }
 
-    protected function userMeta(string $forumWhere): void
+    protected function userMeta(): void
     {
         $this->query("drop table if exists VbulletinUserMeta");
         $this->query("
@@ -1071,10 +1054,7 @@ class VBulletin extends Source
         foreach ($userFields as $field => $insertAs) {
             $this->query(
                 "insert into VbulletinUserMeta (UserID, Name, Value)
-                    select
-                        userid,
-                        'Profile.$insertAs',
-                        $field
+                    select userid, 'Profile.$insertAs', $field
                     from :_user where $field != '' and $field != 'http://'
 
                     union select userid as UserID,
@@ -1095,9 +1075,7 @@ class VBulletin extends Source
         if ($this->hasInputSchema('phrase', ['product', 'fieldname']) === true) {
             // Dynamic vB user data (userfield)
             $profileFields = $this->query(
-                "select distinct
-                    varname,
-                    text
+                "select distinct varname, text
                 from :_phrase
                 where product='vbulletin'
                     and fieldname='cprofilefield'
@@ -1142,10 +1120,10 @@ class VBulletin extends Source
                 union
                 select * from VbulletinUserMeta"
         );
-        $this->categories($forumWhere);
+        $this->categories();
     }
 
-    protected function comments(int $minDiscussionID, string $forumWhere): void
+    protected function comments(): void
     {
         $comment_Map = [
             'pagetext' => ['Column' => 'Body', 'Filter' => function ($value) {
@@ -1155,9 +1133,9 @@ class VBulletin extends Source
         ];
 
         $minDiscussionWhere = '';
-        if ($minDiscussionID) {
-            $minDiscussionWhere = "and p.threadid > $minDiscussionID";
-        }
+        //if ($minDiscussionID) {
+        //    $minDiscussionWhere = "and p.threadid > $minDiscussionID";
+        //}
 
         $excludeFirstPost = '';
         $joinThreads = '';
@@ -1182,20 +1160,19 @@ class VBulletin extends Source
                     left join :_deletionlog as d on (d.type='post' and d.primaryid=p.postid)
                 where $excludeFirstPost d.primaryid is null
                     and p.visible = 1
-                    $minDiscussionWhere
-                    $forumWhere",
+                    $minDiscussionWhere",
             $comment_Map
         );
     }
 
-    protected function wallPosts(int $minDiscussionID): void
+    protected function wallPosts(): void
     {
         // Activity (from visitor messages in vBulletin 3.8+)
         $minDiscussionWhere = '';
         if ($this->hasInputSchema('visitormessage') === true) {
-            if ($minDiscussionID) {
-                $minDiscussionWhere = "and dateline > $minDiscussionID";
-            }
+            //if ($minDiscussionID) {
+            //    $minDiscussionWhere = "and dateline > $minDiscussionID";
+            //}
 
             $activity_Map = [
                 'postuserid' => 'RegardingUserID',
@@ -1224,7 +1201,7 @@ class VBulletin extends Source
         }
     }
 
-    protected function discussions(int $minDiscussionID, string $forumWhere): void
+    protected function discussions(): void
     {
         $discussion_Map = [
             'title' => ['Column' => 'Name', 'Filter' => [$this, 'htmlDecode']],
@@ -1234,9 +1211,9 @@ class VBulletin extends Source
             ],
         ];
         $minDiscussionWhere = '';
-        if ($minDiscussionID) {
-            $minDiscussionWhere = "and t.threadid > $minDiscussionID";
-        }
+        //if ($minDiscussionID) {
+        //    $minDiscussionWhere = "and t.threadid > $minDiscussionID";
+        //}
         $this->export(
             'Discussion',
             "select
@@ -1262,8 +1239,7 @@ class VBulletin extends Source
                     left join :_post as p on p.postid = t.firstpostid
                 where d.primaryid is null
                     and t.visible = 1
-                $minDiscussionWhere
-                $forumWhere",
+                $minDiscussionWhere",
             $discussion_Map
         );
     }

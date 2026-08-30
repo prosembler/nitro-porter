@@ -51,6 +51,7 @@ return [
         'Discourse',
         'Flarum',
         'NodeBb',
+        'Vanilla',
         'Waterhole',
     ],
     'origins' => [

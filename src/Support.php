@@ -102,15 +102,6 @@ class Support
     /** @see self::set() */
     private function setTargets(array $targets): void
     {
-        // Hardcode Vanilla file support (all = yes).
-        $this->targets['file'] = [
-            'name' => 'Vanilla (file)',
-            'avatarsPrefix' => 'p',
-            'avatarThumbnailsPrefix' => 'n',
-            'features' => array_fill_keys($this->getFeatures(), 1),
-        ];
-
-        // Load the rest of the target support automatically.
         foreach ($targets as $name) {
             $classname = '\Porter\Target\\' . $name;
             if (is_a($classname, Target::class, true)) {

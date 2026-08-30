@@ -98,6 +98,17 @@ abstract class Package
                 'required' => $required,
                 'info' => $class::INFO,
             ];
+        } elseif ('target' === $type && 'Vanilla' === $name) {
+            // Hardcode Vanilla file support (all = yes).
+            return [
+                'features' => Support::list(),
+                'required' => [],
+                'info' => [
+                    'name' => 'Vanilla (file)',
+                    'avatarsPrefix' => 'p',
+                    'avatarThumbnailsPrefix' => 'n',
+                ],
+            ];
         }
         return [];
     }

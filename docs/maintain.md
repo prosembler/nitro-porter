@@ -30,7 +30,7 @@ Those same issues are the primary hurdles to level 7, it seems.
 This project desperately needs more **integration tests** that simulate an actual migration.
 Faker & Phinx are available for this purpose (see `composer phinx` and `composer seed`).
 
-## Commits & PRs
+## Code Authoring
 
 You must use `fix: ` and `feat:` prefixes on your commit messages for the [changelog automation](https://www.conventionalcommits.org/en/v1.0.0/#summary) to work.
 
@@ -55,10 +55,15 @@ Ready-built ZIP files are distributed on GitHub with each release.
 Build them with `composer build`, which triggers a Phing build in `/build/current`.
 You will need to manually compress the generated folder into a ZIP.
 
-## Build Docs (localhost)
+## Documentation
+
+### Building Docs (localhost)
+
 This is an advanced setup NOT required to contribute to the docs. It simply lets you run the documentation website on your localhost.
 
-Install MkDocs Material and necessary plugins. On MacOS, use `pip3` instead of `pip`:
+Install MkDocs Material and necessary plugins.
+
+!!! info "On MacOS, use `pip3` instead of `pip`"
 
     pip install -r requirements.txt
 
@@ -70,7 +75,12 @@ You should now be able to view the docs at: `http://127.0.0.1:8000/` (paste it i
 
 To stop serving, use `Ctrl + C` or close the Terminal window. To restart, just use `mkdocs serve` again.
 
-### Troubleshooting
+### Editing Docs
+
+* Nitro Porter docs use [Mkdocs](https://www.mkdocs.org/user-guide/writing-your-docs/).
+* Mkdocs [formatting reference](https://squidfunk.github.io/mkdocs-material/reference/), especially [Admonitions](https://squidfunk.github.io/mkdocs-material/reference/admonitions/).
+
+### Troubleshooting Docs
 
 #### command not found: mkdocs
 If you get this on MacOS, it's likely not in your `PATH`. Take the output of `python3 -m site --user-base` and add `/bin` to it (ex: `/Users/linc/Library/Python/3.9/bin`), add that as a new line in `/etc/paths` (requires `sudo`), and **restart Terminal**.

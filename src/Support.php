@@ -14,29 +14,15 @@ class Support
         'features',
     ];
 
-    public const array SUPPORTED_FEATURES = [
-        'Users',
-        'Categories',
-        'Discussions',
-        'Comments',
-        'Roles',
-        'Passwords',
-        'PrivateMessages',
-        'Attachments',
-        'Bookmarks',
-        'Avatars',
-        'AvatarThumbnails',
-        'Signatures',
-        'Polls',
-        'Tags',
-        'Reactions',
-        'Badges',
-        'UserNotes',
-        'Ranks',
-        //'UserWall',
-        //'Groups',
-        //'Emoji',
-        //'Articles',
+    /**
+     * @var array|string[] Manifest items that represent hooks, not features.
+     * @todo Make this a declarative notation directly in the manifest.
+     */
+    public const array MANIFEST_HOOKS = [
+        'setup',
+        'filemap',
+        'precontent',
+        'cleanup',
     ];
 
     private static ?Support $instance = null;
@@ -68,6 +54,14 @@ class Support
     public function getTargets(): array
     {
         return $this->targets;
+    }
+
+    /**
+     * Retrieve an array from manifest.php.
+     */
+    public static function list(?string $name = null): array
+    {
+        return include(ROOT_DIR . '/manifest.php');
     }
 
     /**
@@ -113,7 +107,7 @@ class Support
             'name' => 'Vanilla (file)',
             'avatarsPrefix' => 'p',
             'avatarThumbnailsPrefix' => 'n',
-            'features' => array_fill_keys(self::SUPPORTED_FEATURES, 1),
+            'features' => array_fill_keys($this->getFeatures(), 1),
         ];
 
         // Load the rest of the target support automatically.
@@ -123,6 +117,15 @@ class Support
                 $this->targets[$name] = $classname::getSupport();
             }
         }
+    }
+
+    /**
+     * Use the manifest list, but without hooks
+     */
+    public function getFeatures(): array
+    {
+        $manifest = include(ROOT_DIR . '/manifest.php');
+        return array_diff($manifest, self::MANIFEST_HOOKS);
     }
 
     /**
@@ -161,7 +164,7 @@ class Support
     public function getFeatureTable(string $name, array $info): array
     {
         // Build feature list.
-        $features = array_keys($this->getAllFeatures());
+        $features = $this->getFeatures();
         $list = [];
         foreach ($features as $feature) {
             $list[] = [
@@ -170,19 +173,5 @@ class Support
             ];
         }
         return $list;
-    }
-
-    /**
-     * Define what data can be successfully ported to Vanilla.
-     *
-     * First array key is where the data is stored.
-     * Second array key is the feature name, and value is one of:
-     *    - 0 if unsupported
-     *    - 1 if supported
-     *    - string if supported, with notes or caveats
-     */
-    public function getAllFeatures(): array
-    {
-        return array_fill_keys(self::SUPPORTED_FEATURES, 0);
     }
 }

@@ -31,43 +31,6 @@ abstract class Package
 
     public const TYPES = ['origins', 'sources', 'targets'];
 
-    /** @var array|string[] Auto-run() this list of methods unless overwritten per-package. */
-    protected const array MANIFEST = [
-        // Prepare
-        'setup', // Pre-migration actions.
-        'filemap', // Map a file transfer.
-
-        // Users
-        'users',
-        'roles',
-        'badges',
-        'ranks',
-        'signatures',
-        'avatars',
-
-        // Taxonomy
-        'categories',
-        'groups',
-        'tags',
-        'emojis',
-
-        // Content
-        'precontent', // Build references for content migration.
-        'discussions',
-        'comments',
-        'conversations', // (private / direct messages)
-        'wallposts', // (public profile posts)
-        'usernotes', // (private profile posts)
-        'attachments',
-        'reactions',
-        'bookmarks',
-        'polls',
-
-        // Finalize
-        'filetransfer', // Do the file transfer.
-        'cleanup', // Post-migration actions.
-    ];
-
     /**
      * If this is 'false', skip extract first post content from `Discussions.Body`.
      *
@@ -88,7 +51,7 @@ abstract class Package
     /** Main process. Run the MANIFEST methods if not overridden. */
     public function run(): void
     {
-        foreach (self::MANIFEST as $step) {
+        foreach (Support::list() as $step) { // @todo Add to packages via Factory::package().
             if (method_exists($this, $step)) {
                 $this->$step();
             }
@@ -96,7 +59,7 @@ abstract class Package
     }
 
     /**
-     * Retrieve an array from named file in `/data`.
+     * Retrieve an array from packages.php.
      */
     public static function list(?string $name = null): array
     {

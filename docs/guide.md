@@ -1,10 +1,14 @@
 # User Guide
 
-## Installation
-
 !!! warning "**Localhost Development Only**: Don't use this in Production or anywhere publicly accessible."
 
-### Docker Desktop (recommended)
+!!! note "It's normal for a migration to take a while! You're learning a new tool, and you might find bugs from edge cases in you content or more recent changes in the source or target software.
+If you want free help, expect the back-and-forth to potentially take months depending on the scope of the issues and volunteer availability.
+If you're in a hurry, contract a developer to manage the process for you. As usual, mind the axiom: You can have it fast, good, or cheap — pick two."
+
+## Installation
+
+### Recommended install: Docker Desktop
 
 - Install Docker Desktop on [Mac](https://docs.docker.com/desktop/setup/install/mac-install/), [Windows](https://docs.docker.com/desktop/setup/install/windows-install/), or [Linux](https://docs.docker.com/desktop/setup/install/linux/).
 - Download the [latest Nitro Porter](https://github.com/prosembler/nitro-porter/releases) & unzip it.
@@ -20,13 +24,13 @@ It is safe to re-run `./bin/setup.sh` any time.
 You can access phpMyAdmin by visiting `localhost:8082` in your browser. Use this to import your database(s).
 Alternatively, connect a desktop app to MariaDB on `localhost:3308` with name & password `porter`. 
 
-### Manual Localhost (alternate)
+### Alternate install: Manual Localhost
 
-!!! info "Non-Docker Only: If using Docker (above), skip to Basic Usage (below)"
+!!! info "Non-Docker Only: If using Docker (above), skip to Basic Usage (below). This requires a full PHP environment."
 
 If you're doing many migrations or have huge datasets, you may which to avoid Docker. In this case, you need:
 
-* PHP 8.4+ (CLI-only is fine) with a 256MB+ `memory_limit` (Nitro Porter will attempt to set this automatically)
+* PHP 8.4+ (CLI-only is fine)
 * MariaDB & its PDO driver for PHP
 * Any database connections your platforms require
 
@@ -45,10 +49,6 @@ With a configured localhost, then:
 
 1. Add connections for your source and output to `config.php`.
 1. See the options with `porter --help`.
-
-It's normal for a migration to take a while. You're learning a new tool, and you might find bugs from edge cases in you content or more recent changes in the source or target software. 
-If you want free help, expect the back-and-forth to potentially take months depending on the scope of the issues and volunteer availability.
-If you're in a hurry, contract a developer to manage the process for you. As usual, mind the axiom: "You can have it fast, good, or cheap — pick 2."
 
 ### Get oriented
 
@@ -78,15 +78,15 @@ Use `porter run --help` for a full set of options (including shortcodes).
 
 A very simple run might look like: 
 ```
-porter run --source=<name> --input=<connection> --target=<name>
+porter run -s=<name> -i=<connection> -t=<name>
 ```
 
 **Example A**: Export from Vanilla in `example_db` to Flarum in `test_db`:
 ```
-porter run --source=Vanilla --input=example_db --target=Flarum --output=test_db
+porter run -s=Vanilla -i=example_db -t=Flarum -o=test_db
 ```
 
-**Example B**: Export from XenForo in `example_db` to Flarum in the same database, using shortcodes:
+**Example B**: Export from XenForo in `example_db` to Flarum in the same database:
 ```
 porter run -s Xenforo -i example_db -t Flarum
 ```

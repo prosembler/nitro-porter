@@ -2,8 +2,7 @@
 
 ## Installation
 
-!!! warning "Localhost Development Only"
-Don't use this in Production or anywhere publicly accessible
+!!! warning "**Localhost Development Only**: Don't use this in Production or anywhere publicly accessible."
 
 ### Docker Desktop (recommended)
 
@@ -23,7 +22,7 @@ Alternatively, connect a desktop app to MariaDB on `localhost:3308` with name & 
 
 ### Manual Localhost (alternate)
 
-!!! info "Non-Docker Only" — If using Docker (above), skip to "Basic Usage" (below)
+!!! info "Non-Docker Only: If using Docker (above), skip to Basic Usage (below)"
 
 If you're doing many migrations or have huge datasets, you may which to avoid Docker. In this case, you need:
 

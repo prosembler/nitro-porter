@@ -16,6 +16,10 @@ to customize them as needed (without committing them — they are ignored by git
 * `composer lint` runs linting (PHPCS) with the PSR12 standard.
 * `composer delint` runs a fix for linting issues (PHPCBF). It does its best.
 * `composer stan` runs static analysis (PHPStan) as defined in `phpstan.neon.dist`.
+* `composer test` runs the _unit_ test suite (_only_).
+* `composer testall` runs both _unit_ & _integration_ tests. It runs mock data tests against databases and takes more time to run. It does **NOT** run in the CI pipeline.
+
+The CI pipeline runs `lint`, `stan`, and `test`.
 
 PHPStan is currently at level 6 with exceptions for the deprecated `src/Database`,
 the `src/Source/*` packages that need updating (still at level 5),
@@ -23,13 +27,7 @@ and rule `missingType.iterableValue` which wants `mixed[]` all over the docblock
 array use / reducing usage of them, which should likely wait for the previous 2 issues to get updated).
 Those same issues are the primary hurdles to level 7, it seems.
 
-## Testing Tools
-
-Use `composer test` to run the _unit_ test suite (_only_ — see `phpunit.xml.dist`). This runs in the CI pipeline.
-
-Use `composer testall` to _also_ run _integration_ tests. It runs mock data tests against databases and takes more time to run. It does **NOT** run in the CI pipeline.
-
-This project desperately needs more **integration tests** that simulate an actual migration. 
+This project desperately needs more **integration tests** that simulate an actual migration.
 Faker & Phinx are available for this purpose (see `composer phinx` and `composer seed`).
 
 ## Commits & PRs
@@ -41,6 +39,8 @@ Please use thoughtful, concise commit messages and make use of rebase & squash w
 Our _unit of work_ is the commit, not the PR. 
 It is therefore preferable to have multiple atomic commits than to squash an entire complex PR into 1 commit.
 If you don't know what this means, that's OK! You can contribute anyway and we'll figure it out as we go.
+
+Please do not submit unedited commits or pull requests generated with an LLM, nor any code that you do not fully understand.
 
 ## Releases
 

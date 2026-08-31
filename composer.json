@@ -31,7 +31,7 @@
         "seed": "vendor/bin/phinx seed:run",
         "stan": "vendor/bin/phpstan analyse --memory-limit 1G",
         "changelog": "php vendor/bin/conventional-changelog",
-        "analyze": "git-of-theseus-analyze ./ --ignore 'tests/**' --ignore 'build/current/**' --ignore 'docs/**' --ignore-whitespace",
+        "analyze": "git-of-theseus-analyze ./ --ignore 'build/current/**' --ignore 'docs/**' --ignore-whitespace",
         "graphauth": "git-of-theseus-stack-plot authors.json --max-n 15",
         "graphcode": "git-of-theseus-survival-plot survival.json"
     },

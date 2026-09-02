@@ -84,7 +84,7 @@ class Schema
         foreach ($filters as $columnName => $filterName) {
             if (is_callable($filterName)) {
                 $row[$columnName] = $filterName($row[$columnName], $columnName, $row);
-            } else {
+            } else { // @todo deprecated
                 $filterName = '\Porter\\Filter\\' . $filterName;
                 if (array_key_exists($columnName, $row) && class_exists($filterName)) {
                     $filter = new $filterName($row[$columnName], $columnName, $row);

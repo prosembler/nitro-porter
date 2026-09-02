@@ -197,12 +197,8 @@ class File extends Storage
 
     /**
      * Whether file storage is writable.
-     *
-     * @param string $resourceName
-     * @param array $structure
-     * @return bool
      */
-    public function exists(string $resourceName = '', array $structure = []): bool
+    public function exists(string $resourceName = '', array $schema = [], array $keys = []): bool
     {
         return is_writable($this->path);
     }

@@ -80,7 +80,7 @@ class Storage
     }
 
     /** Whether $resourceName exists, and optionally contains $structure. */
-    public function exists(string $resourceName = '', array $structure = []): bool
+    public function exists(string $resourceName = '', array $schema = [], array $keys = []): bool
     {
         return false;
     }

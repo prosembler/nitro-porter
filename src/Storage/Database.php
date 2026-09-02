@@ -234,21 +234,20 @@ class Database extends Storage
 
     /**
      * Whether the requested table & columns exist.
-     *
-     * @param string $resourceName
-     * @param array $structure
-     * @return bool
      * @see Migration::hasInputSchema()
      */
-    public function exists(string $resourceName = '', array $structure = []): bool
+    public function exists(string $resourceName = '', array $schema = [], array $keys = []): bool
     {
-        $schema = $this->porterConnection->dbConnection()->getSchemaBuilder();
-        if (empty($structure)) {
+        $builder = $this->porterConnection->dbConnection()->getSchemaBuilder();
+        $hasKeys = true;
+        if (empty($schema)) {
             // No columns requested.
-            return $schema->hasTable($resourceName);
+            return $builder->hasTable($resourceName);
+        } elseif (!empty($keys)) {
+            $hasKeys = $builder->hasIndex($resourceName, $keys);
         }
         // Table must exist and columns were requested.
-        return $schema->hasTable($resourceName) && $schema->hasColumns($resourceName, $structure);
+        return $builder->hasTable($resourceName) && $builder->hasColumns($resourceName, $schema) && $hasKeys;
     }
 
     /**

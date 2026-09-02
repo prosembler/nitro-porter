@@ -250,31 +250,28 @@ abstract class Source extends Package
 
     /**
      * Determine if an index exists in a table
-     * @deprecated Builder::hasIndex()
+     * @deprecated hasInputSchema()
      *
      */
     public function indexExists(string $indexName, string $table): bool
     {
-        $result = $this->query("show index from `$table` WHERE Key_name = '$indexName'");
-        if (false === $result) {
-            return false;
-        }
-        return $result->nextResultRow() !== false;
+        $table = str_replace(':_', $this->dbInput()->getTablePrefix(), $table); // replace prefix.
+        return $this->inputStorage->exists($table, [], [$indexName]);
     }
 
     /**
      * Check if the input storage schema exists.
      *
      * @param string $table The name of the table to check.
-     * @param array|string $columns Column names to check.
+     * @param array|string $schema Column names to check.
      * @return bool Whether the table and all columns exist.
      */
-    public function hasInputSchema(string $table, array|string $columns = []): bool
+    public function hasInputSchema(string $table, array|string $schema = [], array $keys = []): bool
     {
-        if (is_string($columns)) {
-            $columns = [$columns];
+        if (is_string($schema)) {
+            $schema = [$schema];
         }
-        return $this->inputStorage->exists($table, $columns);
+        return $this->inputStorage->exists($table, $schema, $keys);
     }
 
     /**

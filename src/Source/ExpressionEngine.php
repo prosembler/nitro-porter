@@ -79,8 +79,8 @@ class ExpressionEngine extends Source
     public function exportConversationTemps(): void
     {
         $this->dbInput()->unprepared('DROP TABLE IF EXISTS z_pmto;');
-        $this->dbInput()->unprepared('CREATE TABLE z_pmto (message_id INT UNSIGNED, userid INT UNSIGNED, deleted TINYINT(1),
-            PRIMARY KEY(message_id, userid));');
+        $this->dbInput()->unprepared('CREATE TABLE z_pmto 
+            (message_id INT UNSIGNED, userid INT UNSIGNED, deleted TINYINT(1), PRIMARY KEY(message_id, userid));');
         $this->dbInput()->unprepared("insert ignore z_pmto (message_id, userid, deleted)
             select message_id, recipient_id, case when message_deleted = 'y' then 1 else 0 end as `deleted`
             from forum_message_copies;");
@@ -113,7 +113,8 @@ class ExpressionEngine extends Source
             group by t.message_id;");
 
         $this->dbInput()->unprepared("DROP TABLE IF EXISTS z_pmtext;");
-        $this->dbInput()->unprepared("CREATE TABLE z_pmtext (message_id INT UNSIGNED, title VARCHAR(250), title2 VARCHAR(250),
+        $this->dbInput()->unprepared("CREATE TABLE z_pmtext 
+            (message_id INT UNSIGNED, title VARCHAR(250), title2 VARCHAR(250),
             userids VARCHAR(250), group_id INT UNSIGNED);");
         $this->dbInput()->unprepared("insert z_pmtext (message_id, title, title2)
             select message_id, message_subject,
@@ -126,7 +127,8 @@ class ExpressionEngine extends Source
             SET pm.userids = t.userids;");
 
         $this->dbInput()->unprepared("DROP TABLE IF EXISTS z_pmgroup;");
-        $this->dbInput()->unprepared("CREATE TABLE z_pmgroup (group_id INT UNSIGNED, title VARCHAR(250), userids VARCHAR(250));");
+        $this->dbInput()->unprepared("CREATE TABLE z_pmgroup 
+            (group_id INT UNSIGNED, title VARCHAR(250), userids VARCHAR(250));");
         $this->dbInput()->unprepared("insert z_pmgroup (group_id, title, userids)
             select min(pm.message_id), pm.title2, t2.userids
             from z_pmtext pm

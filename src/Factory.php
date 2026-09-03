@@ -11,7 +11,7 @@ class Factory
      */
     public static function fileTransfer(Source $source, Target $target, string $outputName): FileTransfer
     {
-        $porterStorage = new Storage\Database(new DataConnection($outputName, 'PORT_'));
+        $porterStorage = new Storage\Database(new StorageConnection($outputName, 'PORT_'));
         return new FileTransfer($source, $target, $porterStorage);
     }
 
@@ -66,7 +66,7 @@ class Factory
         $source->limitTables($dataTypes);
 
         // Add legacy database support to Sources.
-        $connection = new DataConnection($inputName);
+        $connection = new StorageConnection($inputName);
         if ($connection->getType() === 'database') {
             $inputDB = new \Porter\Database\DbFactory($connection->dbConnection()->getPDO());
             $source->addLegacySupport($inputDB);
@@ -101,7 +101,7 @@ class Factory
         }
 
         // Connection info contains the type of storage we want to instantiate.
-        $connection = new DataConnection($name, $prefix);
+        $connection = new StorageConnection($name, $prefix);
         return match ($connection->getType()) {
             'database' => new \Porter\Storage\Database($connection),
             'https' => new \Porter\Storage\Https($connection),

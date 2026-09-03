@@ -10,7 +10,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * Manages a single connection to a data source or target, like a database or API.
  */
-class DataConnection
+class StorageConnection
 {
     /** @var array Valid values for $type. */
     public const array ALLOWED_TYPES = ['database', 'file', 'https', 'mongo'];
@@ -27,9 +27,6 @@ class DataConnection
 
     /**
      * If no connect alias is give, initiate a test connection.
-     *
-     * @param string $alias
-     * @param string $prefix
      * @throws \Exception
      */
     public function __construct(string $alias = '', string $prefix = '')
@@ -68,25 +65,16 @@ class DataConnection
         return $this->info;
     }
 
-    /**
-     * @return array
-     */
     public function getAllInfo(): array
     {
         return $this->info;
     }
 
-    /**
-     * @return string
-     */
     public function getAlias(): string
     {
         return $this->alias;
     }
 
-    /**
-     * @return string
-     */
     public function getType(): string
     {
         return $this->type;
@@ -127,8 +115,6 @@ class DataConnection
 
     /**
      * Get a new DBM connection.
-     *
-     * @return Connection
      */
     protected function newDatabaseConnection(): Connection
     {
@@ -143,8 +129,6 @@ class DataConnection
 
     /**
      * Map keys from our config to Illuminate's.
-     * @param array $config
-     * @return array
      * @deprecated
      */
     protected function translateDatabaseConfig(array $config): array
@@ -161,9 +145,6 @@ class DataConnection
 
     /**
      * Perform MySQL-specific connection optimizations.
-     *
-     * @param Connection $connection
-     * @return Connection
      */
     protected function optimizeMySQL(Connection $connection): Connection
     {
@@ -185,8 +166,6 @@ class DataConnection
 
     /**
      * Setup Illuminate Database instance.
-     *
-     * @param array $info
      */
     protected function setupDatabase(array $info): void
     {
@@ -200,8 +179,6 @@ class DataConnection
 
     /**
      * Setup Symfony HttpClient instance.
-     *
-     * @param array $info
      */
     protected function setupHttps(array $info): void
     {
@@ -212,8 +189,6 @@ class DataConnection
 
     /**
      * Setup MongoDB client and select the target database.
-     *
-     * @param array $info
      */
     protected function setupMongo(array $info): void
     {

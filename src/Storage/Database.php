@@ -4,7 +4,7 @@ namespace Porter\Storage;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
-use Porter\DataConnection;
+use Porter\StorageConnection;
 use Porter\Log;
 use Porter\Storage;
 use Porter\StorageInfo;
@@ -32,11 +32,11 @@ class Database extends Storage
     /** @var array List of tables to ignore errors on insert. */
     protected array $ignoreErrorsTables = [];
 
-    /** @var DataConnection */
-    protected DataConnection $porterConnection;
+    /** @var StorageConnection */
+    protected StorageConnection $porterConnection;
 
-    /** @param DataConnection $c */
-    public function __construct(DataConnection $c)
+    /** @param StorageConnection $c */
+    public function __construct(StorageConnection $c)
     {
         $this->porterConnection = $c;
     }

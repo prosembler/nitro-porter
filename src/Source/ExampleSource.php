@@ -86,23 +86,6 @@ class ExampleSource extends Source
         );
     }
 
-    protected function signatures(): void
-    {
-        // Example of pulling Signatures into Vanilla's UserMeta table.
-        // You can add the appropriately-named fields after the migration in the dashboard
-        // and profiles will auto-populate with the migrated data.
-
-        // When the query is longer, it's clearer to set it up THEN pass it to export().
-        $query = $this->sourceQB()->from('tblAuthor')
-            ->selectSub('Author_ID', 'UserID') // Use selectSub() to alias within the query.
-            ->selectSub('Signature', 'Value')
-            // The Profile Extender addon uses the namespace "Profile.[FieldName]"
-            ->selectRaw("'Plugin.Signatures.Sig' as Name") // Use selectRaw() for more elaborate SQL.
-            ->whereRaw("Signature <> ''");
-
-        $this->export('UserMeta', $query); // No $map needed in this case.
-    }
-
     protected function categories(): void
     {
         // Be careful to not import hundreds of categories. Try translating huge schemas to Tags instead.
@@ -131,8 +114,6 @@ class ExampleSource extends Source
         ];
         $query = $this->sourceQB()->from('tblTopic')
             ->select()
-            // It's easier to convert between Unix time and MySQL datestamps during the db query.
-            ->selectRaw("FROM_UNIXTIME(Message_date) as Message_date")
             ->join('tblThread', 'tblTopic.Start_Thread_ID', '=', 'tblThread.Thread_ID');
 
         $this->export('Discussion', $query, $map, $filters);

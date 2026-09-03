@@ -18,46 +18,17 @@ class Yaf extends Source
         'charsetTable' => 'Topic',
     ];
 
-    public static array $passwordFormats = [0 => 'md5', 1 => 'sha1', 2 => 'sha256', 3 => 'sha384', 4 => 'sha512'];
-
-    public function cleanDate(?string $value): ?string
-    {
-        if (!$value) {
-            return null;
-        }
-        if (substr($value, 0, 4) == '0000') {
-            return null;
-        }
-        return $value;
-    }
-
-    public function convertPassword(string $hash, string $columnName, array $row): string
-    {
-        $salt = $row['PasswordSalt'];
-        $hash = $row['Password2'];
-        $method = $row['PasswordFormat'];
-        if (isset(self::$passwordFormats[$method])) {
-            $method = self::$passwordFormats[$method];
-        } else {
-            $method = 'sha1';
-        }
-        return $method . '$' . $salt . '$' . $hash . '$';
-    }
-
     protected function exportConversationTemps(): void
     {
-        $sql = "
-         drop table if exists z_pmto;
+        $sql = "drop table if exists z_pmto;
          create table z_pmto (
             PM_ID int unsigned,
             User_ID int,
             Deleted tinyint,
-            primary key(PM_ID, User_ID)
-            );
+            primary key(PM_ID, User_ID) );
          insert ignore z_pmto (PM_ID, User_ID, Deleted)
          select PMessageID,  FromUserID, 0
          from :_PMessage;
-
          replace z_pmto (PM_ID, User_ID, Deleted)
          select PMessageID, UserID, IsDeleted
          from :_UserPMessage;
@@ -66,8 +37,7 @@ class Yaf extends Source
          create table z_pmto2 (
             PM_ID int unsigned,
              UserIDs varchar(250),
-             primary key (PM_ID)
-         );
+             primary key (PM_ID) );
 
          replace z_pmto2 (PM_ID, UserIDs)
          select PM_ID, group_concat(User_ID order by User_ID)
@@ -80,8 +50,7 @@ class Yaf extends Source
             Title varchar(250),
              Title2 varchar(250),
              UserIDs varchar(250),
-             Group_ID int unsigned
-         );
+             Group_ID int unsigned );
 
          insert z_pmtext (PM_ID, Title, Title2)
          select PMessageID, Subject,
@@ -98,28 +67,17 @@ class Yaf extends Source
          create table z_pmgroup (
                  Group_ID int unsigned,
                  Title varchar(250),
-                 UserIDs varchar(250)
-               );
-
-         insert z_pmgroup (
-                 Group_ID,
-                 Title,
-                 UserIDs
-               )
-               select
-                 min(pm.PM_ID),
-                 pm.Title2,
-                 t2.UserIDs
+                 UserIDs varchar(250) );
+         insert z_pmgroup (Group_ID, Title, UserIDs)
+               select min(pm.PM_ID), pm.Title2, t2.UserIDs
                from z_pmtext pm
-               join z_pmto2 t2
-                 on pm.PM_ID = t2.PM_ID
+               join z_pmto2 t2 on pm.PM_ID = t2.PM_ID
                group by pm.Title2, t2.UserIDs;
          create index z_idx_pmgroup on z_pmgroup (Title, UserIDs);
          create index z_idx_pmgroup2 on z_pmgroup (Group_ID);
 
          update z_pmtext pm
-               join z_pmgroup g
-                 on pm.Title2 = g.Title and pm.UserIDs = g.UserIDs
+               join z_pmgroup g on pm.Title2 = g.Title and pm.UserIDs = g.UserIDs
                set pm.Group_ID = g.Group_ID;";
 
         $this->dbInput()->unprepared($sql);
@@ -132,27 +90,24 @@ class Yaf extends Source
             'Name' => 'Name',
             'Email' => 'Email',
             'Joined' => 'DateInserted',
-            'LastVisit' => ['Column' => 'DateLastVisit', 'Type' => 'datetime'],
+            'LastVisit' => 'DateLastVisit',
             'IP' => 'InsertIPAddress',
             'Avatar' => 'Photo',
-            'RankID' => ['Column' => 'RankID', 'Type' => 'int'],
-            'Points' => ['Column' => 'Points', 'Type' => 'int'],
+            'RankID' => 'RankID',
+            'Points' => 'Points',
             'LastActivity' => 'DateLastActive',
-            'Password2' => ['Column' => 'Password', 'Filter' => [$this, 'convertPassword']],
-            'HashMethod' => 'HashMethod'
+            'HashMethod=yaf',
+        ];
+        $filters = [
+            'Password' => \Porter\Filter\YafPassword::class,
         ];
         $this->export(
             'User',
-            "select u.*,
-                    m.Password as Password2,
-                    m.PasswordSalt,
-                    m.PasswordFormat,
-                    m.LastActivity,
-                    'yaf' as HashMethod
+            "select u.*, m.Password, m.PasswordSalt, m.PasswordFormat, m.LastActivity
                 from :_User u
-                left join :_prov_Membership m
-                    on u.ProviderUserKey = m.UserID;",
-            $user_Map
+                left join :_prov_Membership m on u.ProviderUserKey = m.UserID;",
+            $user_Map,
+            $filters
         );
     }
 
@@ -162,11 +117,7 @@ class Yaf extends Source
             'GroupID' => 'RoleID',
             'Name' => 'Name'
         ];
-        $this->export(
-            'Role',
-            "select * from :_Group;",
-            $role_Map
-        );
+        $this->export('Role', "select * from :_Group;", $role_Map);
 
         // UserRole.
         $userRole_Map = [
@@ -186,10 +137,7 @@ class Yaf extends Source
         ];
         $this->export(
             'Rank',
-            "select r.*,
-                    RankID as Level,
-                    Name as Label
-                from :_Rank r;",
+            "select r.*, RankID as Level, Name as Label from :_Rank r;",
             $rank_Map
         );
     }
@@ -198,19 +146,11 @@ class Yaf extends Source
     {
         $this->export(
             'UserMeta',
-            "select
-                    UserID,
-                    'Plugin.Signatures.Sig' as `Name`,
-                    Signature as `Value`
-                from :_User
-                where Signature <> ''
+            "select UserID, 'Plugin.Signatures.Sig' as `Name`, Signature as `Value`
+                from :_User where Signature <> ''
                 union all
-                select
-                    UserID,
-                    'Plugin.Signatures.Format' as `Name`,
-                    'BBCode' as `Value`
-                from :_User
-                where Signature <> '';"
+                select UserID, 'Plugin.Signatures.Format' as `Name`, 'BBCode' as `Value`
+                from :_User where Signature <> '';"
         );
     }
 
@@ -223,19 +163,16 @@ class Yaf extends Source
             'Description' => 'Description',
             'SortOrder' => 'Sort'
         ];
-
         $this->export(
             'Category',
-            "select
-                    f.ForumID,
+            "select f.ForumID,
                     case when f.ParentID = 0 then f.CategoryID * 1000 else f.ParentID end as ParentID,
                     f.Name,
                     f.Description,
                     f.SortOrder
                 from :_Forum f
                 union all
-                select
-                    c.CategoryID * 1000,
+                select c.CategoryID * 1000,
                     null,
                     c.Name,
                     null,
@@ -258,10 +195,8 @@ class Yaf extends Source
         ];
         $this->export(
             'Discussion',
-            "select
-                    case when t.Priority > 0 then 1 else 0 end as Announce,
-                    t.Flags & 1 as Closed,
-                    t.*
+            "select t.*, t.Flags & 1 as Closed,
+                    case when t.Priority > 0 then 1 else 0 end as Announce
                 from :_Topic t
                 where t.IsDeleted = 0;",
             $discussion_Map
@@ -270,45 +205,51 @@ class Yaf extends Source
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'MessageID' => 'CommentID',
             'TopicID' => 'DiscussionID',
-            'ReplyTo' => ['Column' => 'ReplyToCommentID', 'Type' => 'int'],
+            'ReplyTo' => 'ReplyToCommentID',
             'UserID' => 'InsertUserID',
             'Posted' => 'DateInserted',
             'Message' => 'Body',
             'Format' => 'Format',
             'IP' => 'InsertIPAddress',
-            'Edited' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'cleanDate']],
+            'Edited' => 'DateUpdated',
             'EditedBy' => 'UpdateUserID'
+        ];
+        $filters = [
+            'Edited' => function ($value) {
+                if (empty($value) || str_starts_with($value, '0000')) {
+                    return null;
+                }
+                return $value;
+            }
         ];
         $this->export(
             'Comment',
-            "select m.*,
-                    case when m.Flags & 1 = 1 then 'Html' else 'BBCode' end as Format
+            "select m.*, case when m.Flags & 1 = 1 then 'Html' else 'BBCode' end as Format
                 from :_Message m
                 where IsDeleted = 0;",
-            $comment_Map
+            $map,
+            $filters
         );
     }
 
     protected function conversations(): void
     {
         $this->exportConversationTemps();
-
-        $conversation_Map = [
+        $map = [
             'PMessageID' => 'ConversationID',
             'FromUserID' => 'InsertUserID',
             'Created' => 'DateInserted',
-            'Title' => ['Column' => 'Subject', 'Type' => 'varchar(512)']
+            'Title' => 'Subject',
         ];
         $this->export(
             'Conversation',
             "select pm.*, g.Title
                 from z_pmgroup g
-                join :_PMessage pm
-                    on g.Group_ID = pm.PMessageID;",
-            $conversation_Map
+                join :_PMessage pm on g.Group_ID = pm.PMessageID;",
+            $map
         );
 
         // UserConversation.
@@ -318,11 +259,10 @@ class Yaf extends Source
             'Deleted' => 'Deleted'
         ];
         $this->export(
-            'UserConversation',
+            'UserConversation', // @todo WTF join?
             "select pto.*
                 from z_pmto pto
-                join z_pmgroup g
-                on pto.PM_ID = g.Group_ID;",
+                join z_pmgroup g on pto.PM_ID = g.Group_ID;",
             $userConversation_Map
         );
 
@@ -337,12 +277,9 @@ class Yaf extends Source
         ];
         $this->export(
             'ConversationMessage',
-            "select pm.*,
-                    case when pm.Flags & 1 = 1 then 'Html' else 'BBCode' end as Format,
-                    t.Group_ID
+            "select pm.*, t.Group_ID, case when pm.Flags & 1 = 1 then 'Html' else 'BBCode' end as Format
             from :_PMessage pm
-            join z_pmtext t
-                on t.PM_ID = pm.PMessageID;",
+            join z_pmtext t on t.PM_ID = pm.PMessageID;",
             $conversationMessage_Map
         );
     }

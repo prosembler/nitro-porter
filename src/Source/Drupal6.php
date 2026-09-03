@@ -20,24 +20,29 @@ class Drupal6 extends Source
 
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'uid' => 'UserID',
             'name' => 'Name',
             'Password' => 'Password',
             'mail' => 'Email',
             'photo' => 'Photo',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
-            'login' => ['Column' => 'DateLastActive', 'Filter' => 'UnixtimeToDate']
+            'created' => 'DateInserted',
+            'login' => 'DateLastActive',
+            'HashMethod=Django',
+        ];
+        $filters = [
+            'created' => 'UnixtimeToDate',
+            'login' => 'UnixtimeToDate',
         ];
         $this->export(
             'User',
             "select u.*,
                     nullif(concat('drupal/', u.picture), 'drupal/') as photo,
                     concat('md5$$', u.pass) as Password,
-                    'Django' as HashMethod
                 from :_users u
                 where uid > 0",
-            $user_Map
+            $map,
+            $filters
         );
     }
 
@@ -45,14 +50,12 @@ class Drupal6 extends Source
     {
         $userMeta_Map = [
             'uid' => 'UserID',
-            'Name' => 'Name',
+            'Name=Plugins.Signatures.Sig',
             'signature' => 'Value'
         ];
         $this->export(
             'UserMeta',
-            "select u.*, 'Plugins.Signatures.Sig' as Name
-                from :_users u
-                where uid > 0",
+            "select u.* from :_users u where uid > 0",
             $userMeta_Map
         );
     }
@@ -70,11 +73,7 @@ class Drupal6 extends Source
             'uid' => 'UserID',
             'rid' => 'RoleID'
         ];
-        $this->export(
-            'UserRole',
-            "select * from :_users_roles",
-            $userRole_Map
-        );
+        $this->export('UserRole', "select * from :_users_roles", $userRole_Map);
     }
 
     protected function categories(): void
@@ -97,118 +96,113 @@ class Drupal6 extends Source
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'nid' => 'DiscussionID',
             'title' => 'Name',
             'body' => 'Body',
             'uid' => 'InsertUserID',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
-            'DateUpdated' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
+            'created' => 'DateInserted',
             'sticky' => 'Announce',
             'tid' => 'CategoryID'
         ];
+        $filters = [
+            'created' => 'UnixtimeToDate',
+            'updated' => 'UnixtimeToDate',
+        ];
         $this->export(
             'Discussion',
-            "select n.*, nullif(n.changed, n.created) as DateUpdated, f.tid, r.body
+            "select n.*, nullif(n.changed, n.created) as updated, f.tid, r.body
                  from nodeforum f
-                 left join node n
-                    on f.nid = n.nid
-                 left join node_revisions r
-                    on r.nid = n.nid
+                 left join node n on f.nid = n.nid
+                 left join node_revisions r on r.nid = n.nid
                 group by n.nid",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'cid' => 'CommentID',
             'uid' => 'InsertUserID',
-            'body' => ['Column' => 'Body'],
+            'body' => 'Body',
             'hostname' => 'InsertIPAddress',
-            'created' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate']
+            'created' => 'DateInserted',
+            'changed' => 'DateUpdated',
+            'Format=Html',
+        ];
+        $filters = [
+            'created' => 'UnixtimeToDate',
         ];
         $this->export(
             'Comment',
-            "select
-                    c.cid,
-                    n.created,
-                    n.uid,
-                    r.body,
+            "select c.cid,  n.created, n.uid, r.body, n.title,
                     c.nid as DiscussionID,
-                    n.title,
-                    'Html' as Format,
-                    nullif(n.changed, n.created) as DateUpdated
+                    nullif(n.changed, n.created) as changed
                  from node n
-                 left join node_comments c
-                    on c.cid = n.nid
-                 left join node_revisions r
-                    on r.nid = n.nid
+                 left join node_comments c on c.cid = n.nid
+                 left join node_revisions r on r.nid = n.nid
                  where n.type = 'forum_reply'",
-            $comment_Map
+            $map,
+            $filters
         );
     }
 
     protected function conversations(): void
     {
-        $conversation_Map = [
+        $map = [
             'thread_id' => 'ConversationID',
             'author' => 'InsertUserID',
-            'title' => 'Subject',
+            'subject' => 'Subject',
+            'timestamp' => 'DateInserted',
+        ];
+        $filters = [
+            'timestamp' => 'UnixtimeToDate',
         ];
         $this->export(
             'Conversation',
-            "select
-                    pmi.thread_id,
-                    pmm.author,
-                    pmm.subject as title,
-                    FROM_UNIXTIME(pmm.timestamp) as DateInserted
+            "select pmi.thread_id, pmm.author, pmm.subject, pmm.timestamp
                 from pm_message as pmm
-                    inner join pm_index as pmi on pmi.mid = pmm.mid
-                        and pmm.author = pmi.uid and pmi.deleted = 0 and pmi.uid > 0
+                inner join pm_index as pmi on pmi.mid = pmm.mid
+                    and pmm.author = pmi.uid and pmi.deleted = 0 and pmi.uid > 0
                 group by pmi.thread_id;",
-            $conversation_Map
+            $map,
+            $filters
         );
 
         // Conversation Messages.
-        $conversationMessage_Map = [
+        $map = [
             'mid' => 'MessageID',
             'thread_id' => 'ConversationID',
-            'author' => 'InsertUserID'
+            'author' => 'InsertUserID',
+            'timestamp' => 'DateInserted',
+            'body' => 'Body',
+            'Format=Html',
         ];
         $this->export(
             'ConversationMessage',
-            "select
-                    pmm.mid,
-                    pmi.thread_id,
-                    pmm.author,
-                    FROM_UNIXTIME(pmm.timestamp) as DateInserted,
-                    pmm.body as Body,
-                    'Html' as Format
+            "select pmm.mid, pmi.thread_id, pmm.author, pmm.timestamp, pmm.body
                 from pm_message as pmm
-                    inner join pm_index as pmi on pmi.mid = pmm.mid AND pmi.deleted = 0 and pmi.uid > 0;",
-            $conversationMessage_Map
+                inner join pm_index as pmi on pmi.mid = pmm.mid 
+                    and pmi.deleted = 0 and pmi.uid > 0;",
+            $map,
+            $filters
         );
 
         // User Conversation.
         $userConversation_Map = [
             'uid' => 'UserID',
-            'thread_id' => 'ConversationID'
+            'thread_id' => 'ConversationID',
+            'Deleted=0',
         ];
         $this->export(
             'UserConversation',
-            "select
-                    pmi.uid,
-                    pmi.thread_id,
-                    0 as Deleted
+            "select pmi.uid, pmi.thread_id
                 from pm_index as pmi
-                    inner join pm_message as pmm ON pmm.mid = pmi.mid
-                where pmi.deleted = 0
-                    and pmi.uid > 0
-                group by
-                    pmi.uid,
-                    pmi.thread_id;",
+                inner join pm_message as pmm ON pmm.mid = pmi.mid
+                where pmi.deleted = 0 and pmi.uid > 0
+                group by pmi.uid, pmi.thread_id;",
             $userConversation_Map
         );
     }

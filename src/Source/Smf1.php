@@ -23,9 +23,6 @@ class Smf1 extends Source
         'passwordHashMethod' => 'Django',
     ];
 
-    /**
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
         'boards' => [],
         'messages' => [],
@@ -35,29 +32,6 @@ class Smf1 extends Source
         'membergroups' => [],
         'members' => ['ID_MEMBER', 'memberName', 'passwd', 'emailAddress', 'dateRegistered']
     ];
-
-    public function decodeNumericEntity(string $text): array|false|string|null
-    {
-        if (function_exists('mb_decode_numericentity')) {
-            $convmap = [0x0, 0x2FFFF, 0, 0xFFFF];
-            return mb_decode_numericentity($text, $convmap, 'UTF-8');
-        } else {
-            return $text;
-        }
-    }
-
-    /**
-     * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     */
-    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
-    {
-        $extension = pathinfo($row['Path'], PATHINFO_EXTENSION);
-        $images = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
-        if (in_array(strtolower($extension), $images)) {
-            return $value;
-        }
-        return null;
-    }
 
     protected function users(): void
     {
@@ -108,70 +82,72 @@ class Smf1 extends Source
 
     protected function categories(): void
     {
-        $category_Map = [
-            'Name' => ['Column' => 'Name', 'Filter' => [$this, 'decodeNumericEntity']],
+        $map = [
+            'name' => 'Name',
+        ];
+        $filters = [
+            'name' => \Porter\Filter\DecodeNumericEntity::class,
         ];
         $this->export(
             'Category',
-            "select
-                    (`ID_CAT` + 1000000) as `CategoryID`,
-                    `name` as `Name`,
+            "select (`ID_CAT` + 1000000) as `CategoryID`,
+                    name,
                     '' as `Description`,
                     null as `ParentCategoryID`,
                     `catOrder` as `Sort`
                 from :_categories
                 union
-                select
-                    b.`ID_BOARD` as `CategoryID`,
-                    b.`name` as `Name`,
+                select b.`ID_BOARD` as `CategoryID`,
+                    b.name,
                     b.`description` as `Description`,
                     (CASE WHEN b.`ID_PARENT` = 0 THEN (`ID_CAT` + 1000000) ELSE `ID_PARENT` END) as `ParentCategoryID`,
                     b.`boardOrder` as `Sort`
                 from :_boards b",
-            $category_Map
+            $map,
+            $filters
         );
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'ID_TOPIC' => 'DiscussionID',
-            'subject' => ['Column' => 'Name', 'Filter' => [$this, 'decodeNumericEntity']],
-            //,'Filter'=>'bb2html'),
-            'body' => ['Column' => 'Body'],
-            //,'Filter'=>'bb2html'),
+            'subject' => 'Name', //,'Filter'=>'bb2html'),
+            'body' => 'Body', //,'Filter'=>'bb2html'),
             'Format' => 'Format',
             'ID_BOARD' => 'CategoryID',
-            'DateInserted' => 'DateInserted',
-            'DateUpdated' => 'DateUpdated',
+            'posterTime' => 'DateInserted',
+            'modifiedTime' => 'DateUpdated',
             'ID_MEMBER' => 'InsertUserID',
-            'DateLastComment' => 'DateLastComment',
+            'posterTimeEnd' => 'DateLastComment',
             'UpdateUserID' => 'UpdateUserID',
             'locked' => 'Closed',
             'isSticky' => 'Announce',
             'CountComments' => 'CountComments',
             'numViews' => 'CountViews',
             'LastCommentUserID' => 'LastCommentUserID',
-            'ID_LAST_MSG' => 'LastCommentID'
+            'ID_LAST_MSG' => 'LastCommentID',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'subject' => \Porter\Filter\DecodeNumericEntity::class,
+            'posterTime' => \Porter\Filter\UnixtimeToDate::class,
+            'modifiedTime' => \Porter\Filter\UnixtimeToDate::class,
+            'posterTimeEnd' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Discussion',
-            "select t.*,
-                    (t.numReplies + 1) as CountComments,
-                    m.subject,
-                    m.body,
-                    from_unixtime(m.posterTime) as DateInserted,
-                    from_unixtime(m.modifiedTime) as DateUpdated,
-                    m.ID_MEMBER,
-                    from_unixtime(m_end.posterTime) AS DateLastComment,
+            "select t.*, (t.numReplies + 1) as CountComments,
+                    m.subject, m.body, m.posterTime, m.modifiedTime, m.ID_MEMBER,
+                    m_end.posterTime as posterTimeEnd,
                     m_end.ID_MEMBER AS UpdateUserID,
-                    m_end.ID_MEMBER AS LastCommentUserID,
-                    'BBCode' as Format
+                    m_end.ID_MEMBER AS LastCommentUserID
                 from :_topics t
                 join :_messages as m on t.ID_FIRST_MSG = m.ID_MSG
                 join :_messages as m_end on t.ID_LAST_MSG = m_end.ID_MSG
                 -- where t.spam = 0 AND m.spam = 0;",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
@@ -181,25 +157,28 @@ class Smf1 extends Source
             'ID_MSG' => 'CommentID',
             'ID_TOPIC' => 'DiscussionID',
             'Format' => 'Format',
-            'body' => ['Column' => 'Body'], //,'Filter'=>'bb2html'),
+            'body' => 'Body', //,'Filter'=>'bb2html'),
             'ID_MEMBER' => 'InsertUserID',
-            'DateInserted' => 'DateInserted'
+            'posterTime' => 'DateInserted',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'posterTime' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Comment',
-            "select m.*,
-                    from_unixtime(m.posterTime) AS DateInserted,
-                    'BBCode' as Format
+            "select m.*
                 from :_messages m
                 join :_topics t on m.ID_TOPIC = t.ID_TOPIC
                 where m.ID_MSG <> t.ID_FIRST_MSG;",
-            $comment_Map
+            $comment_Map,
+            $filters
         );
     }
 
     protected function attachments(): void
     {
-        $media_Map = [
+        $map = [
             'ID_ATTACH' => 'MediaID',
             'ID_MSG' => 'ForeignID',
             'size' => 'Size',
@@ -209,15 +188,16 @@ class Smf1 extends Source
             'thumb_width' => 'ThumbWidth',
         ];
         $filters = [
-            'Type' => 'ExtToMime',
-            'thumb_path' => [$this, 'filterThumbnailData'],
-            'thumb_width' => [$this, 'filterThumbnailData'],
+            'Type' => \Porter\Filter\ExtToMime::class,
+            'thumb_path' => \Porter\Filter\NullIfNotImage::class,
+            'thumb_width' => \Porter\Filter\NullIfNotImage::class,
         ];
         $this->export(
             'Media',
             "select a.*,
                     concat('attachments/', a.filename) as Path,
                     a.filename as Type,
+                    a.filename as Ext,
                     IF(b.filename is not null, concat('attachments/', b.filename), null) as thumb_path,
                     b.width as thumb_width,
                     if(t.ID_TOPIC is null, 'Comment', 'Discussion') as ForeignTable
@@ -226,113 +206,78 @@ class Smf1 extends Source
                     left join :_topics t on a.ID_MSG = t.ID_FIRST_MSG
                 where a.attachmentType = 0
                     and a.ID_MSG > 0",
-            $media_Map,
+            $map,
             $filters
         );
     }
 
     protected function conversations(): void
     {
-        // Conversations need a bit more conversion so execute a series of queries for that.
-        $this->query(
-            'create table :_smfpmto (
+        $this->dbInput()->unprepared('create table :_smfpmto (
                 id int,
                 to_id int,
                 deleted tinyint,
-                primary key(id, to_id)
-            )'
-        );
-        $this->query(
+                primary key(id, to_id) )');
+        $this->dbInput()->unprepared(
             'insert :_smfpmto (id, to_id, deleted)
             select ID_PM, ID_MEMBER_FROM, deletedBySender
             from :_personal_messages'
         );
-        $this->query(
-            'insert ignore :_smfpmto (id, to_id, deleted)
+        $this->dbInput()->unprepared('insert ignore :_smfpmto (id, to_id, deleted)
             select ID_PM, ID_MEMBER, deleted
-            from :_pm_recipients'
-        );
+            from :_pm_recipients');
 
-        $this->query(
-            'create table :_smfpmto2 (
+        $this->dbInput()->unprepared('create table :_smfpmto2 (
                 id int,
                 to_ids varchar(255),
-                primary key(id)
-            )'
-        );
-        $this->query(
-            'insert :_smfpmto2 (id, to_ids)
+                primary key(id) )');
+        $this->dbInput()->unprepared('insert :_smfpmto2 (id, to_ids)
             select id,  group_concat(to_id order by to_id)
             from :_smfpmto
-            group by id'
-        );
+            group by id');
 
-        $this->query(
-            'create table :_smfpm (
+        $this->dbInput()->unprepared('create table :_smfpm (
                 id int,
                 group_id int,
                 subject varchar(200),
                 subject2 varchar(200),
                 from_id int,
-                to_ids varchar(255)
-            )'
-        );
-        $this->query('create index :_idx_smfpm2 on :_smfpm (subject2, from_id)');
-        $this->query('create index :_idx_smfpmg on :_smfpm (group_id)');
-        $this->query(
-            'insert :_smfpm (
-                id,
-                subject,
-                subject2,
-                from_id,
-                to_ids
-            )
-            select
-                ID_PM,
-                subject,
+                to_ids varchar(255) )');
+        $this->dbInput()->unprepared('create index :_idx_smfpm2 on :_smfpm (subject2, from_id)');
+        $this->dbInput()->unprepared('create index :_idx_smfpmg on :_smfpm (group_id)');
+        $this->dbInput()->unprepared('insert :_smfpm (id, subject, subject2, from_id, to_ids)
+            select ID_PM, subject,
                 case when subject like \'Re: %\' then trim(substring(subject, 4)) else subject end as subject2,
                 ID_MEMBER_FROM,
                 to2.to_ids
             from :_personal_messages pm
             join :_smfpmto2 to2
-                on pm.ID_PM = to2.id'
-        );
+                on pm.ID_PM = to2.id');
 
-        $this->query(
-            'create table :_smfgroups (
+        $this->dbInput()->unprepared('create table :_smfgroups (
               id int primary key,
               subject2 varchar(200),
-              to_ids varchar(255)
-            )'
-        );
-
-        $this->query(
-            'insert :_smfgroups
+              to_ids varchar(255) )');
+        $this->dbInput()->unprepared('insert :_smfgroups
             select min(id) as group_id, subject2, to_ids
             from :_smfpm
-            group by subject2, to_ids'
-        );
+            group by subject2, to_ids');
+        $this->dbInput()->unprepared('create index :_idx_smfgroups on :_smfgroups (subject2, to_ids)');
 
-        $this->query('create index :_idx_smfgroups on :_smfgroups (subject2, to_ids)');
-
-        $this->query(
-            'update :_smfpm pm
-                join :_smfgroups g
-                    on pm.subject2 = g.subject2 and pm.to_ids = g.to_ids
-                set pm.group_id = g.id'
-        );
+        $this->dbInput()->unprepared('update :_smfpm pm
+                join :_smfgroups g on pm.subject2 = g.subject2 and pm.to_ids = g.to_ids
+                set pm.group_id = g.id');
 
         // Conversation.
         $conv_Map = [
             'id' => 'ConversationID',
             'from_id' => 'InsertUserID',
             'DateInserted' => 'DateInserted',
-            'subject2' => ['Column' => 'Subject', 'Type' => 'varchar(255)']
+            'subject2' => 'Subject',
         ];
         $this->export(
             'Conversation',
-            "select
-                    pm.group_id,
+            "select pm.group_id,
                     pm.from_id,
                     pm.subject2,
                     from_unixtime(pm2.msgtime) as DateInserted
@@ -349,20 +294,18 @@ class Smf1 extends Source
             'group_id' => 'ConversationID',
             'DateInserted' => 'DateInserted',
             'from_id' => 'InsertUserID',
-            'body' => ['Column' => 'Body']
+            'body' => 'Body',
         ];
         $this->export(
             'ConversationMessage',
-            "select
-                pm.id,
+            "select pm.id,
                 pm.group_id,
                 from_unixtime(pm2.msgtime) as DateInserted,
                 pm.from_id,
                 'BBCode' as Format,
                 case when pm.subject = pm.subject2 then concat(pm.subject, '\n\n', pm2.body) else pm2.body end as body
             from :_smfpm pm
-            join :_personal_messages pm2
-                on pm.id = pm2.ID_PM",
+            join :_personal_messages pm2 on pm.id = pm2.ID_PM",
             $convMessage_Map
         );
 
@@ -370,20 +313,19 @@ class Smf1 extends Source
         $userConv_Map = [
             'to_id' => 'UserID',
             'group_id' => 'ConversationID',
-            'deleted' => 'Deleted'
+            'deleted' => 'Deleted',
         ];
         $this->export(
             'UserConversation',
             "select pm.group_id, t.to_id, t.deleted
                 from :_smfpmto t
-                join :_smfpm pm
-                    on t.id = pm.group_id",
+                join :_smfpm pm on t.id = pm.group_id",
             $userConv_Map
         );
 
-        $this->query('drop table :_smfpm');
-        $this->query('drop table :_smfpmto');
-        $this->query('drop table :_smfpmto2');
-        $this->query('drop table :_smfgroups');
+        $this->dbInput()->unprepared('drop table :_smfpm');
+        $this->dbInput()->unprepared('drop table :_smfpmto');
+        $this->dbInput()->unprepared('drop table :_smfpmto2');
+        $this->dbInput()->unprepared('drop table :_smfgroups');
     }
 }

@@ -29,58 +29,34 @@ class Smf2 extends Source
         'members' => ['id_member', 'member_name', 'passwd', 'email_address', 'date_registered']
     ];
 
-    public function decodeNumericEntity(string $text): array|false|string|null
-    {
-        if (function_exists('mb_decode_numericentity')) {
-            $convmap = [0x0, 0x2FFFF, 0, 0xFFFF];
-            return mb_decode_numericentity($text, $convmap, 'UTF-8');
-        } else {
-            return $text;
-        }
-    }
-
-    /**
-     * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     */
-    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
-    {
-        $extension = pathinfo($row['Path'], PATHINFO_EXTENSION);
-        $images = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'];
-        if (in_array(strtolower($extension), $images)) {
-            return $value;
-        }
-        return null;
-    }
-
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'id_member' => 'UserID',
             'member_name' => 'Name',
             'password' => 'Password',
             'email_address' => 'Email',
-            'DateInserted' => 'DateInserted',
+            'date_registered' => 'DateInserted',
             'timeOffset' => 'HourOffset',
             'posts' => 'CountComments',
             //'avatar'=>'Photo',
             'Photo' => 'Photo',
             'birthdate' => 'DateOfBirth',
-            'DateFirstVisit' => 'DateFirstVisit',
-            'DateLastActive' => 'DateLastActive',
-            'DateUpdated' => 'DateUpdated'
+            'last_login' => 'DateLastActive',
+        ];
+        $filters = [
+            'date_registered' => \Porter\Filter\UnixtimeToDate::class,
+            'last_login' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'User',
-            " select m.*,
-                    from_unixtime(date_registered) as DateInserted,
-                    from_unixtime(date_registered) as DateFirstVisit,
-                    from_unixtime(last_login) as DateLastActive,
-                    from_unixtime(last_login) as DateUpdated,
+            "select m.*,
                     concat('sha1$', lower(member_name), '$', passwd) as `password`,
                     if(m.avatar <> '', m.avatar, concat('attachments/', a.filename)) as Photo
                 from :_members m
                 left join :_attachments a on a.id_member = m.id_member ",
-            $user_Map
+            $map,
+            $filters
         );
     }
 
@@ -102,42 +78,42 @@ class Smf2 extends Source
 
     protected function categories(): void
     {
-        $category_Map = [
-            'Name' => ['Column' => 'Name', 'Filter' => [$this, 'decodeNumericEntity']],
+        $map = [
+            'name' => 'Name',
+        ];
+        $filters = [
+            'name' => \Porter\Filter\DecodeNumericEntity::class,
         ];
         $this->export(
             'Category',
-            "select
-                    (`id_cat` + 1000000) as `CategoryID`,
-                    `name` as `Name`,
+            "select (`id_cat` + 1000000) as `CategoryID`,
+                    name,
                     '' as `Description`,
                     null as `ParentCategoryID`,
                     `cat_order` as `Sort`
                 from :_categories
                 union
-                select
-                    b.`id_board` as `CategoryID`,
-                    b.`name` as `Name`,
+                select b.`id_board` as `CategoryID`,
+                    b.name,
                     b.`description` as `Description`,
                     (CASE WHEN b.`id_parent` = 0 THEN (`id_cat` + 1000000) ELSE `id_parent` END) as `ParentCategoryID`,
                     b.`board_order` as `Sort`
                 from :_boards b",
-            $category_Map
+            $map,
+            $filters
         );
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'id_topic' => 'DiscussionID',
-            'subject' => ['Column' => 'Name', 'Filter' => [$this, 'decodeNumericEntity']],
-            //,'Filter'=>'bb2html'),
-            'body' => ['Column' => 'Body'],
-            //,'Filter'=>'bb2html'),
+            'subject' => 'Name', //,'Filter'=>'bb2html'),
+            'body' => 'Body',  //,'Filter'=>'bb2html'),
             'Format' => 'Format',
             'id_board' => 'CategoryID',
-            'DateInserted' => 'DateInserted',
-            'DateUpdated' => 'DateUpdated',
+            'poster_time' => 'DateInserted',
+            'modified_time' => 'DateUpdated',
             'id_member' => 'InsertUserID',
             'DateLastComment' => 'DateLastComment',
             'UpdateUserID' => 'UpdateUserID',
@@ -146,26 +122,27 @@ class Smf2 extends Source
             'CountComments' => 'CountComments',
             'numViews' => 'CountViews',
             'LastCommentUserID' => 'LastCommentUserID',
-            'id_last_msg' => 'LastCommentID'
+            'id_last_msg' => 'LastCommentID',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'subject' => \Porter\Filter\DecodeNumericEntity::class,
+            'poster_time' => \Porter\Filter\UnixtimeToDate::class,
+            'modified_time' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Discussion',
-            "select t.*,
-                    (t.num_replies + 1) as CountComments,
-                    m.subject,
-                    m.body,
-                    from_unixtime(m.poster_time) as DateInserted,
-                    from_unixtime(m.modified_time) as DateUpdated,
-                    m.id_member,
+            "select t.*, (t.num_replies + 1) as CountComments, m.subject, m.body, m.id_member,
+                    m.poster_time, m.modified_time,
                     from_unixtime(m_end.poster_time) AS DateLastComment,
-                    m_end.id_member AS UpdateUserID,
-                    m_end.id_member AS LastCommentUserID,
-                    'BBCode' as Format
+                    m_end.id_member as UpdateUserID,
+                    m_end.id_member as LastCommentUserID
                 from :_topics t
                 join :_messages as m on t.id_first_msg = m.id_msg
                 join :_messages as m_end on t.id_last_msg = m_end.id_msg
                 -- where t.spam = 0 AND m.spam = 0;",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
@@ -175,7 +152,7 @@ class Smf2 extends Source
             'id_msg' => 'CommentID',
             'id_topic' => 'DiscussionID',
             'Format' => 'Format',
-            'body' => ['Column' => 'Body'], //,'Filter'=>'bb2html'),
+            'body' => 'Body', //,'Filter'=>'bb2html'),
             'id_member' => 'InsertUserID',
             'DateInserted' => 'DateInserted'
         ];
@@ -193,88 +170,76 @@ class Smf2 extends Source
 
     protected function attachments(): void
     {
-        $media_Map = [
+        $map = [
             'ID_ATTACH' => 'MediaID',
             'id_msg' => 'ForeignID',
             'size' => 'Size',
             'height' => 'ImageHeight',
             'width' => 'ImageWidth',
-            'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
-            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+            'filename' => 'Type',
+            'thumb_path' => 'ThumbPath',
+            'thumb_width' => 'ThumbWidth',
         ];
         $filters = [
-           'Type' => 'ExtToMime',
+            'filename' => \Porter\Filter\ExtToMime::class,
+            'thumb_path' => \Porter\Filter\NullIfNotImage::class,
+            'thumb_width' => \Porter\Filter\NullIfNotImage::class,
         ];
         $this->export(
             'Media',
-            "select a.*,
+            "select a.*, b.width as thumb_width,
                     concat('attachments/', a.filename) as Path,
                     IF(b.filename is not null, concat('attachments/', b.filename), null) as thumb_path,
-                    a.filename as Type,
-                    b.width as thumb_width,
                     if(t.id_topic is null, 'Comment', 'Discussion') as ForeignTable
                 from :_attachments a
-                    left join :_attachments b on b.ID_ATTACH = a.ID_THUMB
-                    left join :_topics t on a.id_msg = t.id_first_msg
-                where a.attachment_type = 0
-                    and a.id_msg > 0",
-            $media_Map,
+                left join :_attachments b on b.ID_ATTACH = a.ID_THUMB
+                left join :_topics t on a.id_msg = t.id_first_msg
+                where a.attachment_type = 0 and a.id_msg > 0",
+            $map,
             $filters
         );
     }
 
     protected function conversations(): void
     {
-        $conversation_Map = [
+        $map = [
             'id_pm_head' => 'ConversationID',
             'subject' => 'Subject',
             'id_member_from' => 'InsertUserID',
-            'unixmsgtime' => 'DateInserted',
+            'msgtime' => 'DateInserted',
         ];
-        $this->export(
-            'Conversation',
-            "select pm.*,
-                    from_unixtime(pm.msgtime) as unixmsgtime
-                from :_personal_messages pm",
-            $conversation_Map
-        );
+        $filters = [
+            'msgtime' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $this->export('Conversation', "select * from :_personal_messages", $map, $filters);
 
-        $convMsg_Map = [
+        $map = [
             'id_pm' => 'MessageID',
             'id_pm_head' => 'ConversationID',
             'body' => 'Body',
-            'format' => 'Format',
             'id_member_from' => 'InsertUserID',
-            'unixmsgtime' => 'DateInserted',
+            'msgtime' => 'DateInserted',
+            'Format=BBCode',
         ];
-        $this->export(
-            'ConversationMessage',
-            "select pm.*,
-                    from_unixtime(pm.msgtime) as unixmsgtime ,
-                    'BBCode' as format
-                from :_personal_messages pm",
-            $convMsg_Map
-        );
+        $this->export('ConversationMessage', "select * from :_personal_messages", $map, $filters);
 
-        $userConv_Map = [
+        $map = [
             'id_member2' => 'UserId',
             'id_pm_head' => 'ConversationID',
             'deleted2' => 'Deleted'
         ];
         $this->export(
             'UserConversation',
-            "(select
-                    pm.id_member_from as id_member2,
+            "(select pm.id_member_from as id_member2,
                     pm.id_pm_head,
                     pm.deleted_by_sender as deleted2
                 from :_personal_messages pm )
-            UNION ALL
-            (select
-                    pmr.id_member as id_member2,
+                UNION ALL
+                (select pmr.id_member as id_member2,
                     pm.id_pm_head,
                     pmr.deleted as deleted2
                 from :_personal_messages pm join :_pm_recipients pmr on pmr.id_pm = pm.id_pm)",
-            $userConv_Map
+            $map
         );
     }
 }

@@ -50,17 +50,9 @@ class Vanilla1 extends Source
         ]
     ];
 
-    public function stripMediaPath(mixed $absPath): false|string
-    {
-        if (($pos = strpos($absPath, '/uploads/')) !== false) {
-            return substr($absPath, $pos + 9);
-        }
-        return $absPath;
-    }
-
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'UserID' => 'UserID',
             'Name' => 'Name',
             'Password' => 'Password',
@@ -69,7 +61,7 @@ class Vanilla1 extends Source
             'CountComments' => 'CountComments',
             'Discovery' => 'DiscoveryText'
         ];
-        $this->export('User', "SELECT * FROM :_User", $user_Map);  // ":_" will be replaced by database prefix
+        $this->export('User', "SELECT * FROM :_User", $map);
     }
 
     protected function roles(): void
@@ -84,40 +76,28 @@ class Vanilla1 extends Source
         }
         $zeroRoleID++;
 
-        $role_Map = [
-            'RoleID' => 'RoleID',
-            'Name' => 'Name',
-            'Description' => 'Description'
-        ];
+        $map = [];
         $this->export(
             'Role',
             "select RoleID, Name, Description
                 from :_Role
                 union all
                 select $zeroRoleID, 'Applicant', 'Created by Nitro Porter'",
-            $role_Map
+            $map
         );
 
         // UserRoles
-        $userRole_Map = [
-            'UserID' => 'UserID',
-            'RoleID' => 'RoleID'
-        ];
         $this->export(
             'UserRole',
             "select UserID, case RoleID when 0 then $zeroRoleID else RoleID end as RoleID from :_User",
-            $userRole_Map
+            $map
         );
     }
 
     protected function categories(): void
     {
-        $category_Map = [
-            'CategoryID' => 'CategoryID',
-            'Name' => 'Name',
-            'Description' => 'Description'
-        ];
-        $this->export('Category', "select CategoryID, Name, Description from :_Category", $category_Map);
+        $map = [];
+        $this->export('Category', "select CategoryID, Name, Description from :_Category", $map);
     }
 
     protected function discussions(): void
@@ -135,18 +115,14 @@ class Vanilla1 extends Source
             'Sticky' => 'Announce',
             'CountComments' => 'CountComments',
             'Sink' => 'Sink',
-            'LastUserID' => 'LastCommentUserID'
+            'LastUserID' => 'LastCommentUserID',
+            'FormatType' => 'Format',
         ];
         $this->export(
             'Discussion',
-            "SELECT d.*,
-                    d.LastUserID as LastCommentUserID,
-                    d.DateCreated as DateCreated2, d.AuthUserID as AuthUserID2,
-                    c.Body,
-                    c.FormatType as Format
+            "SELECT d.*, d.DateCreated as DateCreated2, d.AuthUserID as AuthUserID2, c.Body
                 FROM :_Discussion d
-                LEFT JOIN :_Comment c
-                    ON d.FirstCommentID = c.CommentID
+                LEFT JOIN :_Comment c ON d.FirstCommentID = c.CommentID
                 WHERE coalesce(d.WhisperUserID, 0) = 0 and d.Active = 1",
             $discussion_Map
         );
@@ -156,40 +132,29 @@ class Vanilla1 extends Source
     {
         $this->export(
             'UserDiscussion',
-            "SELECT
-                    w.UserID,
-                    w.DiscussionID,
-                    w.CountComments,
-                    w.LastViewed as DateLastViewed,
+            "SELECT w.UserID, w.DiscussionID, w.CountComments, w.LastViewed as DateLastViewed,
                     case when b.UserID is not null then 1 else 0 end AS Bookmarked
                 FROM :_UserDiscussionWatch w
-                LEFT JOIN :_UserBookmark b
-                    ON w.DiscussionID = b.DiscussionID AND w.UserID = b.UserID"
+                LEFT JOIN :_UserBookmark b ON w.DiscussionID = b.DiscussionID AND w.UserID = b.UserID"
         );
     }
 
     protected function comments(): void
     {
         $comment_Map = [
-            'CommentID' => 'CommentID',
-            'DiscussionID' => 'DiscussionID',
             'AuthUserID' => 'InsertUserID',
             'DateCreated' => 'DateInserted',
             'EditUserID' => 'UpdateUserID',
             'DateEdited' => 'DateUpdated',
-            'Body' => 'Body',
             'FormatType' => 'Format'
         ];
         $this->export(
             'Comment',
             "SELECT c.*
                  FROM :_Comment c
-                 JOIN :_Discussion d
-                    ON c.DiscussionID = d.DiscussionID
-                 WHERE d.FirstCommentID <> c.CommentID
-                    AND c.Deleted = '0'
-                    AND coalesce(d.WhisperUserID, 0) = 0
-                    AND coalesce(c.WhisperUserID, 0) = 0",
+                 JOIN :_Discussion d ON c.DiscussionID = d.DiscussionID
+                 WHERE d.FirstCommentID <> c.CommentID AND c.Deleted = '0'
+                    AND coalesce(d.WhisperUserID, 0) = 0 AND coalesce(c.WhisperUserID, 0) = 0",
             $comment_Map
         );
     }
@@ -198,138 +163,91 @@ class Vanilla1 extends Source
     {
         // These mapping tables are used to group comments that a) are in the same discussion
         // and b) are from and to the same users.
-        $this->query("drop table if exists z_pmto");
-        $this->query(
-            "create table z_pmto (
-                    CommentID int,
-                    UserID int,
-                primary key(CommentID, UserID)
-            )"
-        );
-        $this->query(
-            "insert ignore z_pmto (CommentID, UserID)
+        $this->dbInput()->unprepared("drop table if exists z_pmto");
+        $this->dbInput()->unprepared("create table z_pmto (CommentID int, UserID int,
+                primary key(CommentID, UserID) )");
+        $this->dbInput()->unprepared("insert ignore z_pmto (CommentID, UserID)
                 select distinct CommentID, AuthUserID
                 from :_Comment
-                where coalesce(WhisperUserID, 0) <> 0"
-        );
-        $this->query(
-            "insert ignore z_pmto (CommentID, UserID)
+                where coalesce(WhisperUserID, 0) <> 0");
+        $this->dbInput()->unprepared("insert ignore z_pmto (CommentID, UserID)
                 select distinct CommentID, WhisperUserID
                 from :_Comment
-                where coalesce(WhisperUserID, 0) <> 0"
-        );
-        $this->query(
-            "insert ignore z_pmto (CommentID, UserID)
+                where coalesce(WhisperUserID, 0) <> 0");
+        $this->dbInput()->unprepared("insert ignore z_pmto (CommentID, UserID)
                 select distinct c.CommentID, d.AuthUserID
                 from :_Discussion d
-                join :_Comment c
-                    on c.DiscussionID = d.DiscussionID
-                where coalesce(d.WhisperUserID, 0) <> 0"
-        );
-        $this->query(
-            "insert ignore z_pmto (CommentID, UserID)
+                join :_Comment c on c.DiscussionID = d.DiscussionID
+                where coalesce(d.WhisperUserID, 0) <> 0");
+        $this->dbInput()->unprepared("insert ignore z_pmto (CommentID, UserID)
                 select distinct c.CommentID, d.WhisperUserID
                 from :_Discussion d
-                join :_Comment c
-                    on c.DiscussionID = d.DiscussionID
-                where coalesce(d.WhisperUserID, 0) <> 0"
-        );
-        $this->query(
-            "insert ignore z_pmto (CommentID, UserID)
+                join :_Comment c on c.DiscussionID = d.DiscussionID
+                where coalesce(d.WhisperUserID, 0) <> 0");
+        $this->dbInput()->unprepared("insert ignore z_pmto (CommentID, UserID)
                 select distinct c.CommentID, c.AuthUserID
                 from :_Discussion d
-                join :_Comment c
-                    on c.DiscussionID = d.DiscussionID
-                where coalesce(d.WhisperUserID, 0) <> 0"
-        );
+                join :_Comment c on c.DiscussionID = d.DiscussionID
+                where coalesce(d.WhisperUserID, 0) <> 0");
 
-        $this->query("drop table if exists z_pmto2");
-        $this->query(
-            "create table z_pmto2 (
+        $this->dbInput()->unprepared("drop table if exists z_pmto2");
+        $this->dbInput()->unprepared("create table z_pmto2 (
               CommentID int,
               UserIDs varchar(250),
-              primary key (CommentID)
-            )"
-        );
-        $this->query(
-            "insert z_pmto2 (CommentID, UserIDs)
+              primary key (CommentID) )");
+        $this->dbInput()->unprepared("insert z_pmto2 (CommentID, UserIDs)
                 select CommentID, group_concat(UserID order by UserID)
                 from z_pmto
-                group by CommentID"
-        );
+                group by CommentID");
 
-        $this->query("drop table if exists z_pm");
-        $this->query(
-            "create table z_pm (
+        $this->dbInput()->unprepared("drop table if exists z_pm");
+        $this->dbInput()->unprepared("create table z_pm (
               CommentID int,
               DiscussionID int,
               UserIDs varchar(250),
-              GroupID int
-            )"
-        );
-        $this->query(
-            "insert ignore z_pm (CommentID, DiscussionID)
+              GroupID int )");
+        $this->dbInput()->unprepared("insert ignore z_pm (CommentID, DiscussionID)
                 select CommentID, DiscussionID
                 from :_Comment
-                where coalesce(WhisperUserID, 0) <> 0"
-        );
-        $this->query(
-            "insert ignore z_pm (CommentID, DiscussionID)
+                where coalesce(WhisperUserID, 0) <> 0");
+        $this->dbInput()->unprepared("insert ignore z_pm (CommentID, DiscussionID)
                 select c.CommentID, c.DiscussionID
                 from :_Discussion d
-                join :_Comment c
-                    on c.DiscussionID = d.DiscussionID
-                where coalesce(d.WhisperUserID, 0) <> 0"
-        );
-        $this->query(
-            "update z_pm pm
-                join z_pmto2 t
-                    on t.CommentID = pm.CommentID
-                set pm.UserIDs = t.UserIDs"
-        );
+                join :_Comment c on c.DiscussionID = d.DiscussionID
+                where coalesce(d.WhisperUserID, 0) <> 0");
+        $this->dbInput()->unprepared("update z_pm pm
+                join z_pmto2 t on t.CommentID = pm.CommentID
+                set pm.UserIDs = t.UserIDs");
 
-        $this->query("drop table if exists z_pmgroup");
-        $this->query(
-            "create table z_pmgroup (
+        $this->dbInput()->unprepared("drop table if exists z_pmgroup");
+        $this->dbInput()->unprepared("create table z_pmgroup (
                 GroupID int,
                 DiscussionID int,
-                UserIDs varchar(250)
-            )"
-        );
-        $this->query(
-            "insert z_pmgroup (GroupID, DiscussionID, UserIDs)
+                UserIDs varchar(250) )");
+        $this->dbInput()->unprepared("insert z_pmgroup (GroupID, DiscussionID, UserIDs)
                 select min(pm.CommentID), pm.DiscussionID, t2.UserIDs
                 from z_pm pm
-                join z_pmto2 t2
-                    on pm.CommentID = t2.CommentID
-                group by pm.DiscussionID, t2.UserIDs"
-        );
+                join z_pmto2 t2 on pm.CommentID = t2.CommentID
+                group by pm.DiscussionID, t2.UserIDs");
+        $this->dbInput()->unprepared("create index z_idx_pmgroup on z_pmgroup (DiscussionID, UserIDs)");
+        $this->dbInput()->unprepared("create index z_idx_pmgroup2 on z_pmgroup (GroupID)");
 
-        $this->query("create index z_idx_pmgroup on z_pmgroup (DiscussionID, UserIDs)");
-        $this->query("create index z_idx_pmgroup2 on z_pmgroup (GroupID)");
-
-        $this->query(
-            "update z_pm pm
-                join z_pmgroup g
-                    on pm.DiscussionID = g.DiscussionID and pm.UserIDs = g.UserIDs
-                set pm.GroupID = g.GroupID"
-        );
+        $this->dbInput()->unprepared("update z_pm pm
+                join z_pmgroup g on pm.DiscussionID = g.DiscussionID and pm.UserIDs = g.UserIDs
+                set pm.GroupID = g.GroupID");
 
         $conversation_Map = [
             'AuthUserID' => 'InsertUserID',
             'DateCreated' => 'DateInserted',
-            'DiscussionID' => ['Column' => 'DiscussionID', 'Type' => 'int'],
             'CommentID' => 'ConversationID',
-            'Name' => ['Column' => 'Subject', 'Type' => 'varchar(255)']
+            'Name' => 'Subject',
         ];
         $this->export(
             'Conversation',
             "select c.*, d.Name
                 from :_Comment c
-                join :_Discussion d
-                    on d.DiscussionID = c.DiscussionID
-                join z_pmgroup g
-                    on g.GroupID = c.CommentID;",
+                join :_Discussion d on d.DiscussionID = c.DiscussionID
+                join z_pmgroup g on g.GroupID = c.CommentID;",
             $conversation_Map
         );
 
@@ -337,7 +255,6 @@ class Vanilla1 extends Source
         $conversationMessage_Map = [
             'CommentID' => 'MessageID',
             'GroupID' => 'ConversationID',
-            'Body' => 'Body',
             'FormatType' => 'Format',
             'AuthUserID' => 'InsertUserID',
             'DateCreated' => 'DateInserted'
@@ -346,52 +263,44 @@ class Vanilla1 extends Source
             'ConversationMessage',
             "select c.*, pm.GroupID
                 from z_pm pm
-                join :_Comment c
-                    on pm.CommentID = c.CommentID",
+                join :_Comment c on pm.CommentID = c.CommentID",
             $conversationMessage_Map
         );
 
         // UserConversation
         $userConversation_Map = [
-            'UserID' => 'UserID',
             'GroupID' => 'ConversationID'
         ];
         $this->export(
             'UserConversation',
-            "select distinct
-                    pm.GroupID,
-                    t.UserID
+            "select distinct pm.GroupID, t.UserID
                 from z_pmto t
-                join z_pm pm
-                    on pm.CommentID = t.CommentID",
+                join z_pm pm on pm.CommentID = t.CommentID",
             $userConversation_Map
         );
 
-        $this->query("drop table z_pmto");
-        $this->query("drop table z_pmto2");
-        $this->query("drop table z_pm");
-        $this->query("drop table z_pmgroup");
+        $this->dbInput()->unprepared("drop table z_pmto");
+        $this->dbInput()->unprepared("drop table z_pmto2");
+        $this->dbInput()->unprepared("drop table z_pm");
+        $this->dbInput()->unprepared("drop table z_pmgroup");
     }
 
     protected function attachments(): void
     {
-        if ($this->hasInputSchema('Attachment')) {
-            $media_Map = [
-                'AttachmentID' => 'MediaID',
-                'Name' => 'Name',
-                'MimeType' => 'Type',
-                'Size' => 'Size',
-                'Path' => ['Column' => 'Path', 'Filter' => [$this, 'stripMediaPath']],
-                'UserID' => 'InsertUserID',
-                'DateCreated' => 'DateInserted',
-                'CommentID' => 'ForeignID'
-                //'ForeignTable'
-            ];
-            $this->export(
-                'Media',
-                "select a.*, 'comment' as ForeignTable from :_Attachment a",
-                $media_Map
-            );
+        if (!$this->hasInputSchema('Attachment')) {
+            return;
         }
+        $map = [
+            'AttachmentID' => 'MediaID',
+            'MimeType' => 'Type',
+            'UserID' => 'InsertUserID',
+            'DateCreated' => 'DateInserted',
+            'CommentID' => 'ForeignID',
+            'ForeignTable=comment',
+        ];
+        $filters = [
+            'Path' => \Porter\Filter\RemoveVanilla1Folder::class,
+        ];
+        $this->export('Media', "select a.* from :_Attachment a", $map, $filters);
     }
 }

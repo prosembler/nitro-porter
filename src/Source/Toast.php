@@ -24,7 +24,7 @@ class Toast extends Source
             'ID' => 'UserID',
             'Username' => 'Name',
             'Email' => 'Email',
-            'LastLoginDate' => ['Column' => 'DateLastActive', 'Type' => 'datetime'],
+            'LastLoginDate' => 'DateLastActive',
             'IP' => 'LastIPAddress'
         ];
         $this->export(
@@ -66,12 +66,9 @@ class Toast extends Source
             'UserRole',
             " select GroupID, MemberID from :_MemberGroupLink
                  union all
-                 select
-                    $lastRoleID as GroupID,
-                    m.ID as MemberID
+                 select $lastRoleID as GroupID, m.ID as MemberID
                  from :_Member m
-                 left join :_MemberGroupLink l
-                    on l.MemberID = m.ID
+                 left join :_MemberGroupLink l on l.MemberID = m.ID
                  where l.GroupID is null",
             $userRole_Map
         );
@@ -81,17 +78,11 @@ class Toast extends Source
     {
         $this->export(
             'UserMeta',
-            " select
-                    ID as UserID,
-                    'Plugin.Signatures.Sig' as `Name`,
-                    Signature as `Value`
+            " select ID as UserID, 'Plugin.Signatures.Sig' as `Name`, Signature as `Value`
                  from :_Member
                  where Signature <> ''
                  union all
-                 select
-                    ID as UserID,
-                    'Plugin.Signatures.Format' as `Name`,
-                    'BBCode' as `Value`
+                 select ID as UserID, 'Plugin.Signatures.Format' as `Name`, 'BBCode' as `Value`
                  from :_Member
                  where Signature <> '';"
         );
@@ -107,15 +98,13 @@ class Toast extends Source
         ];
         $this->export(
             'Category',
-            "select
-                    f.ID,
+            "select f.ID,
                     f.CategoryID * 1000 as CategoryID,
                     f.ForumName,
                     f.Description
                 from :_Forum f
                 union all
-                select
-                    c.ID * 1000 as ID,
+                select c.ID * 1000 as ID,
                     -1 as CategoryID,
                     c.Name as ForumName,
                     null as Description
@@ -136,15 +125,13 @@ class Toast extends Source
             'Subject' => 'Name',
             'Message' => 'Body',
             'Hits' => 'CountViews',
-            'ReplyCount' => 'CountComments'
+            'ReplyCount' => 'CountComments',
+            'Format=Html',
         ];
         $this->export(
             'Discussion',
-            "select p.*,
-            'Html' as Format
-                from :_Post p
-                where p.Topic = 1
-                    and p.Deleted = 0;",
+            "select p.* from :_Post p
+                where p.Topic = 1 and p.Deleted = 0;",
             $discussion_Map
         );
     }
@@ -157,13 +144,12 @@ class Toast extends Source
             'MemberID' => 'InsertUserID',
             'PostDate' => 'DateInserted',
             'ModifyDate' => 'DateUpdated',
-            'Message' => 'Body'
+            'Message' => 'Body',
+            'Format=Html',
         ];
         $this->export(
             'Comment',
-            "select *,
-                    'Html' as Format
-                from :_Post p
+            "select * from :_Post p
                 where Topic = 0 and Deleted = 0;",
             $comment_Map
         );

@@ -47,9 +47,7 @@ class Mbox extends Source
         if (!isset($emailBits[1])) {
             return $email;
         }
-
         $emailBits = explode('>', $emailBits[1]);
-
         return trim($emailBits[0]);
     }
 
@@ -66,66 +64,52 @@ class Mbox extends Source
         $body = preg_replace('#\s*From: ([a-zA-Z0-9_-]*)@(.*)#', '', $body);
         $body = explode("____________", $body);
         $body = explode("----- Original Message -----", $body[0]);
-
         return trim($body[0]);
     }
 
     protected function users(): void
     {
-        $user_Map = [];
-        $this->export(
-            'User',
-            "select u.*, NOW() as DateInserted, 'Reset' as HashMethod
-                from :_mbox_user u",
-            $user_Map
-        );
+        $map = [
+            'HashMethod=Reset',
+        ];
+        $this->export('User', "select u.*, NOW() as DateInserted from :_mbox_user u", $map);
     }
 
     protected function categories(): void
     {
         $category_Map = [];
-        $this->export(
-            'Category',
-            "select * from :_mbox_category",
-            $category_Map
-        );
+        $this->export('Category', "select * from :_mbox_category", $category_Map);
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
-            'PostID' => 'DiscussionID'
+        $map = [
+            'PostID' => 'DiscussionID',
+            'Format=Html',
         ];
         $this->export(
             'Discussion',
-            "select p.PostID, p.DateInserted, p.Name, p.Body, p.InsertUserID, p.CategoryID, 'Html' as Format
+            "select p.PostID, p.DateInserted, p.Name, p.Body, p.InsertUserID, p.CategoryID
                 from :_mbox_post p where IsDiscussion = 1",
-            $discussion_Map
+            $map
         );
     }
 
     protected function comments(): void
     {
         $comment_Map = [
-            'PostID' => 'CommentID'
+            'PostID' => 'CommentID',
+            'Format=Html',
         ];
-        $this->export(
-            'Comment',
-            "select p.*, 'Html' as Format
-                from :_mbox_post p
-                where IsDiscussion = 0",
-            $comment_Map
-        );
+        $this->export('Comment', "select p.* from :_mbox_post p where IsDiscussion = 0", $comment_Map);
     }
 
     protected function setup(): void
     {
         // Temporary user table
-        $this->query('create table :_mbox_user
+        $this->dbInput()->unprepared('create table :_mbox_user
             (UserID int AUTO_INCREMENT, Name varchar(255), Email varchar(255), PRIMARY KEY (UserID))');
         $result = $this->query('select Sender from :_mbox group by Sender');
-
-
 
         // Users, pt 1: Build ref array; Parse name & email out - strip quotes, <, >
         $users = [];
@@ -154,10 +138,8 @@ class Mbox extends Source
 
         // Users, pt 2: loop thru unique emails
         foreach ($users as $email => $name) {
-            $this->query(
-                'insert into :_mbox_user (Name, Email)
-                values ("' . $this->dbInput()->escape($name) . '", "' . $this->dbInput()->escape($email) . '")'
-            );
+            $this->dbInput()->unprepared('insert into :_mbox_user (Name, Email)
+                values ("' . $this->dbInput()->escape($name) . '", "' . $this->dbInput()->escape($email) . '")');
             $userID = 0;
             $maxRes = $this->query("select max(UserID) as id from :_mbox_user");
             if (!$maxRes) {
@@ -171,19 +153,15 @@ class Mbox extends Source
         }
 
         // Temporary category table
-        $this->query(
-            'create table :_mbox_category (CategoryID int AUTO_INCREMENT, Name varchar(255),
-            PRIMARY KEY (CategoryID))'
-        );
+        $this->dbInput()->unprepared('create table :_mbox_category (CategoryID int AUTO_INCREMENT, Name varchar(255),
+            PRIMARY KEY (CategoryID))');
         $result = $this->query('select Folder from :_mbox group by Folder');
         // Parse name out & build ref array
         $categories = [];
         if ($result) {
             while ($row = $result->nextResultRow()) {
-                $this->query(
-                    'insert into :_mbox_category (Name)
-                values ("' . $this->dbInput()->escape($row["Folder"]) . '")'
-                );
+                $this->dbInput()->unprepared('insert into :_mbox_category (Name)
+                    values ("' . $this->dbInput()->escape($row["Folder"]) . '")');
                 $categoryID = 0;
                 $maxRes = $this->query("select max(CategoryID) as id from :_mbox_category");
                 if ($maxRes) {
@@ -196,11 +174,9 @@ class Mbox extends Source
         }
 
         // Temporary post table
-        $this->query(
-            'create table :_mbox_post (PostID int AUTO_INCREMENT, DiscussionID int,
+        $this->dbInput()->unprepared('create table :_mbox_post (PostID int AUTO_INCREMENT, DiscussionID int,
             IsDiscussion tinyint default 0, InsertUserID int, Name varchar(255), Body text, DateInserted datetime,
-            CategoryID int, PRIMARY KEY (PostID))'
-        );
+            CategoryID int, PRIMARY KEY (PostID))');
         $result = $this->query('select * from :_mbox');
         // Parse name, body, date, userid, categoryid
         if ($result) {
@@ -211,14 +187,13 @@ class Mbox extends Source
                 $name = trim(preg_replace('#^\[[0-9a-zA-Z_-]*] #', '', $name));
                 $email = $this->parseEmail($row['Sender']);
                 $userID = (isset($users[$email])) ? $users[$email] : 0;
-                $this->query(
-                    'insert into :_mbox_post (Name, InsertUserID, CategoryID, DateInserted, Body)
-                values ("' . $this->dbInput()->escape($name) . '",
-               ' . $userID . ',
-               ' . $categories[$row['Folder']] . ',
-               from_unixtime(' . strtotime($row['Date']) . '),
-               "' . $this->dbInput()->escape($this->parseBody($row['Body'])) . '")'
-                );
+                $this->dbInput()->unprepared('insert into :_mbox_post 
+                    (Name, InsertUserID, CategoryID, DateInserted, Body)
+                    values ("' . $this->dbInput()->escape($name) . '",
+                   ' . $userID . ',
+                   ' . $categories[$row['Folder']] . ',
+                   from_unixtime(' . strtotime($row['Date']) . '),
+                   "' . $this->dbInput()->escape($this->parseBody($row['Body'])) . '")');
             }
         }
 
@@ -232,7 +207,7 @@ class Mbox extends Source
                 $discussions[] = $row['PostID'];
             }
             $query = 'update :_mbox_post set IsDiscussion = 1 where PostID in (' . implode(",", $discussions) . ')';
-            $this->query($query);
+            $this->dbInput()->unprepared($query);
         }
 
         // Thread the comments
@@ -243,7 +218,7 @@ class Mbox extends Source
         );
         if ($result) {
             while ($row = $result->nextResultRow()) {
-                $this->query('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
+                $this->dbInput()->unprepared('update :_mbox_post set DiscussionID = ' . $row['DiscussionID'] . '
                 where PostID = ' . $row['PostID']);
             }
         }

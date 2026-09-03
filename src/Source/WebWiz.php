@@ -21,22 +21,18 @@ class WebWiz extends Source
     public function conversations(): void
     {
         $this->exportConversationTemps();
-
-        // Conversation.
-        $conversation_Map = [
+        $map = [
             'PM_ID' => 'ConversationID',
-            'Title' => ['Column' => 'Subject', 'Type' => 'varchar(255)'],
+            'Title' => 'Subject',
             'Author_ID' => 'InsertUserID',
-            'PM_Message_Date' => ['Column' => 'DateInserted']
+            'PM_Message_Date' => 'DateInserted',
         ];
         $this->export(
             'Conversation',
-            "select pm.*,
-                    g.Title
+            "select pm.*, g.Title
                  from :_PMMessage pm
-                 join z_pmgroup g
-                    on pm.PM_ID = g.Group_ID;",
-            $conversation_Map
+                 join z_pmgroup g on pm.PM_ID = g.Group_ID;",
+            $map
         );
 
         // User Conversation.
@@ -46,12 +42,9 @@ class WebWiz extends Source
         ];
         $this->export(
             'UserConversation',
-            "select
-                    g.Group_ID,
-                    t.User_ID
+            "select g.Group_ID, t.User_ID
                  from z_pmto t
-                 join z_pmgroup g
-                    on g.Group_ID = t.PM_ID;",
+                 join z_pmgroup g on g.Group_ID = t.PM_ID;",
             $userConversation_Map
         );
 
@@ -61,30 +54,26 @@ class WebWiz extends Source
             'PM_ID' => 'MessageID',
             'PM_Message' => 'Body',
             'Format' => 'Format',
-            'PM_Message_Date' => ['Column' => 'DateInserted'],
-            'Author_ID' => 'InsertUserID'
+            'PM_Message_Date' => 'DateInserted',
+            'Author_ID' => 'InsertUserID',
+            'Format=Html',
         ];
         $this->export(
             'ConversationMessage',
-            "select pm.*,
-                    pm2.Group_ID,
-                    'Html' as Format
+            "select pm.*, pm2.Group_ID
                 from :_PMMessage pm
-                join z_pmtext pm2
-                    on pm.PM_ID = pm2.PM_ID;",
+                join z_pmtext pm2 on pm.PM_ID = pm2.PM_ID;",
             $message_Map
         );
     }
 
     protected function exportConversationTemps(): void
     {
-        $sql = "
-            drop table if exists z_pmto;
+        $sql = "drop table if exists z_pmto;
             create table z_pmto (
                 PM_ID int unsigned,
                 User_ID int,
-                primary key(PM_ID, User_ID)
-            );
+                primary key(PM_ID, User_ID) );
             insert ignore z_pmto (PM_ID, User_ID)
             select PM_ID, Author_ID
             from :_PMMessage;
@@ -118,7 +107,6 @@ class WebWiz extends Source
             select  PM_ID, PM_Tittle,
                 case when PM_Tittle like 'Re:%' then trim(substring(PM_Tittle, 4)) else PM_Tittle end as Title2
             from :_PMMessage;
-
             create index z_idx_pmtext on z_pmtext (PM_ID);
 
             update z_pmtext pm
@@ -127,7 +115,6 @@ class WebWiz extends Source
             set pm.UserIDs = t.UserIDs;
 
             drop table if exists z_pmgroup;
-
             create table z_pmgroup (
                 Group_ID int unsigned,
                 Title varchar(250),
@@ -140,7 +127,6 @@ class WebWiz extends Source
             join z_pmto2 t2
                 on pm.PM_ID = t2.PM_ID
             group by pm.Title2, t2.UserIDs;
-
             create index z_idx_pmgroup on z_pmgroup (Title, UserIDs);
             create index z_idx_pmgroup2 on z_pmgroup (Group_ID);
 
@@ -148,39 +134,42 @@ class WebWiz extends Source
             join z_pmgroup g
                 on pm.Title2 = g.Title and pm.UserIDs = g.UserIDs
             set pm.Group_ID = g.Group_ID;";
-
         $this->dbInput()->unprepared($sql);
     }
 
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'Author_ID' => 'UserID',
-            'Username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
-            'Real_name' => ['Column' => 'FullName', 'Type' => 'varchar(50)', 'Filter' => 'DecodeHtml'],
+            'Username' => 'Name',
+            'Real_name' => 'FullName',
             'Password2' => 'Password',
             'Gender2' => 'Gender',
             'Author_email' => 'Email',
-            'Photo2' => ['Column' => 'Photo', 'Filter' => 'DecodeHtml'],
+            'Photo2' => 'Photo',
             'Login_IP' => 'LastIPAddress',
             'Banned' => 'Banned',
-            'Join_date' => ['Column' => 'DateInserted'],
-            'Last_visit' => ['Column' => 'DateLastActive'],
-            'Location' => ['Column' => 'Location', 'Filter' => 'DecodeHtml'],
+            'Join_date' => 'DateInserted',
+            'Last_visit' => 'DateLastActive',
             'DOB' => 'DateOfBirth',
-            'Show_email' => 'ShowEmail'
+            'Show_email' => 'ShowEmail',
+            'HashMethod=webwiz',
+        ];
+        $filters = [
+            'Username' => \Porter\Filter\DecodeHtml::class,
+            'Real_name' => \Porter\Filter\DecodeHtml::class,
+            'Location' => \Porter\Filter\DecodeHtml::class,
+            'Photo2' => \Porter\Filter\DecodeHtml::class,
         ];
         $this->export(
             'User',
-            "select
-                    concat(Salt, '$', Password) as Password2,
-                    case u.Gender when 'Male' then 'm' when 'Female' then 'f' else 'u' end as Gender2,
+            "select  u.* concat(Salt, '$', Password) as Password2,
+                case u.Gender when 'Male' then 'm' when 'Female' then 'f' else 'u' end as Gender2,
                 case when Avatar like 'http%' then Avatar when Avatar > ''
-                    then concat('webwiz/', Avatar) else null end as Photo2,
-                    'webwiz' as HashMethod,
-                    u.*
+                    then concat('webwiz/', Avatar) else null end as Photo2
                 from :_Author u",
-            $user_Map
+            $map,
+            $filters
         );
     }
 
@@ -212,10 +201,7 @@ class WebWiz extends Source
     {
         $this->export(
             'UserMeta',
-            "select
-                Author_ID as UserID,
-                'Plugin.Signatures.Sig' as `Name`,
-                Signature as `Value`
+            "select Author_ID as UserID, 'Plugin.Signatures.Sig' as `Name`, Signature as `Value`
             from :_Author
             where Signature <> ''"
         );
@@ -232,16 +218,14 @@ class WebWiz extends Source
         ];
         $this->export(
             'Category',
-            "select
-                    f.Forum_ID,
+            "select f.Forum_ID,
                     f.Cat_ID * 1000 as Parent_ID,
                     f.Forum_order,
                     f.Forum_name,
                     f.Forum_description
                 from :_Forum f
                 union all
-                select
-                    c.Cat_ID * 1000,
+                select c.Cat_ID * 1000,
                     null,
                     c.Cat_order,
                     c.Cat_name,
@@ -253,32 +237,28 @@ class WebWiz extends Source
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'Topic_ID' => 'DiscussionID',
             'Forum_ID' => 'CategoryID',
             'Author_ID' => 'InsertUserID',
-            'Subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
-            'IP_addr' => 'InsertIPAddress',
-            'Message' => ['Column' => 'Body'],
+            'Subject' => 'Name',
+            'Message' => 'Body',
             'Format' => 'Format',
-            'Message_date' => ['Column' => 'DateInserted'],
+            'Message_date' => 'DateInserted',
             'No_of_views' => 'CountViews',
             'Locked' => 'Closed',
-
+            'Format=Html',
+        ];
+        $filters = [
+            'Subject' => \Porter\Filter\DecodeHtml::class,
         ];
         $this->export(
             'Discussion',
-            "select
-                    th.Author_ID,
-                    th.Message,
-                    th.Message_date,
-                    th.IP_addr,
-                    'Html' as Format,
-                    t.*
+            "select t.*, th.Author_ID, th.Message, th.Message_date                    
                 from :_Topic t
-                join :_Thread th
-                    on t.Start_Thread_ID = th.Thread_ID",
-            $discussion_Map
+                join :_Thread th on t.Start_Thread_ID = th.Thread_ID",
+            $map,
+            $filters
         );
     }
 
@@ -288,17 +268,16 @@ class WebWiz extends Source
             'Thread_ID' => 'CommentID',
             'Topic_ID' => 'DiscussionID',
             'Author_ID' => 'InsertUserID',
-            'IP_addr' => 'InsertIPAddress',
-            'Message' => ['Column' => 'Body'],
+            'Message' => 'Body',
             'Format' => 'Format',
-            'Message_date' => ['Column' => 'DateInserted']
+            'Message_date' => 'DateInserted',
+            'Format=Html',
         ];
-        $this->export(
+        $this->export( // @todo wtf is this join??
             'Comment',
-            "select th.*, 'Html' as Format
+            "select th.*
                 from :_Thread th
-                join :_Topic t
-                    on t.Topic_ID = th.Topic_ID
+                join :_Topic t on t.Topic_ID = th.Topic_ID
                 where th.Thread_ID <> t.Start_Thread_ID",
             $comment_Map
         );

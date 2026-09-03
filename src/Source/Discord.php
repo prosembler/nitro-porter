@@ -22,9 +22,6 @@ class Discord extends Source
         'charsetTable' => 'discord_messages',
     ];
 
-    /** @var int Milliseconds from Unix Epoch. */
-    public const int DISCORD_EPOCH_DIFF = 1288834974657;
-
     public const array CHANNEL_TYPE = [
         'GUILD_TEXT' => 0,
         'GUILD_CATEGORY' => 4,
@@ -108,7 +105,7 @@ class Discord extends Source
         $filters = [
             'new_parent_id' => fn($val, $col, $row) // Text channels use 'id' as 'parent_id' — they are own category.
                 => (Discord::CHANNEL_TYPE['GUILD_TEXT'] === $row['type']) ? $row['new_id'] : $row['new_parent_id'],
-            'derived_timestamp' => __NAMESPACE__ . '\Discord::timestampFromSnowflake',
+            'derived_timestamp' => \Porter\Filter\SnowflakeToTimestamp::class,
         ];
         $query = $this->sourceQB()->from('discord_channels')
             ->join('discord_users', 'discord_users.id', '=', 'discord_channels.owner_id')
@@ -281,20 +278,5 @@ class Discord extends Source
                 'discord_users.new_id as new_user_id',
                 'discord_poll_answers.new_id as new_answer_id']);
         $this->export('PollVote', $query, $map);
-    }
-
-    /**
-     * Discord SnowflakeIDs have timestamps embedded within them.
-     *
-     * @param mixed $value A Discord SnowflakeID
-     * @return ?string MySQL timestamp
-     */
-    public static function timestampFromSnowflake(mixed $value): ?string
-    {
-        if (empty($value)) {
-            return null;
-        }
-        $timestamp = (($value >> 22) + self::DISCORD_EPOCH_DIFF) / 1000;
-        return gmdate("Y-m-d H:i:s", (int)$timestamp); // FROM_UNIXTIME() equivalent.
     }
 }

@@ -20,11 +20,6 @@ class MyBb extends Source
         'charsetTable' => 'posts',
     ];
 
-    /**
-     * You can use this to require certain tables and columns be present.
-     *
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
         'forums' => [],
         'posts' => [],
@@ -34,85 +29,73 @@ class MyBb extends Source
 
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'uid' => 'UserID',
-            'username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'username' => 'Name',
             'avatar' => 'Photo',
-            'regdate2' => 'DateInserted',
-            'regdate3' => 'DateFirstVisit',
+            'regdate' => 'DateInserted',
+            'lastactive' => 'DateLastActive',
             'email' => 'Email',
+            'HashMethod=mybb',
         ];
-        $this->export(
-            'User',
-            "select u.*,
-                FROM_UNIXTIME(regdate) as regdate2,
-                FROM_UNIXTIME(regdate) as regdate3,
-                FROM_UNIXTIME(lastactive) as DateLastActive,
-                concat(password, salt) as Password,
-                'mybb' as HashMethod
-             from :_users u",
-            $user_Map
-        );
+        $filters = [
+            'username' => \Porter\Filter\DecodeHtml::class,
+            'regdate' => \Porter\Filter\UnixtimeToDate::class,
+            'lastactive' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $this->export('User', "select u.*, concat(password, salt) as Password from :_users u", $map, $filters);
     }
 
     protected function roles(): void
     {
-        $role_Map = [
+        $map = [
             'gid' => 'RoleID',
             'title' => 'Name',
             'description' => 'Description',
         ];
-        $this->export(
-            'Role',
-            "select * from :_usergroups",
-            $role_Map
-        );
+        $this->export('Role', "select * from :_usergroups", $map);
 
         // User Role.
-        $userRole_Map = [
+        $map = [
             'uid' => 'UserID',
             'usergroup' => 'RoleID',
         ];
-        $this->export(
-            'UserRole',
-            "select u.uid, u.usergroup from :_users u",
-            $userRole_Map
-        );
+        $this->export('UserRole', "select uid, usergroup from :_users", $map);
     }
 
     protected function categories(): void
     {
-        $category_Map = [
+        $map = [
             'fid' => 'CategoryID',
             'pid' => 'ParentCategoryID',
             'disporder' => 'Sort',
             'name' => 'Name',
             'description' => 'Description',
         ];
-        $this->export(
-            'Category',
-            "select * from :_forums f",
-            $category_Map
-        );
+        $this->export('Category', "select * from :_forums", $map);
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'tid' => 'DiscussionID',
             'fid' => 'CategoryID',
             'uid' => 'InsertUserID',
-            'subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'subject' => 'Name',
             'views' => 'CountViews',
             'replies' => 'CountComments',
+            'dateline' => 'DateInserted',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'subject' => \Porter\Filter\DecodeHtml::class,
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Discussion',
-            "select *,
-                    FROM_UNIXTIME(dateline) as DateInserted,
-                    'BBCode' as Format
-                from :_threads t",
-            $discussion_Map
+            "select * from :_threads",
+            $map,
+            $filters
         );
     }
 
@@ -122,21 +105,19 @@ class MyBb extends Source
             'pid' => 'CommentID',
             'tid' => 'DiscussionID',
             'uid' => 'InsertUserID',
-            'message' => ['Column' => 'Body'],
+            'dateline' => 'DateInserted',
+            'message' => 'Body',
+            'Format=BBCode',
         ];
-        $this->export(
-            'Comment',
-            "select p.*,
-                    FROM_UNIXTIME(dateline) as DateInserted,
-                    'BBCode' as Format
-                from :_posts p",
-            $comment_Map
-        );
+        $filters = [
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $this->export('Comment', "select * from :_posts", $comment_Map, $filters);
     }
 
     protected function attachments(): void
     {
-        $media_Map = [
+        $map = [
             'aid' => 'MediaID',
             'pid' => 'ForeignID',
             'uid' => 'InsertUserId',
@@ -145,33 +126,31 @@ class MyBb extends Source
             'height' => 'ImageHeight',
             'width' => 'ImageWidth',
             'filetype' => 'Type',
-            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+            'thumb_width' => 'ThumbWidth',
+            'ForeignTable=Comment',
+            'ThumbWidth=600',
+        ];
+        $filters = [
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Media',
-            "select a.*,
-                    600 as thumb_width,
-                    concat('attachments/', a.thumbnail) as ThumbPath,
-                    concat('attachments/', a.attachname) as Path,
-                    'Comment' as ForeignTable
-                from :_attachments a
-                where a.pid > 0",
-            $media_Map
+            "select *,
+                    concat('attachments/', thumbnail) as ThumbPath,
+                    concat('attachments/', attachname) as Path
+                from :_attachments where pid > 0",
+            $map,
+            $filters
         );
     }
 
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = [
+        $map = [
             'tid' => 'DiscussionID',
             'uid' => 'UserID',
+            'Bookmarked=1',
         ];
-        $this->export(
-            'UserDiscussion',
-            "select *,
-                    1 as Bookmarked
-                from :_threadsubscriptions t",
-            $userDiscussion_Map
-        );
+        $this->export('UserDiscussion', "select * from :_threadsubscriptions", $map);
     }
 }

@@ -19,20 +19,9 @@ class Kunena extends Source
         'passwordHashMethod' => 'joomla',
     ];
 
-    /**
-     * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     */
-    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
-    {
-        if (str_starts_with(strtolower($row['filetype']), 'image/')) {
-            return $value;
-        }
-        return null;
-    }
-
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'id' => 'UserID',
             'name' => 'Name',
             'email' => 'Email',
@@ -43,42 +32,25 @@ class Kunena extends Source
             'birthdate' => 'DateOfBirth',
             'banned' => 'Banned',
             'admin' => 'Admin',
-            'Photo' => 'Photo'
         ];
         $this->export(
             'User',
-            "SELECT
-                    u.*,
+            "select u.*, ku.birthdate, !ku.hideemail as showemail, if(isnull(ku.banned), 0, 1) as banned,
                     case when ku.avatar <> '' then concat('kunena/avatars/', ku.avatar) else null end as `Photo`,
-                    case group_id when 'superadministrator' then 1 else 0 end as admin,
-                    if(isnull(ku.banned), 0, 1) as banned,
-                    ku.birthdate,
-                    !ku.hideemail as showemail
-                FROM :_users u
-                left join :_kunena_users ku
-                    on ku.userid = u.id",
-            $user_Map
+                    case group_id when 'superadministrator' then 1 else 0 end as admin
+                from :_users u
+                left join :_kunena_users ku on ku.userid = u.id",
+            $map
         );
     }
 
     protected function roles(): void
     {
-        $role_Map = [
-            'rank_id' => 'RoleID',
-            'rank_title' => 'Name',
-        ];
+        $role_Map = ['rank_id' => 'RoleID', 'rank_title' => 'Name',];
         $this->export('Role', "select * from :_kunena_ranks", $role_Map);
-
         // UserRole.
-        $userRole_Map = [
-            'id' => 'UserID',
-            'rank' => 'RoleID'
-        ];
-        $this->export(
-            'UserRole',
-            "select * from :_users u",
-            $userRole_Map
-        );
+        $userRole_Map = ['id' => 'UserID', 'rank' => 'RoleID'];
+        $this->export('UserRole', "select * from :_users u", $userRole_Map);
     }
 
     protected function categories(): void
@@ -89,109 +61,112 @@ class Kunena extends Source
             'name' => 'Name',
             'ordering' => 'Sort',
             'description' => 'Description',
-
         ];
-        $this->export(
-            'Category',
-            "select * from :_kunena_categories",
-            $category_Map
-        );
+        $this->export('Category', "select * from :_kunena_categories", $category_Map);
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'id' => 'DiscussionID',
             'catid' => 'CategoryID',
             'userid' => 'InsertUserID',
-            'subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
-            'time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'subject' => 'Name',
+            'time' => 'DateInserted',
             'ip' => 'InsertIPAddress',
             'locked' => 'Closed',
             'hits' => 'CountViews',
             'modified_by' => 'UpdateUserID',
-            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
+            'modified_time' => 'DateUpdated',
             'message' => 'Body',
-            'Format' => 'Format'
+            'Format=BBCode',
+        ];
+        $filters = [
+            'subject' => \Porter\Filter\DecodeHtml::class,
+            'time' => \Porter\Filter\UnixtimeToDate::class,
+            'modified_time' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Discussion',
-            "select t.*,
-                    txt.message,
-                    'BBCode' as Format
+            "select t.*, txt.message
                  from :_kunena_messages t
-                 left join :_kunena_messages_text txt
-                    on t.id = txt.mesid
+                 left join :_kunena_messages_text txt on t.id = txt.mesid
                  where t.thread = t.id",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'id' => 'CommentID',
             'thread' => 'DiscussionID',
             'userid' => 'InsertUserID',
-            'time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'time' => 'DateInserted',
             'ip' => 'InsertIPAddress',
             'modified_by' => 'UpdateUserID',
-            'modified_time' => ['Column' => 'DateUpdated', 'Filter' => 'UnixtimeToDate'],
+            'modified_time' => 'DateUpdated',
             'message' => 'Body',
-            'Format' => 'Format'
+            'Format=BBCode',
+        ];
+        $filters = [
+            'time' => \Porter\Filter\UnixtimeToDate::class,
+            'modified_time' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Comment',
-            "select t.*,
-                    txt.message,
-                    'BBCode' as Format
+            "select t.*, txt.message
                  from :_kunena_messages t
-                 left join :_kunena_messages_text txt
-                    on t.id = txt.mesid
+                 left join :_kunena_messages_text txt on t.id = txt.mesid
                  where t.thread <> t.id",
-            $comment_Map
+            $map,
+            $filters
         );
     }
 
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = [
+        $map = [
             'thread' => 'DiscussionID',
-            'userid' => 'UserID'
+            'userid' => 'UserID',
+            'Bookmarked=1',
         ];
-        $this->export(
-            'UserDiscussion',
-            "select t.*, 1 as Bookmarked from :_kunena_user_topics t",
-            $userDiscussion_Map
-        );
+        $this->export('UserDiscussion', "select t.* from :_kunena_user_topics t", $map);
     }
 
     protected function attachments(): void
     {
-        $media_Map = [
+        $map = [
             'id' => 'MediaID',
             'mesid' => 'ForeignID',
             'userid' => 'InsertUserID',
             'size' => 'Size',
-            'path2' => ['Column' => 'Path', 'Filter' => 'DecodeUrl'],
-            'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
-            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+            'path2' => 'Path',
+            'thumb_path' => 'ThumbPath',
+            'thumb_width' => 'ThumbWidth',
             'filetype' => 'Type',
-            'filename' => ['Column' => 'Name', 'Filter' => 'DecodeUrl'],
-            'time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'filename' => 'Name',
+            'time' => 'DateInserted',
+        ];
+        $filters = [
+            'path2' => \Porter\Filter\DecodeUrl::class,
+            'filename' => \Porter\Filter\DecodeUrl::class,
+            'time' => \Porter\Filter\UnixtimeToDate::class,
+            'thumb_path' => \Porter\Filter\NullIfNotImage::class,
+            'thumb_width' => \Porter\Filter\NullIfNotImage::class,
         ];
         $this->export(
             'Media',
-            "select a.*,
+            "select a.*, m.time, filetype as Mime,
                     concat(a.folder, '/', a.filename) as path2,
                     case when m.id = m.thread then 'discussion' else 'comment' end as ForeignTable,
-                    m.time,
                     concat(a.folder, '/', a.filename) as thumb_path,
                     128 as thumb_width
                  from :_kunena_attachments a
-                 join :_kunena_messages m
-                    on m.id = a.mesid",
-            $media_Map
+                 join :_kunena_messages m on m.id = a.mesid",
+            $map,
+            $filters
         );
     }
 }

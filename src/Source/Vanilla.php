@@ -27,9 +27,6 @@ class Vanilla extends Source
         'Reactions' => ['enabled' => 'Cloud or YAGA'],
     ];
 
-    /**
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [];
 
     public function categories(): void
@@ -131,12 +128,9 @@ class Vanilla extends Source
             $this->export('Badge', "select *,
                 NOW() as DateInserted,
                 1 as InsertUserID,
-                Description as Body,
                 Enabled as Visible
                 from :_YagaBadge", $map);
-            $this->export('UserBadge', "select *,
-                DateInserted as DateCompleted
-                from :_YagaBadgeAward");
+            $this->export('UserBadge', "select *, DateInserted as DateCompleted from :_YagaBadgeAward");
         }
     }
 

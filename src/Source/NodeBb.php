@@ -19,110 +19,53 @@ class NodeBb extends Source
         'passwordHashMethod' => 'Vanilla',
     ];
 
-    public function tsToDate(mixed $time): false|string|null
-    {
-        if (!$time) {
-            return null;
-        }
-        return gmdate('Y-m-d H:i:s', (int) $time / 1000);
-    }
-
-    public function removeNumId(mixed $slug): array|string|null
-    {
-        $regex = '/(\d*)\//';
-        return preg_replace($regex, '', $slug);
-    }
-
-    public function roleNameFromKey(mixed $key): mixed
-    {
-        $regex = '/\w*:([\w|\s|-]*):/';
-        preg_match($regex, $key, $matches);
-        return $matches[1] ?? '';
-    }
-
-    public function idFromKey(mixed $key): mixed
-    {
-        $regex = '/\w*:(\d*):/';
-        preg_match($regex, $key, $matches);
-        return $matches[1] ?? '';
-    }
-
-    public function makeNullZero(mixed $value): int
-    {
-        if (!$value) {
-            return 0;
-        }
-        return $value;
-    }
-
-    public function isPoll(mixed $value): ?string
-    {
-        if ($value) {
-            return 'poll';
-        }
-        return null;
-    }
-
-    public function serializeReactions(mixed $reactions): ?string
-    {
-        if ($reactions == '0:0') {
-            return null;
-        }
-        $reactionArray = explode(':', $reactions);
-        $arraynum = 1;
-        if ($reactionArray[0] > 0 && $reactionArray[1] > 0) {
-            $arraynum = 2;
-        }
-        $attributes = 'a:1:{s:5:"React";a:' . $arraynum . ':{';
-        if ($reactionArray[0] > 0) {
-            $attributes .= 's:2:"Up";s:' . strlen($reactionArray[0]) . ':"' . $reactionArray[0] . '";';
-        }
-        if ($reactionArray[1] > 0) {
-            $attributes .= 's:4:"Down";s:' . strlen($reactionArray[1]) . ':"' . $reactionArray[1] . '";';
-        }
-        $attributes .= '}}';
-
-        return $attributes;
-    }
-
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'uid' => 'UserID',
             'username' => 'Name',
             'password' => 'Password',
             'email' => 'Email',
             'confirmed' => 'Confirmed',
             'showemail' => 'ShowEmail',
-            'joindate' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
-            'lastonline' => ['Column' => 'DateLastActive', 'Filter' => [$this, 'tsToDate']],
-            'lastposttime' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'tsToDate']],
+            'joindate' => 'DateInserted',
+            'lastonline' => 'DateLastActive',
+            'lastposttime' => 'DateUpdated',
             'banned' => 'Banned',
-            'admin' => 'Admin',
-            'hm' => 'HashMethod'
+            'HashMethod=crypt'
+        ];
+        $filters = [
+            'joindate' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
+            'lastonline' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
+            'lastposttime' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
         ];
         $this->export(
             'User',
             "select uid, username, password, email, `email:confirmed` as confirmed,
-                    showemail, joindate, lastonline, lastposttime, banned, 0 as admin, 'crypt' as hm
+                    showemail, joindate, lastonline, lastposttime, banned
                 from :_user",
-            $user_Map
+            $map,
+            $filters
         );
     }
 
     protected function roles(): void
     {
-        $role_Map = [
+        $map = [
             '_num' => 'RoleID',
-            '_key' => ['Column' => 'Name', 'Filter' => [$this, 'roleNameFromKey']],
-            'description' => 'Description'
+            '_key' => 'Name',
+            'description' => 'Description',
+        ];
+        $filters = [
+            '_key' => \Porter\Filter\ExtractColonDelimWord::class,
         ];
         $this->export(
             'Role',
             "select gm._key as _key, gm._num as _num, g.description as description
                 from :_group_members gm left join :_group g
                 on gm._key like concat(g._key, '%')",
-            $role_Map
+            $map,
+            $filters
         );
 
         $userRole_Map = [
@@ -168,113 +111,73 @@ class NodeBb extends Source
 
     protected function categories(): void
     {
-        $category_Map = [
+        $map = [
             'cid' => 'CategoryID',
-            'name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'name' => 'Name',
             'description' => 'Description',
             'order' => 'Sort',
             'parentCid' => 'ParentCategoryID',
-            'slug' => ['Column' => 'UrlCode', 'Filter' => [$this, 'removeNumId']],
+            'slug' => 'UrlCode',
             'image' => 'Photo',
             'disabled' => 'Archived'
         ];
-        $this->export(
-            'Category',
-            "select * from :_category",
-            $category_Map
-        );
+        $filters = [
+            'name' => \Porter\Filter\DecodeHtml::class,
+            'slug' => \Porter\Filter\RemoveNumber::class,
+        ];
+        $this->export('Category', "select * from :_category", $map, $filters);
     }
 
     protected function discussions(): void
     {
         if (!$this->indexExists('z_idx_topic', ':_topic')) {
-            $this->query("create index z_idx_topic on :_topic(mainPid);");
+            $this->dbInput()->unprepared("create index z_idx_topic on :_topic(mainPid);");
         }
         if (!$this->indexExists('z_idx_post', ':_post')) {
-            $this->query("create index z_idx_post on :_post(pid);");
+            $this->dbInput()->unprepared("create index z_idx_post on :_post(pid);");
         }
         if (!$this->indexExists('z_idx_poll', ':_poll')) {
-            $this->query("create index z_idx_poll on :_poll(tid);");
+            $this->dbInput()->unprepared("create index z_idx_poll on :_poll(tid);");
         }
 
-        $this->query("drop table if exists z_discussionids;");
-        $this->query(
-            "
+        $this->dbInput()->unprepared("drop table if exists z_discussionids;");
+        $this->dbInput()->unprepared("create table z_discussionids (tid int unsigned, primary key(tid));");
+        $this->dbInput()->unprepared("insert ignore z_discussionids (tid)
+            select mainPid from :_topic
+            where mainPid is not null and deleted != 1;");
 
-            create table z_discussionids (
-                tid int unsigned,
-                primary key(tid)
-            );
+        $this->dbInput()->unprepared("drop table if exists z_reactiontotalsupvote;");
+        $this->dbInput()->unprepared("create table z_reactiontotalsupvote (
+                value varchar(50), total int, primary key (value));");
 
-        "
-        );
-        $this->query(
-            "insert ignore z_discussionids (tid)
-            select mainPid
-            from :_topic
-            where mainPid is not null
-            and deleted != 1;"
-        );
+        $this->dbInput()->unprepared("drop table if exists z_reactiontotalsdownvote;");
+        $this->dbInput()->unprepared("create table z_reactiontotalsdownvote (
+                value varchar(50), total int, primary key (value));");
 
-        $this->query("drop table if exists z_reactiontotalsupvote;");
-        $this->query(
-            "create table z_reactiontotalsupvote (
-                value varchar(50),
-                total int,
-                primary key (value)
-            );"
-        );
+        $this->dbInput()->unprepared("drop table if exists z_reactiontotals;");
+        $this->dbInput()->unprepared("create table z_reactiontotals (
+              value varchar(50), upvote int, downvote int, primary key (value));");
 
-        $this->query("drop table if exists z_reactiontotalsdownvote;");
-        $this->query(
-            "create table z_reactiontotalsdownvote (
-                value varchar(50),
-                total int,
-                primary key (value)
-            );"
-        );
-
-        $this->query("drop table if exists z_reactiontotals;");
-        $this->query(
-            "create table z_reactiontotals (
-              value varchar(50),
-              upvote int,
-              downvote int,
-              primary key (value)
-            );"
-        );
-
-        $this->query(
-            "insert z_reactiontotalsupvote
+        $this->dbInput()->unprepared("insert z_reactiontotalsupvote
             select value, count(*) as totals
             from :_uid_upvote
-            group by value;"
-        );
-
-        $this->query(
-            " insert z_reactiontotalsdownvote
+            group by value;");
+        $this->dbInput()->unprepared("insert z_reactiontotalsdownvote
             select value, count(*) as totals
             from :_uid_downvote
-            group by value;"
-        );
-
-        $this->query(
-            "insert z_reactiontotals
-            select *
-            from (
+            group by value;");
+        $this->dbInput()->unprepared("insert z_reactiontotals
+            select * from (
                 select u.value, u.total as up, d.total as down
                 from z_reactiontotalsupvote u
-                left join z_reactiontotalsdownvote d
-                on u.value = d.value
+                left join z_reactiontotalsdownvote d on u.value = d.value
                 union
                 select d.value, u.total as up, d.total as down
                 from z_reactiontotalsdownvote d
-                left join z_reactiontotalsupvote u
-                on u.value = d.value
-            ) as reactions"
-        );
+                left join z_reactiontotalsupvote u on u.value = d.value
+            ) as reactions");
 
-        $discussion_Map = [
+        $map = [
             'tid' => 'DiscussionID',
             'cid' => 'CategoryID',
             'title' => 'Name',
@@ -282,118 +185,120 @@ class NodeBb extends Source
             'uid' => 'InsertUserID',
             'locked' => 'Closed',
             'pinned' => 'Announce',
-            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
-            'edited' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'tsToDate']],
+            'timestamp' => 'DateInserted',
+            'edited' => 'DateUpdated',
             'editor' => 'UpdateUserID',
             'viewcount' => 'CountViews',
-            'format' => 'Format',
+            'Format=Markdown',
             'votes' => 'Score',
-            'attributes' => ['Column' => 'Attributes', 'Filter' => [$this, 'serializeReactions']],
-            'poll' => ['Column' => 'Type', 'Filter' => [$this, 'isPoll']]
+            'attributes' => 'Attributes',
+            'poll' => 'Type',
+            'FilterStringValue=poll',
+        ];
+        $filters = [
+            'timestamp' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
+            'edited' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
+            'attributes' => \Porter\Filter\ExtractColonDelimReactions::class,
+            'poll' => \Porter\Filter\NotEmptyToStringValue::class, // see above: 'FilterStringValue=poll',
         ];
         $this->export(
             'Discussion',
             "select p.tid, cid, title, content, p.uid, locked, pinned, p.timestamp,
-                    p.edited, p.editor, viewcount, votes, poll._id as poll, 'Markdown' as format,
+                    p.edited, p.editor, viewcount, votes, 
+                    poll._id as poll,
                     concat(ifnull(u.total, 0), ':', ifnull(d.total, 0)) as attributes
                 from :_topic t
-                left join :_post p
-                on t.mainPid = p.pid
-                left join z_reactiontotalsupvote u
-                on u.value = t.mainPid
-                left join z_reactiontotalsdownvote d
-                on d.value = t.mainPid
-                left join :_poll poll
-                on p.tid = poll.tid
+                left join :_post p on t.mainPid = p.pid
+                left join z_reactiontotalsupvote u on u.value = t.mainPid
+                left join z_reactiontotalsdownvote d on d.value = t.mainPid
+                left join :_poll poll on p.tid = poll.tid
                 where t.deleted != 1",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
-        $this->query("drop table if exists z_comments;");
-        $this->query(
-            "create table z_comments (
-                pid int,
-                content text,
-                uid varchar(255),
-                tid varchar(255),
-                timestamp double,
-                edited varchar(255),
-                editor varchar(255),
-                votes int,
-                upvote int,
-                downvote int,
-                primary key(pid)
-            );"
-        );
-        $this->query(
-            "insert ignore z_comments (pid, content, uid, tid, timestamp, edited, editor, votes)
+        $this->dbInput()->unprepared("drop table if exists z_comments;");
+        $this->dbInput()->unprepared("create table z_comments (
+                pid int, content text, uid varchar(255), tid varchar(255),
+                timestamp double, edited varchar(255), editor varchar(255),
+                votes int, upvote int, downvote int, primary key(pid) );");
+        $this->dbInput()->unprepared("insert ignore z_comments 
+                    (pid, content, uid, tid, timestamp, edited, editor, votes)
             select p.pid, p.content, p.uid, p.tid, p.timestamp, p.edited, p.editor, p.votes
             from :_post p
-            left join z_discussionids t
-            on t.tid = p.pid
-            where p.deleted != 1 and t.tid is null;"
-        );
-        $this->query(
-            "update z_comments as c
-            join z_reactiontotals r
-            on r.value = c.pid
-            set c.upvote = r.upvote, c.downvote = r.downvote;"
-        );
+            left join z_discussionids t on t.tid = p.pid
+            where p.deleted != 1 and t.tid is null;");
+        $this->dbInput()->unprepared("update z_comments as c
+            join z_reactiontotals r on r.value = c.pid
+            set c.upvote = r.upvote, c.downvote = r.downvote;");
 
         // Comments
-        $comment_Map = [
+        $map = [
             'content' => 'Body',
             'uid' => 'InsertUserID',
             'tid' => 'DiscussionID',
-            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
-            'edited' => ['Column' => 'DateUpdated', 'Filter' => [$this, 'tsToDate']],
+            'timestamp' => 'DateInserted',
+            'edited' => 'DateUpdated',
             'editor' => 'UpdateUserID',
             'votes' => 'Score',
-            'format' => 'Format',
-            'attributes' => ['Column' => 'Attributes', 'Filter' => [$this, 'serializeReactions']]
+            'Format=Markdown',
+            'attributes' => 'Attributes',
         ];
-
+        $filters = [
+            'timestamp' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
+            'edited' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
+            'attributes' => \Porter\Filter\ExtractColonDelimReactions::class,
+        ];
         $this->export(
             'Comment',
-            "select content, uid, tid, timestamp, edited, editor, votes, 'Markdown' as format,
+            "select content, uid, tid, timestamp, edited, editor, votes,
                     concat(ifnull(upvote, 0), ':', ifnull(downvote, 0)) as attributes
                 from z_comments",
-            $comment_Map
+            $map,
+            $filters
         );
     }
 
     protected function polls(): void
     {
-        $poll_Map = [
+        $map = [
             'pollid' => 'PollID',
             'title' => 'Name',
             'tid' => 'DiscussionID',
             'votecount' => 'CountVotes',
             'uid' => 'InsertUserID',
-            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']]
+            'timestamp' => 'DateInserted',
+        ];
+        $filters = [
+            'timestamp' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
         ];
         $this->export(
             'Poll',
             "select *
-                from :_poll p left join :_poll_settings ps
-                on ps._key like concat(p._key, ':', '%')",
-            $poll_Map
+                from :_poll p 
+                left join :_poll_settings ps on ps._key like concat(p._key, ':', '%')",
+            $map,
+            $filters
         );
 
         $pollOption_Map = [
             '_num' => 'PollOptionID',
-            '_key' => ['Column' => 'PollID', 'Filter' => [$this, 'idFromKey']],
+            '_key' => 'PollID',
             'title' => 'Body',
             'sort' => 'Sort',
-            'votecount' => ['Column' => 'CountVotes', 'Filter' => [$this, 'makeNullZero']],
-            'format' => 'Format'
+            'votecount' => 'CountVotes',
+            'Format=Html',
+        ];
+        $filters = [
+            'votecount' => \Porter\Filter\EmptyToZero::class,
+            '_key' => \Porter\Filter\ExtractColonDelimNumber::class,
         ];
         $this->export(
             'PollOption',
-            "select _num, _key, title, id+1 as sort, votecount, 'Html' as format
+            "select _num, _key, title, id+1 as sort, votecount
                 from :_poll_options
                 where title is not null",
             $pollOption_Map
@@ -407,10 +312,8 @@ class NodeBb extends Source
             'PollVote',
             "select povm.members as userid, po._num as poll_option_id
                 from :_poll_options_votes__members povm
-                left join :_poll_options_votes pov
-                on povm._parentid = pov._id
-                left join :_poll_options po
-                on pov._key like concat(po._key, ':', '%')
+                left join :_poll_options_votes pov on povm._parentid = pov._id
+                left join :_poll_options po on pov._key like concat(po._key, ':', '%')
                 where po.title is not null",
             $pollVote_Map
         );
@@ -419,9 +322,9 @@ class NodeBb extends Source
     protected function tags(): void
     {
         if (!$this->indexExists('z_idx_topic_key', ':_topic')) {
-            $this->query("create index z_idx_topic_key on :_topic (_key);");
+            $this->dbInput()->unprepared("create index z_idx_topic_key on :_topic (_key);");
         }
-        $tag_Map = [
+        $map = [
             'slug' => 'Name',
             'fullname' => 'FullName',
             'count' => 'CountDiscussions',
@@ -431,32 +334,32 @@ class NodeBb extends Source
             'timestamp' => 'DateInserted',
             'uid' => 'InsertUserID'
         ];
-        $filters = ['slug' => 'FormatUrl', 'timestamp' => [$this, 'tsToDate']];
-        $this->query("set @rownr=1000;");
+        $filters = [
+            'timestamp' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
+            'slug' => \Porter\Filter\FormatUrl::class,
+        ];
+        $this->dbInput()->unprepared("set @rownr=1000;");
         $this->export(
             'Tag',
-            "select @rownr:=@rownr+1 as tagid, members as fullname, members as slug,
-                    '' as type, count, timestamp, uid, cid
+            "select @rownr:=@rownr+1 as tagid, members as fullname, members as slug, count, timestamp, uid, cid
                 from (
                     select members, count(*) as count, _parentid
                     from :_topic_tags__members
                     group by members
                 ) as tags
-                join :_topic_tags tt
-                on tt._id = _parentid
-                left join :_topic t
-                on substring(tt._key, 1, length(tt._key) - 5) = t._key",
-            $tag_Map,
+                join :_topic_tags tt on tt._id = _parentid
+                left join :_topic t on substring(tt._key, 1, length(tt._key) - 5) = t._key",
+            $map,
             $filters
         );
 
-        $tagDiscussion_Map = [
+        $map = [
             'tagid' => 'TagID',
             'tid' => 'DiscussionID',
             'cid' => 'CategoryID',
-            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']]
+            'timestamp' => 'DateInserted',
         ];
-        $this->query("set @rownr=1000;");
+        $this->dbInput()->unprepared("set @rownr=1000;");
         $this->export(
             'TagDiscussion',
             "select tagid, cid, tid, timestamp
@@ -468,89 +371,65 @@ class NodeBb extends Source
                         from :_topic_tags__members
                         group by members
                     ) as tags
-                ) as tagids
-                on two.members = tagids.fullname
-                join :_topic_tags tt
-                on tt._id = _parentid
-                left join :_topic t
-                on substring(tt._key, 1, length(tt._key) - 5) = t._key",
-            $tagDiscussion_Map
+                ) as tagids on two.members = tagids.fullname
+                join :_topic_tags tt on tt._id = _parentid
+                left join :_topic t on substring(tt._key, 1, length(tt._key) - 5) = t._key",
+            $map,
+            $filters
         );
     }
 
     protected function conversations(): void
     {
         if (!$this->indexExists('z_idx_message_key', ':_message')) {
-            $this->query("create index z_idx_message_key on :_message(_key);");
+            $this->dbInput()->unprepared("create index z_idx_message_key on :_message(_key);");
         }
-        $this->query("drop table if exists z_pmto;");
-        $this->query(
-            "create table z_pmto (
+        $this->dbInput()->unprepared("drop table if exists z_pmto;");
+        $this->dbInput()->unprepared("create table z_pmto (
                 pmid int unsigned,
                 userid int,
                 groupid int,
-                primary key(pmid, userid)
-            );"
-        );
-        $this->query(
-            "insert ignore z_pmto (pmid, userid)
+                primary key(pmid, userid) );");
+        $this->dbInput()->unprepared("insert ignore z_pmto (pmid, userid)
             select substring_index(_key, ':', -1), fromuid
-            from :_message;"
-        );
-        $this->query(
-            "insert ignore z_pmto (pmid, userid)
+            from :_message;");
+        $this->dbInput()->unprepared("insert ignore z_pmto (pmid, userid)
             select substring_index(_key, ':', -1), touid
-            from :_message;"
-        );
+            from :_message;");
 
-        $this->query("drop table if exists z_pmto2;");
-        $this->query(
-            "create table z_pmto2 (
+        $this->dbInput()->unprepared("drop table if exists z_pmto2;");
+        $this->dbInput()->unprepared("create table z_pmto2 (
                 pmid int unsigned,
                 userids varchar(250),
                 groupid int unsigned,
-                primary key (pmid)
-            );"
-        );
-        $this->query(
-            "replace z_pmto2 (pmid, userids)
+                primary key (pmid) );");
+        $this->dbInput()->unprepared("replace z_pmto2 (pmid, userids)
             select pmid, group_concat(userid order by userid)
             from z_pmto
-            group by pmid;"
-        );
+            group by pmid;");
 
-        $this->query("drop table if exists z_pmgroup;");
-        $this->query(
-            "create table z_pmgroup (
+        $this->dbInput()->unprepared("drop table if exists z_pmgroup;");
+        $this->dbInput()->unprepared("create table z_pmgroup (
                 userids varchar(250),
                 groupid varchar(255),
                 firstmessageid int,
                 lastmessageid int,
                 countmessages int,
-                primary key (userids, groupid)
-            );"
-        );
-        $this->query(
-            "insert z_pmgroup
+                primary key (userids, groupid) );");
+        $this->dbInput()->unprepared("insert z_pmgroup
             select userids, concat('message:', min(pmid)), min(pmid), max(pmid), count(*)
             from z_pmto2
-            group by userids;"
-        );
-        $this->query(
-            "update z_pmto2 as p
+            group by userids;");
+        $this->dbInput()->unprepared("update z_pmto2 as p
             left join z_pmgroup g
             on p.userids = g.userids
-            set p.groupid = g.firstmessageid;"
-        );
-        $this->query(
-            "update z_pmto as p
-            left join z_pmto2 p2
-            on p.pmid = p2.pmid
-            set p.groupid = p2.groupid;"
-        );
+            set p.groupid = g.firstmessageid;");
+        $this->dbInput()->unprepared("update z_pmto as p
+            left join z_pmto2 p2 on p.pmid = p2.pmid
+            set p.groupid = p2.groupid;");
 
-        $this->query("create index z_idx_pmto_cid on z_pmto(groupid);");
-        $this->query("create index z_idx_pmgroup_cid on z_pmgroup(firstmessageid);");
+        $this->dbInput()->unprepared("create index z_idx_pmto_cid on z_pmto(groupid);");
+        $this->dbInput()->unprepared("create index z_idx_pmgroup_cid on z_pmgroup(firstmessageid);");
 
         $conversation_Map = [
             'conversationid' => 'ConversationID',
@@ -563,29 +442,31 @@ class NodeBb extends Source
             'Conversation',
             "select *, firstmessageid as conversationid, 2 as countparticipants
             from z_pmgroup
-            left join :_message
-            on groupid = _key;",
+            left join :_message on groupid = _key;",
             $conversation_Map
         );
 
-        $conversationMessage_Map = [
+        $map = [
             'messageid' => 'MessageID',
             'conversationid' => 'ConversationID',
             'content' => 'Body',
             'format' => 'Format',
             'fromuid' => 'InsertUserID',
-            'timestamp' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']]
+            'timestamp' => 'DateInserted',
+        ];
+        $filters = [
+            'timestamp' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
         ];
         $this->export(
             'ConversationMessage',
             "select groupid as conversationid, pmid as messageid, content, 'Text' as format, fromuid, timestamp
                 from z_pmto2
-                left join :_message
-                on concat('message:', pmid) = _key",
-            $conversationMessage_Map
+                left join :_message on concat('message:', pmid) = _key",
+            $map,
+            $filters
         );
 
-        $userConversationMap = [
+        $map = [
             'conversationid' => 'ConversationID',
             'userid' => 'UserID',
             'lastmessageid' => 'LastMessageID'
@@ -594,87 +475,82 @@ class NodeBb extends Source
             'UserConversation',
             "select p.groupid as conversationid, userid, lastmessageid
                 from z_pmto p
-                left join z_pmgroup
-                on firstmessageid = p.groupid;",
-            $userConversationMap
+                left join z_pmgroup on firstmessageid = p.groupid;",
+            $map
         );
     }
 
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = [
+        $map = [
             'members' => 'UserID',
-            '_key' => ['Column' => 'DiscussionID', 'Filter' => [$this, 'idFromKey']],
+            '_key' => 'DiscussionID',
             'bookmarked' => 'Bookmarked'
+        ];
+        $filters = [
+            '_key' => \Porter\Filter\ExtractColonDelimNumber::class,
         ];
         $this->export(
             'UserDiscussion',
             "select members, _key, 1 as bookmarked
                 from :_tid_followers__members
-                left join :_tid_followers
-                on _parentid = _id",
-            $userDiscussion_Map
+                left join :_tid_followers on _parentid = _id",
+            $map,
+            $filters
         );
     }
 
     protected function reactions(): void
     {
         if (!$this->indexExists('z_idx_topic_mainpid', ':_topic')) {
-            $this->query("create index z_idx_topic_mainpid on :_topic(mainPid);");
+            $this->dbInput()->unprepared("create index z_idx_topic_mainpid on :_topic(mainPid);");
         }
         if (!$this->indexExists('z_idx_uid_downvote', ':_uid_downvote')) {
-            $this->query("create index z_idx_uid_downvote on :_uid_downvote(value);");
+            $this->dbInput()->unprepared("create index z_idx_uid_downvote on :_uid_downvote(value);");
         }
         if (!$this->indexExists('z_idx_uid_upvote', ':_uid_upvote')) {
-            $this->query("create index z_idx_uid_upvote on :_uid_upvote(value);");
+            $this->dbInput()->unprepared("create index z_idx_uid_upvote on :_uid_upvote(value);");
         }
 
-        $userTag_Map = [
+        $map = [
             'tagid' => 'TagID',
             'recordtype' => 'RecordType',
-            '_key' => ['Column' => 'UserID', 'Filter' => [$this, 'idFromKey']],
+            '_key' => 'UserID',
             'value' => 'RecordID',
-            'score' => ['Column' => 'DateInserted', 'Filter' => [$this, 'tsToDate']],
-            'total' => 'Total'
+            'score' => 'DateInserted',
+            'total' => 'Total',
+        ];
+        $filters = [
+            '_key' => \Porter\Filter\ExtractColonDelimNumber::class,
+            'timestamp' => \Porter\Filter\UnixtimeMillisecondsToDate::class,
         ];
         $this->export(
             'UserTag',
             "select 11 as tagid, 'Discussion' as recordtype, u._key, u.value, score, total
                 from :_uid_upvote u
-                left join z_discussionids t
-                on u.value = t.tid
-                left join z_reactiontotalsupvote r
-                on  r.value = u.value
-                where u._key != 'uid:NaN:upvote'
-                and t.tid is not null
+                left join z_discussionids t on u.value = t.tid
+                left join z_reactiontotalsupvote r on  r.value = u.value
+                where u._key != 'uid:NaN:upvote' and t.tid is not null
                 union
                 select 11 as tagid, 'Comment' as recordtype, u._key, u.value, score, total
                 from :_uid_upvote u
-                left join z_discussionids t
-                on u.value = t.tid
-                left join z_reactiontotalsupvote r
-                on  r.value = u.value
-                where u._key != 'uid:NaN:upvote'
-                and t.tid is null
+                left join z_discussionids t on u.value = t.tid
+                left join z_reactiontotalsupvote r on  r.value = u.value
+                where u._key != 'uid:NaN:upvote' and t.tid is null
                 union
                 select 10 as tagid, 'Discussion' as recordtype, u._key, u.value, score, total
                 from :_uid_downvote u
-                left join z_discussionids t
-                on u.value = t.tid
-                left join z_reactiontotalsdownvote r
-                on  r.value = u.value
-                where u._key != 'uid:NaN:downvote'
-                and t.tid is not null
+                left join z_discussionids t on u.value = t.tid
+                left join z_reactiontotalsdownvote r on  r.value = u.value
+                where u._key != 'uid:NaN:downvote' and t.tid is not null
                 union
                 select 10 as tagid, 'Comment' as recordtype, u._key, u.value, score, total
                 from :_uid_downvote u
-                left join z_discussionids t
-                on u.value = t.tid
-                left join z_reactiontotalsdownvote r
-                on  r.value = u.value
-                where u._key != 'uid:NaN:downvote'
-                and t.tid is null",
-            $userTag_Map
+                left join z_discussionids t on u.value = t.tid
+                left join z_reactiontotalsdownvote r on  r.value = u.value
+                where u._key != 'uid:NaN:downvote' and t.tid is null",
+            $map,
+            $filters
         );
     }
 }

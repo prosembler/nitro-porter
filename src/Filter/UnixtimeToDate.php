@@ -12,6 +12,6 @@ class UnixtimeToDate extends Filter
 {
     public function __invoke(): mixed
     {
-        return ($this->value === null) ? null : gmdate('Y-m-d H:i:s', $this->value);
+        return (empty($this->value)) ? null : gmdate('Y-m-d H:i:s', $this->value);
     }
 }

@@ -24,152 +24,132 @@ class ModxDiscuss extends Source
         'boards' => [],
         'posts' => [],
         'threads' => [],
-        'users' => ['user', 'username', 'email', 'createdon', 'gender',
-            'birthdate', 'location', 'confirmed', 'last_login', 'last_active',
-            'title', 'avatar', 'show_email'],
+        'users' => ['user', 'username', 'email', 'createdon'],
     ];
 
     protected function users(): void
     {
-        $this->export(
-            'User',
-            "select
-                    u.user as UserID,
-                    u.username as Name,
-                    u.password as Password,
-                    u.email as Email,
-                    u.ip as LastIPAddress,
-                    u.createdon as DateInserted,
-                    u.gender2 as Gender, // 0 => 'u'
-                    u.birthdate as DateOfBirth,
-                    u.location as Location,
-                    u.confirmed as Confirmed,
-                    u.last_active as DateLastActive,
-                    u.title as Title,
-                    u.avatar as Photo,
-                    u.show_email as ShowEmail,
-                    case u.gender when 0 then 'u' else gender end as gender2
-                from :_users u"
-        );
+        $map = [
+            'user' => 'UserID',
+            'username' => 'Name',
+            'password' => 'Password',
+            'email' => 'Email',
+            'createdon' => 'DateInserted',
+            'birthdate' => 'DateOfBirth',
+            'location' => 'Location',
+            'confirmed' => 'Confirmed',
+            'last_active' => 'DateLastActive',
+            'title' => 'Title',
+            'avatar' => 'Photo',
+            'show_email' => 'ShowEmail',
+        ];
+        $this->export('User', "select * from :_users", $map);
     }
 
     protected function roles(): void
     {
-        // Roles do not exist in Discuss. Really simple matchup.
-        $this->export(
-            'UserRole',
-            "select
-                    u.user as UserID,
-                    u.roleID as RoleID,
-                    '32' as roleID
-                from :_moderators u"
-        );
+        // Roles do not exist in Discuss.
+        // @todo needs a 'member' role.
+        $map = [
+            'user' => 'UserID',
+            'RoleID=32',
+        ];
+        $this->export('UserRole', "select * from :_moderators", $map);
     }
 
     protected function signatures(): void
     {
         $this->export( // @todo split non-signature data to users()
             'UserMeta',
-            "select
-                    user as UserID,
-                    'Plugin.Signatures.Sig' as `Name`,
-                    Signature as `Value`
-                from :_users
-                where Signature <> ''
+            "select user as UserID, 'Plugin.Signatures.Sig' as `Name`, Signature as `Value`
+                from :_users where Signature <> ''
                 union
-                select
-                    user as UserID,
-                    'Profile.Website' as `Name`,
-                    website as `Value`
-                from :_users
-                where website <> ''
+                select user as UserID, 'Profile.Website' as `Name`, website as `Value`
+                from :_users where website <> ''
                 union
-                select
-                    user as UserID,
-                    'Profile.LastName' as `Name`,
-                    name_last as `Value`
-                from :_users
-                where name_last <> ''
+                select user as UserID, 'Profile.LastName' as `Name`, name_last as `Value`
+                from :_users where name_last <> ''
                 union
-                select
-                    user as UserID,
-                    'Profile.FirstName' as `Name`,
-                    name_first as `Value`
-                from :_users
-                where name_first <> ''"
+                select user as UserID, 'Profile.FirstName' as `Name`, name_first as `Value`
+                from :_users where name_first <> ''"
         );
     }
 
     protected function categories(): void
     {
-        $this->export(
-            'Category',
-            "select
-                    id as CategoryID,
-                    case parent when 0 then '-1' else parent end as ParentCategoryID,
-                    name as `Name`,
-                    description as `Description`,
-                    'Heading' as `DisplayAs`,
-                    rank as `Sort`
-                from :_boards
-                union
-                select
-                    (select max(id) from :_boards) + id as CategoryID,
-                    '-1' as ParentCategoryID,
-                    name as `Name`,
-                    description as `Description`,
-                    'Heading' as `DisplayAs`,
-                    rank as `Sort`
-                from :_categories"
-        );
+        $map = [
+            'id' => 'CategoryID',
+            'name' => 'Name',
+            'description' => 'Description',
+            'rank' => 'Sort',
+            'DisplayAs=Heading',
+        ];
+        $query = "select  id, name, description, rank, 
+            case parent when 0 then '-1' else parent end as ParentCategoryID
+            from :_boards";
+        $this->export('Category', $query, $map);
+
+        $map = [
+            'name' => 'Name',
+            'description' => 'Description',
+            'rank' => 'Sort',
+            'ParentCategoryID=-1',
+            'DisplayAs=Heading',
+        ];
+        $query = "select name, description, rank, (select max(id) from :_boards) + id as CategoryID from :_categories";
+        $this->export('Category', $query, $map);
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
-            'title2' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+        $map = [
+            'title' => 'Name',
+            'id' => 'DiscussionID',
+            'board' => 'CategoryID',
+            'replies' => 'CountComments',
+            'views' => 'CountViews',
+            'locked' => 'Closed',
+            'sticky' => 'Announce',
+            'message' => 'Body',
+            'author' => 'InsertUserID',
+            'createdon' => 'DateInserted',
+            'editedon' => 'DateUpdated',
+            'Format=BBCode',
         ];
-        // It's easier to convert between Unix time and MySQL datestamps during the db query.
+        $filters = [
+            'title' => 'DecodeHtml',
+        ];
         $this->export(
             'Discussion',
-            "select
-                    t.id as `DiscussionID`,
-                    t.board as `CategoryID`,
-                    t.title as `title2`,
-                    t.replies as `CountComments`,
-                    t.views as `CountViews`,
-                    t.locked as `Closed`,
-                    t.sticky as `Announce`,
-                    p.message as `Body`,
-                    'BBCode' as `Format`,
-                    p.author as `InsertUserID`,
-                    p.createdon as `DateInserted`,
-                    p.editedon as `DateUpdated`,
-                    p.ip as `InsertIPAddress`,
+            "select t.id, t.board, t.title, t.replies, t.views, t.locked, t.sticky,
+                    p.message, p.author, p.createdon, p.editedon,
                     case p.editedby when 0 then null else p.editedby end as `UpdateUserID`
                 from :_threads t
                 join :_posts p on t.id = p.thread",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
+        $map = [
+            'id' => 'CommentID',
+            'thread' => 'DiscussionID',
+            'message' => 'Body',
+            'author' => 'InsertUserID',
+            'createdon' => 'DateInserted',
+            'editedon' => 'DateUpdated',
+            'editedby2' => 'UpdateUserID',
+            'Format=BBCode',
+        ];
         $this->export(
             'Comment',
-            'select
-                    p.id as CommentID,
-                    p.thread as DiscussionID,
-                    p.message as Body,
-                    p.BBCode as Format,
-                    p.author as InsertUserID,
-                    p.createdon as DateInserted,
-                    p.editedby2 as UpdateUserID,
-                    p.editedon as DateUpdated,
-                    p.ip as InsertIPAddress,
+            'select p.id, p.thread, p.message, p.author, p.createdon, p.editedon,
                     case p.editedby when 0 then null else p.editedby end as editedby2
                 from :_posts p
-                where p.parent <> 0'
+                where p.parent <> 0',
+            $map
         );
     }
 }

@@ -37,14 +37,13 @@ class SimplePress extends Source
             'user_pass' => 'Password',
             'user_email' => 'Email',
             'user_registered' => 'DateInserted',
-            'lastvisit' => 'DateLastActive'
+            'lastvisit' => 'DateLastActive',
         ];
         $this->export(
             'User',
             "select m.*, u.user_pass, u.user_email, u.user_registered
                 from :_users u
-                join :_sfmembers m
-                    on u.ID = m.user_id;",
+                join :_sfmembers m on u.ID = m.user_id;",
             $user_Map
         );
     }
@@ -54,27 +53,21 @@ class SimplePress extends Source
         $role_Map = [
             'usergroup_id' => 'RoleID',
             'usergroup_name' => 'Name',
-            'usergroup_desc' => 'Description'
+            'usergroup_desc' => 'Description',
         ];
         $this->export(
             'Role',
-            "select
-                usergroup_id,
-                usergroup_name,
-                usergroup_desc
+            "select usergroup_id, usergroup_name, usergroup_desc
             from :_sfusergroups
-             union
-             select
-                100,
-                'Administrators',
-                ''",
+            union
+            select 100, 'Administrators', ''",
             $role_Map
         );
 
         // UserRoles
         $userRole_Map = [
             'user_id' => 'UserID',
-            'usergroup_id' => 'RoleID'
+            'usergroup_id' => 'RoleID',
         ];
         $this->export(
             'UserRole',
@@ -91,54 +84,50 @@ class SimplePress extends Source
 
     protected function categories(): void
     {
-        $category_Map = [
+        $map = [
             'forum_id' => 'CategoryID',
-            'forum_name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'forum_name' => 'Name',
             'forum_desc' => 'Description',
             'forum_seq' => 'Sort',
             'form_slug' => 'UrlCode',
-            'parent_id' => 'ParentCategoryID'
+            'parent_id' => 'ParentCategoryID',
+        ];
+        $filters = [
+            'forum_name' => \Porter\Filter\DecodeHtml::class,
         ];
         $this->export(
             'Category',
-            "select
-                    f.forum_id,
-                    f.forum_name,
-                    f.forum_seq,
-                    f.forum_desc,
+            "select f.forum_id, f.forum_name, f.forum_seq,  f.forum_desc,
                     lower(f.forum_slug) as forum_slug,
                     case when f.parent = 0 then f.group_id + 1000 else f.parent end as parent_id
                 from :_sfforums f
                 union
-                select
-                    1000 + g.group_id,
-                    g.group_name,
-                    g.group_seq,
-                    g.group_desc,
+                select 1000 + g.group_id, g.group_name, g.group_seq, g.group_desc,
                     null,
                     null
                 from :_sfgroups g",
-            $category_Map
+            $map,
+            $filters
         );
     }
 
     protected function tags(): void
     {
-        if ($this->hasInputSchema('sftags')) {
-            // Tags
-            $tag_Map = [
-                'tag_id' => 'TagID',
-                'tag_name' => 'Name'
-            ];
-            $this->export('Tag', "select * from :_sftags", $tag_Map);
+        if (!$this->hasInputSchema('sftags')) {
+            return;
+        }
+        $tag_Map = [
+            'tag_id' => 'TagID',
+            'tag_name' => 'Name',
+        ];
+        $this->export('Tag', "select * from :_sftags", $tag_Map);
 
-            if ($this->hasInputSchema('sftagmeta')) {
-                $tagDiscussion_Map = [
-                    'tag_id' => 'TagID',
-                    'topic_id' => 'DiscussionID'
-                ];
-                $this->export('TagDiscussion', "select * from :_sftagmeta", $tagDiscussion_Map);
-            }
+        if ($this->hasInputSchema('sftagmeta')) {
+            $tagDiscussion_Map = [
+                'tag_id' => 'TagID',
+                'topic_id' => 'DiscussionID',
+            ];
+            $this->export('TagDiscussion', "select * from :_sftagmeta", $tagDiscussion_Map);
         }
     }
 
@@ -152,7 +141,7 @@ class SimplePress extends Source
             'Format' => 'Format',
             'topic_date' => 'DateInserted',
             'topic_pinned' => 'Announce',
-            'topic_slug' => ['Column' => 'Slug', 'Type' => 'varchar(200)']
+            'topic_slug' => 'Slug',
         ];
         $this->export(
             'Discussion',
@@ -170,7 +159,7 @@ class SimplePress extends Source
             'Format' => 'Format',
             'user_id' => 'InsertUserID',
             'post_date' => 'DateInserted',
-            'poster_ip' => 'InsertIPAddress'
+            'poster_ip' => 'InsertIPAddress',
         ];
         $this->export(
             'Comment',
@@ -184,7 +173,7 @@ class SimplePress extends Source
         $conv_Map = [
             'message_id' => 'ConversationID',
             'from_id' => 'InsertUserID',
-            'sent_date' => 'DateInserted'
+            'sent_date' => 'DateInserted',
         ];
         $this->export(
             'Conversation',
@@ -196,7 +185,7 @@ class SimplePress extends Source
         $convMessage_Map = [
             'message_id' => 'MessageID',
             'from_id' => 'InsertUserID',
-            'message' => ['Column' => 'Body']
+            'message' => 'Body',
         ];
         $this->export(
             'ConversationMessage',
@@ -212,7 +201,7 @@ class SimplePress extends Source
         // UserConversation
         $userConv_Map = [
             'message_id' => 'ConversationID',
-            'from_id' => 'UserID'
+            'from_id' => 'UserID',
         ];
         $this->export(
             'UserConversation',

@@ -19,256 +19,153 @@ class FluxBb extends Source
         'passwordHashMethod' => 'punbb', // FluxBB is a fork of punbb and the password works.
     ];
 
-    /**
-     * @var bool|string Path to avatar images
-     */
-    protected bool|string $avatarPath = false;
-
-    /**
-     * @var string CDN path prefix
-     */
-    protected string $cdn = '';
-
-    /**
-     * @var array Required tables => columns
-     */
-    public array $sourceTables = [];
-
-    /**
-     * Forum-specific export format
-     *
-     *@todo Project file size / export time and possibly break into multiple files
-     *
-     */
-    public function run(): void
-    {
-        $this->cdn = ''; //$this->param('cdn', '');
-        /*if ($this->avatarPath = '') { //$this->param('avatars-source')) {
-            if (!$this->avatarPath = realpath($this->avatarPath)) {
-                exit("Unable to access path to avatars: $this->avatarPath\n");
-            }
-        }*/
-
-        $this->users();
-        $this->roles();
-        $this->signatures();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-        $this->tags();
-        $this->attachments();
-    }
-
-    /**
-     * Take the user ID, avatar type value and generate a path to the avatar file.
-     *
-     * @param mixed $value Row field value.
-     * @param string $field Name of the current field.
-     * @param array $row All of the current row values.
-     * @return null|string
-     */
-    public function getAvatarByID($value, $field, $row): ?string
-    {
-        if (!$this->avatarPath) {
-            return null;
-        }
-
-        switch ($row['avatar']) {
-            case 1:
-                $extension = 'gif';
-                break;
-            case 2:
-                $extension = 'jpg';
-                break;
-            case 3:
-                $extension = 'png';
-                break;
-            default:
-                return null;
-        }
-
-        $avatarFilename = "{$this->avatarPath}/{$value}.$extension";
-        if (file_exists($avatarFilename)) {
-            $avatarBasename = basename($avatarFilename);
-            return "{$this->cdn}fluxbb/img/avatars/$avatarBasename";
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @access public
-     * @param  string $value Current value
-     * @param  string $field Current field
-     * @param  array  $row   Contents of the current record.
-     * @return string|null Return the supplied value if the record's file is an image. Return null otherwise
-     *@see    Migration::writeTableToFile
-     *
-     */
-    public function filterThumbnailData($value, $field, $row): ?string
-    {
-        if (strpos(strtolower($row['file_mime_type']), 'image/') === 0) {
-            return $value;
-        } else {
-            return null;
-        }
-    }
-
     protected function users(): void
     {
-        $user_Map = [
-            'AvatarID' => ['Column' => 'Photo', 'Filter' => [$this, 'getAvatarByID']],
+        $map = [
+            'id' => 'UserID',
+            'avatar' => 'Photo',
+            'username' => 'Name',
+            'email' => 'Email',
+            'password' => 'Password',
+            'registered' => 'DateInserted',
+            'last_visit' => 'DateLastActive',
         ];
-        $this->export(
-            'User',
-            "select
-                    u.id as UserID,
-                    u.username as UserID,
-                    u.email as Email,
-                    u.registration_ip as InsertIPAddress,
-                    u.id as AvatarID,
-                    u.password as Password,
-                    from_unixtime(u.registered) as DateInserted,
-                    from_unixtime(u.last_visit) as DateLastActive
-                from :_users u
-                where group_id <> 2",
-            $user_Map
-        );
+        $filters = [
+            'avatar' => \Porter\Filter\FluxBbAvatar::class,
+            'registered' => \Porter\Filter\UnixtimeToDate::class,
+            'last_visit' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $this->export('User', "select * from :_users u where group_id <> 2", $map, $filters);
     }
 
     protected function roles(): void
     {
-        $this->export(
-            'Role',
-            "select g_id as RoleID, g_title as Name from :_groups"
-        );
-        // UserRole
-        $this->export(
-            'UserRole',
-            "select u.id as UserID, u.group_id as RoleID from :_users u"
-        );
+        $this->export('Role', "select g_id as RoleID, g_title as Name from :_groups");
+        $this->export('UserRole', "select u.id as UserID, u.group_id as RoleID from :_users u");
     }
 
     protected function signatures(): void
     {
-        $this->export(
-            'UserMeta',
-            "select
-                    u.id as UserID,
-                    'Plugin.Signatures.Sig' as Name,
-                    signature as Value
-                from :_users u
-                where u.signature is not null"
-        );
+        $map = [
+            'id' => 'UserID',
+            'signature' => 'Value',
+            'Name=Plugin.Signatures.Sig',
+        ];
+        $this->export('UserMeta', "select * from :_users u where u.signature is not null", $map);
     }
 
     protected function categories(): void
     {
-        $this->export(
-            'Category',
-            "select
-                    id as CategoryID,
-                    forum_name as Name,
-                    forum_desc as Description,
-                    disp_position as Sort,
-                    cat_id * 1000 as ParentCategoryID
-                from :_forums f
-                union
-                select
-                    id * 1000 as CategoryID,
-                    cat_name as Name,
-                    '' as Description,
-                    disp_position as Sort,
-                    NULL as ParentCategoryID
-                from :_categories"
-        );
+        $map = [
+            'id' => 'CategoryID',
+            'forum_name' => 'Name',
+            'forum_desc' => 'Description',
+            'disp_position' => 'Sort',
+        ];
+        $query = "select *, cat_id*1000 as ParentCategoryID from :_forums f";
+        $this->export('Category', $query, $map);
+
+        $map = [
+            'cat_name' => 'Name',
+            'disp_position' => 'Sort',
+        ];
+        $query = "select *, id*1000 as CategoryID from :_categories";
+        $this->export('Category', $query, $map);
     }
 
     protected function discussions(): void
     {
-        $this->export(
-            'Discussion',
-            "select
-                    t.id as DiscussionID,
-                    from_unixtime(p.posted) as DateInserted,
-                    p.poster_id as InsertUserID,
-                    p.poster_ip as InsertIPAddress,
-                    p.message as Body,
-                    t.closed as Closed,
-                    t.sticky as Announce,
-                    t.forum_id as CategoryID,
-                    t.subject as Name,
-                    from_unixtime(p.edited) as DateUpdated,
-                    u.id as UpdateUserID,
-                    'BBCode' as Format
+        $map = [
+            'poster_id' => 'InsertUserID',
+            'forum_id' => 'CategoryID',
+            'subject' => 'Name',
+            'message' => 'Body',
+            'posted' => 'DateInserted',
+            'updated' => 'DateUpdated',
+            'closed' => 'Closed',
+            'sticky' => 'Announce',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'posted' => \Porter\Filter\UnixtimeToDate::class,
+            'edited' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $query = "select p.poster_id, t.forum_id, t.subject, p.posted, p.edited, t.closed, t.sticky,
+                    t.id as DiscussionID, u.id as UpdateUserID
                 from :_topics t
                 left join :_posts p on t.first_post_id = p.id
-                left join :_users u on u.username = p.edited_by"
-        );
+                left join :_users u on u.username = p.edited_by";
+        $this->export('Discussion', $query, $map, $filters);
     }
 
     protected function comments(): void
     {
-        $this->export(
-            'Comment',
-            "select
-                    p.*,
-                    p.id as CommentID,
-                    p.poster_id as InsertUserID,
-                    p.poster_ip as InsertIPAddress,
-                    p.message as Body,
-                    'BBCode' as Format,
-                    from_unixtime(p.posted) as DateInserted,
-                    from_unixtime(p.edited) as DateUpdated,
-                    u.id as UpdateUserID
+        $map = [
+            'id' => 'CommentID',
+            'poster_id' => 'InsertUserID',
+            'message' => 'Body',
+            'Format=BBCode',
+            'posted' => 'DateInserted',
+            'edited' => 'DateUpdated',
+        ];
+        $filters  = [
+            'posted' => \Porter\Filter\UnixtimeToDate::class,
+            'edited' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $query = "select p.*, u.id as UpdateUserID
                 from :_topics t
                 join :_posts p on t.id = p.topic_id
                 left join :_users u on u.username = p.edited_by
-                where p.id <> t.first_post_id;"
-        );
+                where p.id <> t.first_post_id";
+        $this->export('Comment', $query, $map, $filters);
     }
 
     protected function tags(): void
     {
-        if ($this->hasInputSchema('tags')) {
-            $this->export(
-                'Tag',
-                "select id as TagID, tag as Name from :_tags"
-            );
-            $this->export(
-                'TagDiscussion',
-                "select topic_id as DiscussionID, tag_id as TagID from :_topic_tags"
-            );
+        if (!$this->hasInputSchema('tags')) {
+            return;
         }
+        $map = [
+            'id' => 'TagID',
+            'tag' => 'Name',
+        ];
+        $this->export('Tag', "select id, tag from :_tags", $map);
+
+        $map  = [
+            'topic_id' => 'DiscussionID',
+            'tag_id' => 'TagID',
+        ];
+        $this->export('TagDiscussion', "select topic_id, tag_id from :_topic_tags", $map);
     }
 
     protected function attachments(): void
     {
-        if ($this->hasInputSchema('attach_files')) {
-            $media_Map = [
-                'owner_id' => 'InsertUserID',
-                'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
-                'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
-            ];
-            $this->export(
-                'Media',
-                "select f.*,
-                        f.id as MediaID,
-                        f.filename as Name,
-                        f.size as Size,
-                        f.type as Type,
-                        f.ownder_id as InsertUserID,
-                        concat({$this->cdn}, 'FileUpload/', f.file_path) as Path,
-                        concat({$this->cdn}, 'FileUpload/', f.file_path) as thumb_path,
-                        128 as thumb_width,
-                        from_unixtime(f.uploaded_at) as DateInserted,
-                        case when f.post_id is null then 'Discussion' else 'Comment' end as ForeignTable,
-                        coalesce(f.post_id, f.topic_id) as ForeignID
-                    from :_attach_files f",
-                $media_Map
-            );
+        if (!$this->hasInputSchema('attach_files')) {
+            return;
         }
+        $map = [
+            'owner_id' => 'InsertUserID',
+            'thumb_path' => 'ThumbPath',
+            'thumb_width' => 'ThumbWidth',
+            'id' => 'MediaID',
+            'filename' => 'Name',
+            'size' => 'Size',
+            'type' => 'Type',
+            'uploaded_at' => 'DateInserted',
+        ];
+        $filters  = [
+            'thumb_path' => \Porter\Filter\NullIfNotImage::class,
+            'thumb_width' => \Porter\Filter\NullIfNotImage::class,
+            'uploaded_at' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $query = "select f.*,
+                    file_mime_type as Mime,
+                    concat('FileUpload/', f.file_path) as Path,
+                    concat('FileUpload/', f.file_path) as thumb_path,
+                    128 as thumb_width,
+                    case when f.post_id is null then 'Discussion' else 'Comment' end as ForeignTable,
+                    coalesce(f.post_id, f.topic_id) as ForeignID
+                from :_attach_files f";
+        $this->export('Media', $query, $map, $filters);
     }
 }

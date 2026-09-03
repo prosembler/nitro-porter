@@ -19,9 +19,6 @@ class PhpBb2 extends Source
         'passwordHashMethod' => 'phpBB',
     ];
 
-    /**
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
         'users' => [
             'user_id',
@@ -59,20 +56,11 @@ class PhpBb2 extends Source
         'privmsgs_text' => ['privmsgs_text_id', 'privmsgs_bbcode_uid', 'privmsgs_text']
     ];
 
-    public function removeBBCodeUIDs(string $value, string $field, array $row): array|string
-    {
-        if (empty($row['bbcode_uid'])) {
-            return $value;
-        }
-        return str_replace(':' . $row['bbcode_uid'], '', $value);
-    }
-
     protected function attachments(): void
     {
         $this->export(
             'Media',
-            "select
-                    ad.attach_id as MediaID,
+            "select ad.attach_id as MediaID,
                     ad.real_filename as Name,
                     concat('attachments/',ad.physical_filename) as Path,
                     concat('attachments/',ad.physical_filename) as ThumbPath,
@@ -90,23 +78,20 @@ class PhpBb2 extends Source
 
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'user_id' => 'UserID',
             'username' => 'Name',
             'user_password' => 'Password',
             'user_email' => 'Email',
-            //'user_timezone' => 'HourOffset',
-            'user_posts' => ['Column' => 'CountComments', 'Type' => 'int']
+            'user_posts' => ['Column' => 'CountComments', 'Type' => 'int'],
+            'user_lastvisit' => 'DateLastActive',
+            'user_regdate' => 'DateInserted',
         ];
-        $this->export(
-            'User',
-            "select *,
-                    FROM_UNIXTIME(nullif(user_regdate, 0)) as DateFirstVisit,
-                    FROM_UNIXTIME(nullif(user_lastvisit, 0)) as DateLastActive,
-                    FROM_UNIXTIME(nullif(user_regdate, 0)) as DateInserted
-                from :_users",
-            $user_Map
-        );
+        $filters = [
+            'user_lastvisit' => \Porter\Filter\UnixtimeToDate::class,
+            'user_regdate' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $this->export('User', "select *, from :_users", $map, $filters);
     }
 
     protected function roles(): void
@@ -120,18 +105,12 @@ class PhpBb2 extends Source
         $this->export('Role', 'select * from :_groups where group_single_user = 0', $role_Map);
 
         // UserRoles
-        $userRole_Map = [
+        $map = [
             'user_id' => 'UserID',
             'group_id' => 'RoleID'
         ];
         // Skip pending memberships
-        $this->export(
-            'UserRole',
-            'select user_id, group_id
-                from :_user_group
-                where user_pending = 0;',
-            $userRole_Map
-        );
+        $this->export('UserRole', 'select user_id, group_id from :_user_group where user_pending = 0;', $map);
     }
 
     protected function categories(): void
@@ -171,12 +150,13 @@ class PhpBb2 extends Source
             'forum_id' => 'CategoryID',
             'topic_poster' => 'InsertUserID',
             'topic_title' => 'Name',
-            'topic_views' => 'CountViews'
+            'topic_views' => 'CountViews',
+            'Format=BBCode',
         ];
+
         $this->export(
             'Discussion',
             "select t.*,
-                    'BBCode' as Format,
                     case t.topic_status when 1 then 1 else 0 end as Closed,
                     case t.topic_type when 1 then 2 else 0 end as Announce,
                     FROM_UNIXTIME(t.topic_time) as DateInserted
@@ -187,161 +167,128 @@ class PhpBb2 extends Source
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
-            'post_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
-            'poster_id' => 'InsertUserID'
+            'post_text' => 'Body',
+            'poster_id' => 'InsertUserID',
+            'post_time' => 'DateInserted',
+            'post_edit_time' => 'DateUpdated',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'post_text' => \Porter\Filter\RemoveBbCodeUidsSimple::class,
+            'post_time' => \Porter\Filter\UnixtimeToDate::class,
+            'post_edit_time' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Comment',
-            "select p.*,
-                    pt.post_text,
-                    pt.bbcode_uid,
-                    'BBCode' as Format,
-                    FROM_UNIXTIME(p.post_time) as DateInserted,
-                    FROM_UNIXTIME(nullif(p.post_edit_time,0)) as DateUpdated
-                from :_posts p inner join :_posts_text pt on p.post_id = pt.post_id",
-            $comment_Map
+            "select p.*, pt.post_text, pt.bbcode_uid
+                from :_posts p 
+                inner join :_posts_text pt on p.post_id = pt.post_id",
+            $map,
+            $filters
         );
     }
 
     protected function conversations(): void
     {
-        $this->query("drop table if exists z_pmto;");
-        $this->query(
-            "create table z_pmto (
+        $this->dbInput()->unprepared("drop table if exists z_pmto;");
+        $this->dbInput()->unprepared("create table z_pmto (
                 id int unsigned,
                 userid int unsigned,
-                primary key(id, userid));"
-        );
-        $this->query(
-            "insert ignore z_pmto (id, userid)
+                primary key(id, userid));");
+        $this->dbInput()->unprepared("insert ignore z_pmto (id, userid)
                 select privmsgs_id, privmsgs_from_userid
-                from :_privmsgs;"
-        );
-
-        $this->query(
-            "insert ignore z_pmto (id, userid)
+                from :_privmsgs;");
+        $this->dbInput()->unprepared("insert ignore z_pmto (id, userid)
                 select privmsgs_id, privmsgs_to_userid
-                from :_privmsgs;"
-        );
+                from :_privmsgs;");
 
-        $this->query("drop table if exists z_pmto2;");
-        $this->query(
-            "create table z_pmto2 (
+        $this->dbInput()->unprepared("drop table if exists z_pmto2;");
+        $this->dbInput()->unprepared("create table z_pmto2 (
                 id int unsigned,
                 userids varchar(250),
-                primary key (id));"
-        );
-        $this->query(
-            "insert ignore z_pmto2 (id, userids)
+                primary key (id));");
+        $this->dbInput()->unprepared("insert ignore z_pmto2 (id, userids)
                 select id, group_concat(userid order by userid)
                 from z_pmto
-                group by id;"
-        );
+                group by id;");
 
-        $this->query("drop table if exists z_pm;");
-        $this->query(
-            "create table z_pm (
+        $this->dbInput()->unprepared("drop table if exists z_pm;");
+        $this->dbInput()->unprepared("create table z_pm (
                 id int unsigned,
                 subject varchar(255),
                 subject2 varchar(255),
                 userids varchar(250),
-                groupid int unsigned);"
-        );
-        $this->query(
-            "insert z_pm (
-                    id,
-                    subject,
-                    subject2,
-                    userids
-                )
-                select
-                    pm.privmsgs_id,
+                groupid int unsigned);");
+        $this->dbInput()->unprepared("insert z_pm (id, subject, subject2, userids)
+                select pm.privmsgs_id,
                     pm.privmsgs_subject,
                     case when pm.privmsgs_subject like 'Re: %' then trim(substring(pm.privmsgs_subject, 4))
                         else pm.privmsgs_subject end as subject2,
                     t.userids
                 from :_privmsgs pm
-                join z_pmto2 t
-                    on t.id = pm.privmsgs_id;"
-        );
-        $this->query("create index z_idx_pm on z_pm (id);");
+                join z_pmto2 t on t.id = pm.privmsgs_id;");
+        $this->dbInput()->unprepared("create index z_idx_pm on z_pm (id);");
 
-        $this->query("drop table if exists z_pmgroup;");
-        $this->query(
-            "create table z_pmgroup (
+        $this->dbInput()->unprepared("drop table if exists z_pmgroup;");
+        $this->dbInput()->unprepared("create table z_pmgroup (
                 groupid int unsigned,
                 subject varchar(255),
-                userids varchar(250));"
-        );
-        $this->query(
-            "insert z_pmgroup (
-                  groupid,
-                  subject,
-                  userids
-                )
-                select
-                  min(pm.id),
-                  pm.subject2,
-                  pm.userids
+                userids varchar(250));");
+        $this->dbInput()->unprepared("insert z_pmgroup (groupid, subject, userids)
+                select  min(pm.id), pm.subject2, pm.userids
                 from z_pm pm
-                group by pm.subject2, pm.userids;"
-        );
+                group by pm.subject2, pm.userids;");
 
-        $this->query("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
-        $this->query("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
-        $this->query(
-            "update z_pm pm
-                join z_pmgroup g
-                    on pm.subject2 = g.subject and pm.userids = g.userids
-                set pm.groupid = g.groupid;"
-        );
+        $this->dbInput()->unprepared("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
+        $this->dbInput()->unprepared("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
+        $this->dbInput()->unprepared("update z_pm pm
+                join z_pmgroup g on pm.subject2 = g.subject and pm.userids = g.userids
+                set pm.groupid = g.groupid;");
 
         // Conversations.
-        $conversation_Map = [
+        $map = [
             'privmsgs_id' => 'ConversationID',
             'privmsgs_from_userid' => 'InsertUserID',
-            'RealSubject' => [
-                'Column' => 'Subject',
-                'Type' => 'varchar(250)',
-                'Filter' => 'DecodeHtml'
-            ]
+            'realsubject' => 'Subject',
+            'privmsgs_date' => 'DateInserted',
         ];
-
+        $filters = [
+            'realsubject' => \Porter\Filter\DecodeHtml::class,
+            'privmsgs_date' => \Porter\Filter\UnixtimeToDate::class,
+        ];
         $this->export(
             'Conversation',
-            "select pm.*,
-                    g.subject as RealSubject,
-                    from_unixtime(pm.privmsgs_date) as DateInserted
+            "select pm.*, g.subject as realsubject
                 from :_privmsgs pm
-                join z_pmgroup g
-                  on g.groupid = pm.privmsgs_id",
-            $conversation_Map
+                join z_pmgroup g on g.groupid = pm.privmsgs_id",
+            $map,
+            $filters
         );
 
         // Coversation Messages.
         $conversationMessage_Map = [
             'privmsgs_id' => 'MessageID',
             'groupid' => 'ConversationID',
-            'privmsgs_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
-            'privmsgs_from_userid' => 'InsertUserID'
+            'privmsgs_text' => 'Body',
+            'privmsgs_from_userid' => 'InsertUserID',
+            'privmsgs_date' => 'DateInserted',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'post_text' => \Porter\Filter\RemoveBbCodeUidsSimple::class,
+            'privmsgs_date' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'ConversationMessage',
-            "select pm.*,
-                    txt.*,
-                    txt.privmsgs_bbcode_uid as bbcode_uid,
-                    pm2.groupid,
-                    'BBCode' as Format,
-                    FROM_UNIXTIME(pm.privmsgs_date) as DateInserted
+            "select pm.*, txt.*, txt.privmsgs_bbcode_uid as bbcode_uid, pm2.groupid
                 from :_privmsgs pm
-                join :_privmsgs_text txt
-                    on pm.privmsgs_id = txt.privmsgs_text_id
-                join z_pm pm2
-                    on pm.privmsgs_id = pm2.id",
-            $conversationMessage_Map
+                join :_privmsgs_text txt on pm.privmsgs_id = txt.privmsgs_text_id
+                join z_pm pm2 on pm.privmsgs_id = pm2.id",
+            $conversationMessage_Map,
+            $filters
         );
 
         // User Conversation.
@@ -351,18 +298,13 @@ class PhpBb2 extends Source
         ];
         $this->export(
             'UserConversation',
-            "select
-                    g.groupid,
-                    t.userid
-                from z_pmto t
-                join z_pmgroup g
-                    on g.groupid = t.id;",
+            "select g.groupid, t.userid from z_pmto t join z_pmgroup g on g.groupid = t.id",
             $userConversation_Map
         );
 
-        $this->query('drop table if exists z_pmto');
-        $this->query('drop table if exists z_pmto2;');
-        $this->query('drop table if exists z_pm;');
-        $this->query('drop table if exists z_pmgroup;');
+        $this->dbInput()->unprepared('drop table if exists z_pmto');
+        $this->dbInput()->unprepared('drop table if exists z_pmto2;');
+        $this->dbInput()->unprepared('drop table if exists z_pm;');
+        $this->dbInput()->unprepared('drop table if exists z_pmgroup;');
     }
 }

@@ -117,13 +117,16 @@ class BbPress1 extends Source
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
-            'post_text' => ['Column' => 'Body', 'Filter' => 'BBPressBody'],
+            'post_text' => 'Body',
             'Format' => 'Format',
             'poster_id' => 'InsertUserID',
             'post_time' => 'DateInserted'
+        ];
+        $filters = [
+            'post_text' => \Porter\Filter\BBPressBody::class,
         ];
         $this->export(
             'Comment',
@@ -131,7 +134,8 @@ class BbPress1 extends Source
                     'Html' as Format
                  from :_posts p
                  where post_status = 0",
-            $comment_Map
+            $map,
+            $filters
         );
     }
 
@@ -163,21 +167,24 @@ class BbPress1 extends Source
             );
 
             // ConversationMessage.
-            $convMessage_Map = [
+            $map = [
                 'ID' => 'MessageID',
                 'pm_thread' => 'ConversationID',
                 'pm_from' => 'InsertUserID',
-                'pm_text' => ['Column' => 'Body', 'Filter' => 'BBPressBody']
+                'pm_text' => 'Body',
+            ];
+            $filters = [
+                'pm_text' => \Porter\Filter\BBPressBody::class,
             ];
             $this->export(
                 'ConversationMessage',
-                'select *, from_unixtime(sent_on) as DateInserted
-                    from :_bbpm',
-                $convMessage_Map
+                'select *, from_unixtime(sent_on) as DateInserted from :_bbpm',
+                $map,
+                $filters
             );
 
             // UserConversation.
-            $this->query("create temporary table bbpmto (UserID int, ConversationID int)");
+            $this->dbInput()->unprepared("create temporary table bbpmto (UserID int, ConversationID int)");
 
             if ($conversationVersion == 'new') {
                 $to = $this->query(
@@ -195,7 +202,7 @@ class BbPress1 extends Source
                         }
                         $toIns = trim($toIns, ',');
 
-                        $this->query("insert bbpmto (UserID, ConversationID) values $toIns");
+                        $this->dbInput()->unprepared("insert bbpmto (UserID, ConversationID) values $toIns");
                     }
 
                     $this->export('UserConversation', 'select * from bbpmto');

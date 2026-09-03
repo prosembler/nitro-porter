@@ -20,42 +20,35 @@ class Q2a extends Source
 
     /** @var array[] List of required tables. */
     public array $sourceTables = [
-        'blobs' => [],
-        'categories' => [],
         'posts' => [],
         'users' => [],
     ];
 
     protected function users(): void
     {
-        $this->export(
-            'User',
-            "SELECT
-                    u.userid as UserID,
-                    u.handle as Name,
-                    'Reset' as HashMethod,
-                    u.email as Email,
-                    u.created as DateInserted,
-                    p.points as Points
-                FROM :_users as u
-                LEFT JOIN :_userpoints p USING(userid)
-                WHERE u.userid IN (Select DISTINCT userid from :_posts)
-                    AND (BIN(flags) & BIN(128) = 0) AND (BIN(flags) & BIN(2) = 0);"
-        );
+        $map = [
+            'userid' => 'UserID',
+            'handle' => 'Name',
+            'email' => 'Email',
+            'created' => 'DateInserted',
+            'points' => 'Points',
+            'HashMethod=Reset'
+        ];
+        $query = "select u.userid, u.handle, u.email, u.created, p.points
+                from :_users as u
+                left join :_userpoints p using(userid)
+                where u.userid in (select distinct userid from :_posts)
+                    and (BIN(flags) & BIN(128) = 0) AND (BIN(flags) & BIN(2) = 0)";
+        $this->export('User', $query, $map);
     }
 
     protected function roles(): void
     {
-        $this->export(
-            'Role',
-            "select 1 as RolesID, 'Member' as Name"
-        );
-
+        // Create a new role.
+        $this->export('Role', "select 1 as RolesID, 'Member' as Name");
         $this->export(
             'UserRole',
-            "select
-                    ur.userid as UserID,
-                    1 as RoleID
+            "select ur.userid as UserID, 1 as RoleID
                 from :_users ur
                 where (BIN(flags) & BIN(128) = 0) AND (BIN(flags) & BIN(2) = 0);"
         );
@@ -64,47 +57,40 @@ class Q2a extends Source
     protected function discussions(): void
     {
         $this->export('Category', "select 1 as CategoryID, 'Legacy' as Name");
-        $discussion_Map = [
+        $map = [
             'postid' => 'DiscussionID',
             'categoryid' => 'CategoryID',
             'userid' => 'InsertUserID',
-            'Subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'content' => 'Body',
+            'created' => 'DateInserted',
+            'Type=Question',
+            'CategoryID=1',
+            'Format=Html',
+            'Closed=1',
+            'QnA=Accepted',
         ];
-        $this->export(
-            'Discussion',
-            "select
-                    'Question' as Type,
-                    p.postid as DiscussionID,
-                    1 as CategoryID,
-                    p.userid as InsertUserID,
-                    LEFT(p.title,99) as Name,
-                    'HTML' as Format,
-                    p.content as Body,
-                    p.created as DateInserted,
-                    1 as Closed,
-                    'Accepted' as QnA
+        $filters = [
+            'Subject' => \Porter\Filter\DecodeHtml::class,
+        ];
+        $query = "select p.postid, p.userid, p.content,  p.created, LEFT(p.title,99) as Name
                 from :_posts p
-                WHERE parentid IS NULL
-                    AND userid IS NOT NULL
-                    AND type = 'Q';",
-            $discussion_Map
-        );
+                where parentid is null and userid IS NOT null and type = 'Q'";
+        $this->export('Discussion', $query, $map, $filters);
     }
 
     protected function comments(): void
     {
-        $this->export(
-            'Comment',
-            "select
-                    p.postid as CommentID,
-                    p.parentid as DiscussionID,
-                    p.userid as InsertUserID,
-                    p.content as Body,
-                    'HTML' as Format,
-                    p.created as DateInserted
+        $map = [
+            'postid' => 'CommentID',
+            'parentid' => 'DiscussionID',
+            'userid' => 'InsertUserID',
+            'content' => 'Body',
+            'created' => 'DateInserted',
+            'Format=Html',
+        ];
+        $query = "select p.postid, p.parentid, p.userid, p.content, p.created
                 from :_posts p
-                WHERE type = 'A'
-                    AND userid IS NOT NULL ;"
-        );
+                where type = 'A' and userid IS NOT NULL";
+        $this->export('Comment', $query, $map);
     }
 }

@@ -57,8 +57,7 @@ class IpBoard4 extends Source
             'map_user_id' => 'UserID',
             'map_topic_id' => 'ConversationID',
         ];
-        $query = "select t.*, !map_user_active as Deleted
-            from :_core_message_topic_user_map t";
+        $query = "select t.*, !map_user_active as Deleted from :_core_message_topic_user_map t";
         $this->export('UserConversation', $query, $map);
     }
 
@@ -80,9 +79,9 @@ class IpBoard4 extends Source
             'name' => 'DecodeHtml',
             'joined' => 'UnixtimeToDate',
             'last_activity' => 'UnixtimeToDate',
+            'HashMethod=ipb',
         ];
-        $query = "select m.*, 'ipb' as HashMethod
-            from :_core_members m";
+        $query = "select m.* from :_core_members m";
         $this->export('User', $query, $map, $filters);
     }
 
@@ -144,14 +143,14 @@ class IpBoard4 extends Source
             'views' => 'CountViews',
             'pinned' => 'Announce',
             'post' => 'Body',
-            'closed' => 'Closed'
+            'closed' => 'Closed',
+            'Format=Html',
         ];
         $filters = [
             'start_date' => 'UnixtimeToDate',
             'edit_time' => 'UnixtimeToDate',
         ];
-        $query = "select t.*, $descriptionSQL as post, 
-                IF(t.state = 'closed', 1, 0) as closed, 'Html' as Format, p.edit_time
+        $query = "select t.*, p.edit_time, $descriptionSQL as post, if(t.state = 'closed', 1, 0) as closed, 
             from :_forums_topics t
             left join :_forums_posts p on t.topic_firstpost = p.pid";
         $this->export('Discussion', $query, $map, $filters);
@@ -166,14 +165,14 @@ class IpBoard4 extends Source
             'ip_address' => 'InsertIPAddress',
             'post_date' => 'DateInserted',
             'edit_time' => 'DateUpdated',
-            'post' => 'Body'
+            'post' => 'Body',
+            'Format=Html',
         ];
         $filters = [
             'post_date' => 'UnixtimeToDate',
             'edit_time' => 'UnixtimeToDate',
         ];
-        $query = "select p.*, 'Html' as Format
-            from :_forums_posts p
+        $query = "select p.* from :_forums_posts p
             join :_forums_topics t on p.topic_id = t.tid
             where p.pid <> t.topic_firstpost";
         $this->export('Comment', $query, $map, $filters);
@@ -196,8 +195,7 @@ class IpBoard4 extends Source
         $filters = [
             'attach_date' => 'UnixtimeToDate',
         ];
-        $query = "select a.*
-            from :_core_attachments a";
+        $query = "select a.* from :_core_attachments a";
         $this->export('Media', $query, $map, $filters);
     }
 }

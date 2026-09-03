@@ -19,89 +19,38 @@ class PunBb extends Source
         'passwordHashMethod' => 'punbb',
     ];
 
-    /**
-     * @var string Path to avatar images
-     */
-    protected string $avatarPath = '';
-
-    /**
-     * @var string CDN path prefix
-     */
-    protected string $cdn = '';
-
-    /**
-     * Take the user ID, avatar type value and generate a path to the avatar file.
-     *
-     * @param mixed $value Row field value.
-     * @param string $field Name of the current field.
-     * @param array $row All of the current row values.
-     * @return null|string
-     */
-    public function getAvatarByID($value, $field, $row): ?string
-    {
-        if (!$this->avatarPath) {
-            return null;
-        }
-
-        switch ($row['avatar']) {
-            case 1:
-                $extension = 'gif';
-                break;
-            case 2:
-                $extension = 'jpg';
-                break;
-            case 3:
-                $extension = 'png';
-                break;
-            default:
-                return null;
-        }
-        $avatarFilename = "{$this->avatarPath}/{$value}.$extension";
-
-        if (file_exists($avatarFilename)) {
-            $avatarBasename = basename($avatarFilename);
-            return "{$this->cdn}punbb/avatars/$avatarBasename";
-        } else {
-            return null;
-        }
-    }
-
-    /**
-     * Filter used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     */
-    public function filterThumbnailData(mixed $value, string $field, array $row): ?string
-    {
-        if (strpos(strtolower($row['file_mime_type']), 'image/') === 0) {
-            return $value;
-        } else {
-            return null;
-        }
-    }
-
     protected function attachments(): void
     {
         if ($this->hasInputSchema('attach_files')) {
             // Media.
-            $media_Map = [
+            $map = [
                 'id' => 'MediaID',
                 'filename' => 'Name',
                 'file_mime_type' => 'Type',
                 'size' => 'Size',
                 'owner_id' => 'InsertUserID',
-                'thumb_path' => ['Column' => 'ThumbPath', 'Filter' => [$this, 'filterThumbnailData']],
-                'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
+                'uploaded_at' => 'DateInserted',
+                'thumb_path' => 'ThumbPath',
+                'thumb_width' => 'ThumbWidth',
+            ];
+            $filters = [
+                'thumb_path' => \Porter\Filter\NullIfNotImage::class,
+                'thumb_width' => \Porter\Filter\NullIfNotImage::class,
+                'uploaded_at' => \Porter\Filter\UnixtimeToDate::class,
             ];
             $this->export(
                 'Media',
                 "select f.*,
-                        concat({$this->cdn}, 'FileUpload/', f.file_path) as Path,
-                        concat({$this->cdn}, 'FileUpload/', f.file_path) as thumb_path,
+                        file_mime_type as Mime,
+                        concat('FileUpload/', f.file_path) as Path,
+                        concat('FileUpload/', f.file_path) as thumb_path,
                         128 as thumb_width,
-                        from_unixtime(f.uploaded_at) as DateInserted,
+                        f.uploaded_at,
                         case when post_id is null then 'Discussion' else 'Comment' end as ForeignTable,
                         coalesce(post_id, topic_id) as ForieignID
                     from :_attach_files f",
-                $media_Map
+                $map,
+                $filters
             );
         }
     }
@@ -130,12 +79,12 @@ class PunBb extends Source
             'topic_id' => 'DiscussionID',
             'poster_id' => 'InsertUserID',
             'poster_ip' => 'InsertIPAddress',
-            'message' => 'Body'
+            'message' => 'Body',
+            'Format=BBCode',
         ];
         $this->export(
             'Comment',
             "SELECT p.*,
-                    'BBCode' AS Format,
                     from_unixtime(p.posted) AS DateInserted,
                     from_unixtime(p.edited) AS DateUpdated,
                     eu.id AS UpdateUserID
@@ -173,10 +122,8 @@ class PunBb extends Source
                     eu.id AS UpdateUserID,
                     'BBCode' AS Format
                 FROM :_topics t
-                LEFT JOIN :_posts p
-                    ON t.first_post_id = p.id
-                LEFT JOIN :_users eu
-                    ON eu.username = p.edited_by",
+                LEFT JOIN :_posts p ON t.first_post_id = p.id
+                LEFT JOIN :_users eu ON eu.username = p.edited_by",
             $discussion_Map
         );
     }
@@ -192,16 +139,14 @@ class PunBb extends Source
         ];
         $this->export(
             'Category',
-            "SELECT
-                id,
+            "SELECT id,
                 forum_name,
                 forum_desc,
                 disp_position,
                 cat_id * 1000 AS parent_id
             FROM :_forums f
             UNION
-            SELECT
-                id * 1000,
+            SELECT id * 1000,
                 cat_name,
                 '',
                 disp_position,
@@ -215,21 +160,17 @@ class PunBb extends Source
     {
         $this->export(
             'UserMeta',
-            "select
-                   u.id as UserID,
+            "select u.id as UserID,
                    'Plugin.Signatures.Format' AS Name,
                    'BBCode' as Value
                 from :_users u
-                where u.signature is not null
-                and u.signature != ''
+                where u.signature is not null and u.signature != ''
                 union
-                select
-                    u.id as UserID,
+                select u.id as UserID,
                     'Plugin.Signatures.Sig' AS Name,
                     signature as Value
                 from :_users u
-                where u.signature is not null
-                and u.signature !=''"
+                where u.signature is not null and u.signature !=''"
         );
     }
 
@@ -248,35 +189,32 @@ class PunBb extends Source
         ];
         $this->export(
             'UserRole',
-            "SELECT
-                    CASE u.group_id WHEN 2 THEN 0 ELSE id END AS id,
-                    u.group_id
-                FROM :_users u",
+            "SELECT CASE u.group_id WHEN 2 THEN 0 ELSE id END AS id, u.group_id FROM :_users u",
             $userRole_Map
         );
     }
 
     protected function users(): void
     {
-        $user_Map = [
-            'AvatarID' => ['Column' => 'Photo', 'Filter' => [$this, 'getAvatarByID']],
+        $map = [
             'id' => 'UserID',
             'username' => 'Name',
             'email' => 'Email',
-            //'timezone' => 'HourOffset',
-            'registration_ip' => 'InsertIPAddress',
             'PasswordHash' => 'Password'
+        ];
+        $filters = [
+            'Photo' => \Porter\Filter\PunBbAvatarFileType::class,
         ];
         $this->export(
             'User',
-            "SELECT
-                     u.*, u.id AS AvatarID,
+            "SELECT u.*, u.id AS Photo,
                      concat(u.password, '$', u.salt) AS PasswordHash,
                      from_unixtime(registered) AS DateInserted,
                      from_unixtime(last_visit) AS DateLastActive
                 FROM :_users u
                 WHERE group_id <> 2",
-            $user_Map
+            $map,
+            $filters
         );
     }
 }

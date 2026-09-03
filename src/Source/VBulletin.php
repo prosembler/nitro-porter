@@ -52,29 +52,19 @@ class VBulletin extends Source
 
     /* @var string SQL fragment to build new path to user photo. */
     public string $avatarSelect = "
-        case
-            when a.userid is not null then concat('customavatars/',
+        case when a.userid is not null then concat('customavatars/',
                 a.userid % 100,'/avatar_', a.userid, right(a.filename, instr(reverse(a.filename), '.')))
             when av.avatarpath is not null then av.avatarpath
             else null
         end as customphoto
     ";
 
-    /**
-     * @var array Required tables => columns. Commented values are optional.
-     */
     public array $sourceTables = [
-        //'attachment'
-        //'contenttype'
-        //'customavatar'
+        //'attachment','contenttype','customavatar','filedata'
         'deletionlog' => ['type', 'primaryid'],
-        //'filedata'
         'forum' => ['forumid', 'description', 'displayorder', 'title', 'description', 'displayorder'],
         //'phrase' => array('varname','text','product','fieldname','varname'),
-        //'pm'
-        //'pmgroup'
-        //'pmreceipt'
-        //'pmtext'
+        //'pm','pmgroup','pmreceipt','pmtext'
         'post' => ['postid', 'threadid', 'pagetext', 'userid', 'dateline', 'visible'],
         //'setting'
         'subscribethread' => ['userid', 'threadid'],
@@ -107,44 +97,12 @@ class VBulletin extends Source
             'usergroupid',
             'usertitle',
             'homepage',
-            'aim',
-            'icq',
-            'yahoo',
             'styleid',
             'avatarid'
         ],
-        //'userban'
         'userfield' => ['userid'],
         'usergroup' => ['usergroupid', 'title', 'description'],
-        //'visitormessage'
     ];
-
-    public function run(): void
-    {
-        $ranks = $this->ranks();
-        $this->users($ranks); // @todo Timing problem.
-        $this->roles();
-
-        $this->discussions();
-        $this->comments();
-
-        $this->bookmarks();
-        $this->wallPosts();
-
-        $this->conversations();
-        $this->polls();
-        $this->attachments();
-        $this->tags();
-        $this->reactions();
-    }
-
-    /**
-     * SQL to get the file extension from a string.
-     */
-    public static function fileExtension(string $columnName): string
-    {
-        return "right($columnName, instr(reverse($columnName), '.') - 1)";
-    }
 
     /**
      * Converts database blobs into files.
@@ -159,47 +117,37 @@ class VBulletin extends Source
         if ($attachments) {
             $identity = 'f.attachmentid';
             $extension = '';
-
-            if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid']) === true) {
-                $extension = self::fileExtension('a.filename');
+            if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid'])) {
+                $extension = "right(a.filename, instr(reverse(a.filename), '.') - 1)";
                 $identity = 'f.filedataid';
-            } elseif ($this->hasInputSchema('attach') === true) {
+            } elseif ($this->hasInputSchema('attach')) {
                 $identity = 'f.filedataid';
             } else {
-                $extension = self::fileExtension('filename');
+                $extension = "right(filename, instr(reverse(filename), '.') - 1)";
             }
 
-            $sql = "select
-                   f.filedata,
-                   $extension as extension,
+            // Table is dependent on vBulletin version (v4+ is filedata, v3 is attachment)
+            $sql = "select f.filedata, $extension as extension,
                    concat('attachments/', f.userid, '/', $identity, '.', lower($extension)) as Path
                from ";
-
-            // Table is dependent on vBulletin version (v4+ is filedata, v3 is attachment)
-            if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid']) === true) {
+            if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid'])) {
                 $sql .= ":_filedata f left join :_attachment a on a.filedataid = f.filedataid";
-            } elseif ($this->hasInputSchema('attach') === true) {
+            } elseif ($this->hasInputSchema('attach')) {
                 $sql .= ":_filedata f left join :_attach a on a.filedataid = f.filedataid";
             } else {
                 $sql .= ":_attachment f";
             }
-
             $this->exportBlobs($sql, 'filedata', 'Path');
         }
 
         if ($customAvatars) {
-            if ($this->hasInputSchema('customavatar', ['avatardata']) === true) {
+            $avatarDataColumn = 'filedata';
+            if ($this->hasInputSchema('customavatar', ['avatardata'])) {
                 $avatarDataColumn = 'avatardata';
-            } else {
-                $avatarDataColumn = 'filedata';
             }
-
-            $sql = "select
-                   a.$avatarDataColumn,
-                   if (a.userid is not null,
-                       concat('customavatars/', a.userid % 100,'/avatar_', a.userid,
-                        right(a.filename, instr(reverse(a.filename), '.'))),
-                       null
+            $sql = "select a.$avatarDataColumn,
+                   if (a.userid is not null, concat('customavatars/', a.userid % 100,'/avatar_', a.userid,
+                        right(a.filename, instr(reverse(a.filename), '.'))), null
                    ) as customphoto
                 from :_customavatar a";
             $sql = str_replace('u.userid', 'a.userid', $sql);
@@ -207,18 +155,10 @@ class VBulletin extends Source
         }
 
         // Export the group icons no matter what.
-        if (
-            $this->hasInputSchema('socialgroupicon', 'thumbnail_filedata') === true
-            && ($attachments || $customAvatars)
-        ) {
-            $this->exportBlobs(
-                "select
-                   i.filedata,
-                   concat('vb/groupicons/', i.groupid, '.', i.extension) as path
-                from :_socialgroupicon i",
-                'filedata',
-                'path'
-            );
+        if ($this->hasInputSchema('socialgroupicon', 'thumbnail_filedata') && ($attachments || $customAvatars)) {
+            $query = "select i.filedata, concat('vb/groupicons/', i.groupid, '.', i.extension) as path 
+                from :_socialgroupicon i";
+            $this->exportBlobs($query, 'filedata', 'path');
         }
     }
 
@@ -235,7 +175,7 @@ class VBulletin extends Source
         $count = 0;
         while ($row = $result->nextResultRow()) {
             // vBulletin attachment hack (can't do this in MySQL)
-            if (strpos($row[$pathColumn], '.attach') && strpos($row[$pathColumn], 'attachments/') !== false) {
+            if (strpos($row[$pathColumn], '.attach') && str_contains($row[$pathColumn], 'attachments/')) {
                 $pathParts = explode('/', $row[$pathColumn]); // 3 parts
 
                 // Split up the userid into a path, digit by digit
@@ -249,7 +189,6 @@ class VBulletin extends Source
                 // Rebuild full path
                 $row[$pathColumn] = implode('/', $pathParts);
             }
-
             $path = $row[$pathColumn];
 
             // Build path
@@ -270,7 +209,6 @@ class VBulletin extends Source
             if (!is_resource($fp)) {
                 die("Could not open $path.");
             }
-
             fwrite($fp, $row[$blobColumn]);
             fclose($fp);
 
@@ -278,7 +216,6 @@ class VBulletin extends Source
                 if ($thumbnail === true) {
                     $thumbnail = 50;
                 }
-
                 $thumbPath = str_replace('/avat', '/navat', $path);
                 self::generateThumbnail($picPath, $thumbPath, $thumbnail, $thumbnail);
             }
@@ -287,7 +224,7 @@ class VBulletin extends Source
         Log::comment("$count Blobs.", false);
     }
 
-    public function bookmarks(): void
+    protected function bookmarks(): void
     {
         $minDiscussionWhere = 0;
         if ($this->hasInputSchema('threadread', ['readtime']) === true) {
@@ -297,18 +234,14 @@ class VBulletin extends Source
             $threadReadTime = 'now()';
             $threadReadJoin = null;
         }
-        $this->export(
-            'UserDiscussion',
-            "
-            select
-                st.userid as UserID,
+        $query = "select st.userid as UserID,
                 st.threadid as DiscussionID,
                 $threadReadTime as DateLastViewed,
                 '1' as Bookmarked
             from :_subscribethread as st
                 $threadReadJoin
-                $minDiscussionWhere"
-        );
+                $minDiscussionWhere";
+        $this->export('UserDiscussion', $query);
     }
 
     /**
@@ -318,40 +251,34 @@ class VBulletin extends Source
      */
     public function attachments(): void
     {
+        // @todo call doFileExport()
         if ($this->hasInputSchema('attachment') !== true) {
             return;
         }
-
         $instance = $this;
-        //if ($minDiscussionID) {
-        //    $discussionWhere = "and t.threadid > $minDiscussionID";
-        //} else {
-        $discussionWhere = '';
-        //}
         $media_Map = [
             'attachmentid' => 'MediaID',
             'filename' => 'Name',
             'filesize' => 'Size',
             'userid' => 'InsertUserID',
-            'filehash' => ['Column' => 'Path', 'Filter' => [$this, 'buildMediaPath']],
-            'filethumb' => [
-                'Column' => 'ThumbPath',
-                'Filter' => function ($value, $field, $row) use ($instance) {
-                    $filteredData = $this->filterThumbnailData($value, $field, $row);
-
-                    if ($filteredData) {
-                        return $instance->buildMediaPath($value, $field, $row);
-                    } else {
-                        return null;
-                    }
-                }
-            ],
-            'thumb_width' => ['Column' => 'ThumbWidth', 'Filter' => [$this, 'filterThumbnailData']],
-            'height' => ['Column' => 'ImageHeight', 'Filter' => [$this, 'buildMediaDimension']],
-            'width' => ['Column' => 'ImageWidth', 'Filter' => [$this, 'buildMediaDimension']],
+            'filehash' => 'Path',
+            'filethumb' => 'ThumbPath',
+            'thumb_width' => 'ThumbWidth',
+            'height' => 'ImageHeight',
+            'width' => 'ImageWidth',
         ];
         $filters = [
-            'extension' => 'ExtToMime',
+            'filethumb' => function ($value, $field, $row) use ($instance) {
+                $filter = new \Porter\Filter\NullIfNotImage($value, $field, $row);
+                if ($filter()) {
+                    return $instance->buildMediaPath($value, $field, $row);
+                }
+                return null;
+            },
+            'filehash' => [$this, 'buildMediaPath'],
+            'thumb_width' => \Porter\Filter\NullIfNotImage::class,
+            'height' => \Porter\Filter\NullIfNotImage::class,
+            'width' => \Porter\Filter\NullIfNotImage::class,
         ];
 
         // Add hash fields if they exist (from 2.x)
@@ -366,13 +293,13 @@ class VBulletin extends Source
             }
         }
         // Do the export
-        if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid']) === true) {
-            // Exporting 4.x with 'filedata' table.
+        if ($this->hasInputSchema('attachment', ['contenttypeid', 'contentid'])) {
             // Build an index to join on.
             if (!$this->indexExists('ix_thread_firstpostid', ':_thread')) {
-                $this->query('create index ix_thread_firstpostid on :_thread (firstpostid)');
+                $this->dbInput()->unprepared('create index ix_thread_firstpostid on :_thread (firstpostid)');
             }
-            $mediaSql = "select
+            // Exporting 4.x with 'filedata' table.
+            $mediaSql = "select a.*, f.extension, f.extension as Ext, f.filesize, f.width, f.height,
                     case
                         when t.threadid is not null then 'discussion'
                         when ct.class = 'Post' then 'comment'
@@ -383,32 +310,24 @@ class VBulletin extends Source
                         when t.threadid is not null then t.threadid
                         else a.contentid
                     end as ForeignID,
-                    from_unixtime(a.dateline) as DateInserted,
-                    a.*,
-                    f.extension,
-                    f.filesize/*,*/
+                    from_unixtime(a.dateline) as DateInserted
                     $attachColumnsString,
-                    f.width,
-                    f.height,
                     'mock_value' as filethumb,
                     128 as thumb_width
                 from :_attachment a
-                    join :_contenttype ct on a.contenttypeid = ct.contenttypeid
-                    join :_filedata f on f.filedataid = a.filedataid
-                    left join :_thread t on t.firstpostid = a.contentid and a.contenttypeid = 1
-                where a.contentid > 0
-                    $discussionWhere";
-            $this->export('Media', $mediaSql, $media_Map, $filters);
+                join :_contenttype ct on a.contenttypeid = ct.contenttypeid
+                join :_filedata f on f.filedataid = a.filedataid
+                left join :_thread t on t.firstpostid = a.contentid and a.contenttypeid = 1
+                where a.contentid > 0";
         } else {
             // Exporting 3.x without 'filedata' table.
             // Do NOT grab every field to avoid 'filedata' blob in 3.x.
             // Left join 'attachment' because we can't left join 'thread' on firstpostid (not an index).
             // Lie about the height & width to spoof FileUpload serving generic thumbnail if they aren't set.
-            $extension = self::fileExtension('a.filename');
             $mediaSql = "select
                     a.attachmentid,
                     a.filename,
-                    $extension as extension/*,*/
+                    a.filename as Path/*,*/
                     $attachColumnsString,
                     a.userid,
                     'discussion' as ForeignTable,
@@ -425,7 +344,7 @@ class VBulletin extends Source
                 select
                     a.attachmentid,
                     a.filename,
-                    $extension as extension/*,*/
+                    a.filename as Path/*,*/
                     $attachColumnsString,
                     a.userid,
                     'comment' as ForeignTable,
@@ -436,11 +355,11 @@ class VBulletin extends Source
                     'mock_value' as filethumb,
                     128 as thumb_width
                 from :_post p
-                    inner join :_thread t ON p.threadid = t.threadid
-                    left join :_attachment a ON a.postid = p.postid
+                inner join :_thread t ON p.threadid = t.threadid
+                left join :_attachment a ON a.postid = p.postid
                 where p.postid <> t.firstpostid and a.attachmentid > 0";
-            $this->export('Media', $mediaSql, $media_Map, $filters);
         }
+        $this->export('Media', $mediaSql, $media_Map, $filters);
 
         // files named .attach need to be named properly.
         // file needs to be renamed and db updated.
@@ -508,35 +427,26 @@ class VBulletin extends Source
         ];
         $this->export(
             'Poll',
-            "select
-                    p.*,
-                    t.threadid,
-                    t.postuserid,
-                    !p.public as anonymous
+            "select p.*, t.threadid, t.postuserid, !p.public as anonymous
                 from :_poll p
-                    join :_thread t on p.pollid = t.pollid",
+                join :_thread t on p.pollid = t.pollid",
             $poll_Map
         );
 
-
         // Poll options
-        $this->query("drop table if exists zPollOptions;");
-        $this->query(
-            "create table zPollOptions (
+        $this->dbInput()->unprepared("drop table if exists zPollOptions;");
+        $this->dbInput()->unprepared("create table zPollOptions (
                 PollOptionID int(11) NOT NULL AUTO_INCREMENT,
                 PollID int(11),
                 Body varchar(250),
                 Sort int(11),
                 DateInserted int(11),
                 InsertUserID int(11),
-                PRIMARY KEY (`PollOptionID`)
-            );"
-        );
+                PRIMARY KEY (`PollOptionID`));");
 
         $sql = "select p.*, t.postuserid
             from :_poll p
             join :_thread t on p.pollid = t.pollid";
-
         $r = $this->query($sql);
         $rowCount = 0;
         $sql  = "replace into zPollOptions (
@@ -565,96 +475,69 @@ class VBulletin extends Source
                 }
             }
         }
-
         if ($rowCount > 0) {
-            $this->query(substr($sql, 0, -1));
+            $this->dbInput()->unprepared(substr($sql, 0, -1));
         }
 
         $this->export(
             'PollOption',
-            "select
-                PollOptionID,
-                PollID,
-                Body,
-                'BBCdode' as Format,
-                Sort,
-                FROM_UNIXTIME(DateInserted),
-                InsertUserID
+            "select PollOptionID, PollID, Body, 'BBCdode' as Format, Sort,FROM_UNIXTIME(DateInserted), InsertUserID
             from zPollOptions"
         );
 
         $this->export(
             'PollVote',
-            "select
-                pv.userid as UserID,
-                zp.PollOptionID,
-                pv.pollid
+            "select pv.userid as UserID, zp.PollOptionID, pv.pollid
             from :_pollvote pv
             join zPollOptions zp on pv.pollid = zp.PollID and pv.voteoption = zp.sort"
         );
     }
 
-    public function ranks(): iterable
+    public function ranks(): void
     {
         $hasRanks = $this->dbInput()->table('ranks')->select()->get()->count();
         if ($hasRanks) {
-            $ranks = $this->dbInput()->table('ranks')
-                ->select(['minposts'])
-                ->where('minposts', '>', 0)
-                ->orderBy('minposts', 'desc')
-                ->get();
+            $map = [
+                'rankid' => 'RankID',
+                'rankimg' => 'Name',
+            ];
             $this->export(
                 'Rank',
-                "select
-                    rankid as RankID,
-                    rankimg as Name,
-                    rankimg as Label,
-                    NULL as Body,
+                "select rankid, rankimg, rankimg as Label,
                     concat('{\"Criteria\":{\"CountPosts\":\"', minposts, '\"}}') as Attributes
                     from :_ranks
-                    where minposts > 0"
+                    where minposts > 0",
+                $map
             );
         } else {
-            $ranks = $this->dbInput()->table('usertitle')
-                ->select()
-                ->selectRaw('usertitleid as RankID')
-                ->orderBy('minposts', 'desc')
-                ->get();
-            $rank_Map = [
+            $map = [
                 'usertitleid' => 'RankID',
                 'title' => 'Name',
                 'title2' => 'Label',
-                'minposts' => [
-                    'Column' => 'Attributes',
-                    'Filter' => function ($value) {
-                        $result = [
-                            'Criteria' => [
-                                'CountPosts' => $value
-                            ]
-                        ];
-                        return serialize($result);
-                    }
-                ],
-                'level' => [
-                    'Column' => 'Level',
-                    'Filter' => function ($value) {
-                        static $level = 1;
-                        return $level++;
-                    }
-                ]
+                'minposts' => 'Attributes',
+                'level' => 'Level',
             ];
-
+            $filters = [
+                'level' => function ($value) {
+                    static $level = 1;
+                    return $level++;
+                },
+                'minposts' => function ($value) {
+                    $result = [
+                        'Criteria' => ['CountPosts' => $value]
+                    ];
+                    return serialize($result);
+                },
+            ];
             $this->export(
                 'Rank',
-                "select ut.*,
-                        ut.title as title2,
-                        0 as level
+                "select ut.*, ut.title as title2, 0 as level
                     from :_usertitle as ut
                     order by ut.minposts",
-                $rank_Map
+                $map,
+                $filters
             );
         }
-        return $ranks;
     }
 
     /**
@@ -670,30 +553,26 @@ class VBulletin extends Source
      */
     public function buildMediaPath(mixed $value, string $field, array $row): string
     {
-        if (isset($row['hash']) && $row['hash'] != '') {
+        if (!empty($row['hash'])) {
             // Old school! (2.x)
             $filePath = $row['hash'] . '.' . $row['extension'];
         } else { // Newer than 3.0
+            // 3.x uses attachmentid, 4.x uses filedataid
+            $identity = $row['filedataid'] ?? $row['attachmentid'];
+
+            // @todo restore detection of blob export
             // Build user directory path
             $chars = str_split($row['userid']);
             $dirParts = [];
             foreach ($chars as $char) {
                 $dirParts[] = $char;
             }
-
-            // 3.x uses attachmentid, 4.x uses filedataid
-            $identity = (isset($row['filedataid'])) ? $row['filedataid'] : $row['attachmentid'];
-
             // If we're exporting blobs, simplify the folder structure.
             // Otherwise, we need to preserve vBulletin's eleventy subfolders.
             $separator = ''; //$this->param('separator', '');
             $filePath = implode($separator, $dirParts) . '/' . $identity . '.' . $row['extension'];
         }
-
-        // Use 'cdn' parameter to define path prefix, ex: ?cdn=~cf/
-        $cdn = ''; //$this->param('cdn', '');
-
-        return $cdn . 'attachments/' . $filePath;
+        return 'attachments/' . $filePath;
     }
 
     /**
@@ -702,7 +581,7 @@ class VBulletin extends Source
     public function buildMediaDimension(mixed $value, string $field, array $row): mixed
     {
         // Non-images get no height/width
-        if ($this->hasInputSchema('attachment', ['extension']) === true) {
+        if ($this->hasInputSchema('attachment', ['extension'])) {
             $extension = $row['extension'];
         } else {
             $extension = pathinfo($row['filename'], PATHINFO_EXTENSION);
@@ -741,29 +620,19 @@ class VBulletin extends Source
         return false;
     }
 
-    public function htmlDecode(mixed $value): mixed
-    {
-        return ($value);
-    }
-
     protected function tags(): void
     {
         $this->export(
             'Tag',
-            "
-            select
-                tagid as TagID,
+            "select tagid as TagID,
                 replace(lower(tagtext), ' ', '-') as Name,
                 tagtext as FullName ,
                 from_unixtime(dateline) as DateInserted
-            from :_tag
-        "
+            from :_tag"
         );
-
         $this->export(
             'TagDiscussion',
-            "select
-                    tagid as TagID,
+            "select tagid as TagID,
                     threadid as DiscussionID,
                     -1 as CategoryID,
                     from_unixtime(dateline) as DateInserted
@@ -773,53 +642,73 @@ class VBulletin extends Source
 
     protected function conversations(): void
     {
+        $map = [
+            'parentpmid' => 'ConversationID',
+            'fromuserid' => 'InsertUserID',
+            'dateline' => 'DateInserted',
+            'pmtextid' => 'FirstMessageID',
+            'title' => 'Subject',
+        ];
+        $filters = [
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
+            'title' => function ($value) {
+                return str_replace('Re: ', '', $value);
+            }
+        ];
         $this->export(
             'Conversation',
-            "select
-                p.parentpmid as ConversationID,
-                 replace(t.title, 'Re: ', '') as Subject,
-                t.fromuserid as InsertUserID,
-                from_unixtime(t.dateline) as DateInserted,
-                t.pmtextid as FirstMessageID
-            from (select
-                parentpmid,
-                min(p.pmtextid) as pmtextid
-            from (
-                select pmtextid, parentpmid from :_pm where parentpmid <> 0 group by pmtextid having count(pmtextid) > 1
-            ) p
-            group by parentpmid)	p
-            join :_pmtext t on t.pmtextid = p.pmtextid"
+            "select p.parentpmid, t.title, t.fromuserid, t.dateline, t.pmtextid
+                from (
+                    select parentpmid, min(p.pmtextid) as pmtextid
+                    from (
+                        select pmtextid, parentpmid from :_pm
+                        where parentpmid <> 0 
+                        group by pmtextid having count(pmtextid) > 1
+                    ) p
+                    group by parentpmid
+                ) p
+                join :_pmtext t on t.pmtextid = p.pmtextid",
+            $map,
+            $filters
         );
 
+        $map = [
+            'parentpmid' => 'ConversationID',
+            'fromuserid' => 'InsertUserID',
+            'dateline' => 'DateInserted',
+            'message' => 'Body',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
+        ];
         $this->export(
             'ConversationMessage',
-            "select distinct
-                    t.pmtextid,
-                    p.parentpmid as ConversationID,
-                    t.message as Body,
-                    'BBCode' as Format,
-                    t.fromuserid as InsertUserID,
-                    from_unixtime(t.dateline) as DateInserted
+            "select distinct t.pmtextid, p.parentpmid, t.message, t.fromuserid, t.dateline
                 from :_pmtext t
                 join (
                     select pmtextid, parentpmid
                     from :_pm
                     where parentpmid > 0
                     group by pmtextid having count(pmtextid) > 1
-                ) p on t.pmtextid = p.pmtextid"
+                ) p on t.pmtextid = p.pmtextid",
+            $map,
+            $filters
         );
 
         // User Conversation.
+        $map = [
+            'userid' => 'UserID',
+            'parentpmid' => 'ConversationID',
+            'messageread' => 'CountReadMessages',
+        ];
         $this->export(
             'UserConversation',
-            "
-                select
-                userid as UserID,
-                parentpmid as ConversationID,
-                messageread as CountReadMessages
+            "select userid, parentpmid, messageread
                 from :_pm
                 where parentpmid > 0
-            	group by userid, parentpmid"
+            	group by userid, parentpmid",
+            $map
         );
     }
 
@@ -830,8 +719,7 @@ class VBulletin extends Source
         }
         $this->export(
             'UserTag',
-            "select
-                    if(t.threadid is not null, 'Discussion', 'Comment') as RecordType,
+            "select if(t.threadid is not null, 'Discussion', 'Comment') as RecordType,
                     if(t.threadid is not null, t.threadid, p.postid) as RecordID,
                     -1 as TagID,
                     p.userid as UserID,
@@ -840,8 +728,7 @@ class VBulletin extends Source
                 from :_post_thanks p
                 left join :_thread t on p.postid = t.firstpostid
                 union
-                select
-                    concat(if(t.threadid is not null, 'Discussion', 'Comment'), '-Total') as RecordType,
+                select concat(if(t.threadid is not null, 'Discussion', 'Comment'), '-Total') as RecordType,
                     if(t.threadid is not null, t.threadid, p.postid) as RecordID,
                     -1 as TagID,
                     p.userid as UserID,
@@ -854,21 +741,17 @@ class VBulletin extends Source
 
     protected function categories(): void
     {
-        $category_Map = [
-            'title' => ['Column' => 'Name', 'Filter' => [$this, 'htmlDecode']],
-            'displayorder' => ['Column' => 'Sort', 'Type' => 'int'],
+        $map = [
+            'title' => 'Name',
+            'forumid' => 'CategoryID',
+            'description' => 'Description',
+            'parentid' => 'ParentCategoryID',
+            'displayorder' => 'Sort',
         ];
-        $this->export(
-            'Category',
-            "select
-                    f.forumid as CategoryID,
-                    f.description as Description,
-                    f.parentid as ParentCategoryID,
-                    f.title,
-                    f.displayorder
-                from :_forum as f",
-            $category_Map
-        );
+        $filters = [
+            'title' => \Porter\Filter\DecodeHtml::class,
+        ];
+        $this->export('Category', "select * from :_forum as f", $map, $filters);
     }
 
     protected function roles(): void
@@ -885,13 +768,12 @@ class VBulletin extends Source
             'userid' => 'UserID',
             'usergroupid' => 'RoleID'
         ];
-        $this->query("drop table if exists VbulletinRoles");
-        $this->query(
-            "create table VbulletinRoles (
-            userid int unsigned not null, usergroupid int unsigned not null)"
-        );
+        $this->dbInput()->unprepared("drop table if exists VbulletinRoles");
+        $this->dbInput()->unprepared("create table VbulletinRoles (
+            userid int unsigned not null, usergroupid int unsigned not null)");
         // Put primary groups into tmp table
-        $this->query("insert into VbulletinRoles (userid, usergroupid) select userid, usergroupid from :_user");
+        $this->dbInput()->unprepared("insert into VbulletinRoles (userid, usergroupid) 
+            select userid, usergroupid from :_user");
         // Put stupid CSV column into tmp table
         $secondaryRoles = $this->query("select userid, usergroupid, membergroupids from :_user");
         if (is_object($secondaryRoles)) {
@@ -902,136 +784,124 @@ class VBulletin extends Source
                         if (!$groupID) {
                             continue;
                         }
-                        $this->query(
-                            "insert into VbulletinRoles (userid, usergroupid)
-                            values({$row['userid']},{$groupID})"
-                        );
+                        $this->dbInput()->unprepared("insert into VbulletinRoles (userid, usergroupid)
+                            values({$row['userid']},{$groupID})");
                     }
                 }
             }
         }
         // Export from our tmp table and drop
         $this->export('UserRole', 'select distinct userid, usergroupid from VbulletinRoles', $userRole_Map);
-        $this->query("drop table if exists VbulletinRoles");
+        $this->dbInput()->unprepared("drop table if exists VbulletinRoles");
     }
 
-    protected function users(mixed $ranks): void
+    protected function users(): void
     {
-        $cdn = '';
-        $user_Map = [
-            'usertitle' => [
-                'Column' => 'Title',
-                'Filter' => function ($value) {
-                    return trim(strip_tags(str_replace('&nbsp;', ' ', $value)));
-                }
-            ],
-            'posts' => [
-                'Column' => 'RankID',
-                'Filter' => function ($value) use ($ranks) {
-                    // Look  up the posts in the ranks table.
-                    foreach ($ranks as $row) {
-                        if ($value >= $row->minposts) {
-                            return $row->rankID;
-                        }
-                    }
-                    return null;
-                }
-            ]
-        ];
-
-        // Use file avatar or the result of our blob export?
-        if ($this->getConfig('usefileavatar')) {
-            $user_Map['filephoto'] = 'Photo';
+        $hasRanks = $this->dbInput()->table('ranks')->select()->get()->count();
+        if ($hasRanks) {
+            $ranks = $this->dbInput()->table('ranks')->select(['minposts'])
+                ->where('minposts', '>', 0)
+                ->orderBy('minposts', 'desc')
+                ->get();
         } else {
-            $user_Map['customphoto'] = 'Photo';
+            $ranks = $this->dbInput()->table('usertitle')->select()
+                ->selectRaw('usertitleid as RankID')
+                ->orderBy('minposts', 'desc')
+                ->get();
         }
 
+        $map = [
+            'userid' => 'UserID',
+            'username' => 'Name',
+            'email' => 'Email',
+            'referrerid' => 'InviteUserID',
+            'usertitle' => 'Title',
+            'posts' => 'RankID',
+            'joindate' => 'DateInserted',
+            'lastvisit' => 'DateLastActive',
+            'lastactivity' => 'DateUpdated', // ?
+            'HashMethod=vbulletin',
+            // Use file avatar or the result of our blob export?
+            $this->getConfig('usefileavatar') ? 'filephoto' : 'customphoto' => 'Photo',
+        ];
+        $filters = [
+            'joindate' => \Porter\Filter\UnixtimeToDate::class,
+            'lastvisit' => \Porter\Filter\UnixtimeToDate::class,
+            'lastactivity' => \Porter\Filter\UnixtimeToDate::class,
+            'usertitle' => function ($value) {
+                return trim(strip_tags(str_replace('&nbsp;', ' ', $value)));
+            },
+            'posts' => function ($value) use ($ranks) {
+                // Look up the posts in the ranks table.
+                foreach ($ranks as $row) {
+                    if ($value >= $row->minposts) {
+                        return $row->rankID;
+                    }
+                }
+                return null;
+            },
+        ];
         $this->export(
             'User',
-            "select
-                u.userid as UserID,
-                u.username as Name,
-                u.email as Email,
-                u.referrerid as InviteUserID,
-                u.timezoneoffset as HourOffset,
-                u.timezoneoffset as HourOffset,
-                u.ipaddress as LastIPAddress,
-                u.ipaddress as InsertIPAddress,
-                u.usertitle,
-                u.posts,
-                concat(`password`, salt) as Password,
+            "select u.userid, u.username, u.email, u.referrerid, u.usertitle, u.posts, 
+                joindate, lastvisit, lastactivity, concat(`password`, salt) as Password,
                 date_format(birthday_search, get_format(DATE, 'ISO')) as DateOfBirth,
-                from_unixtime(joindate) as DateFirstVisit,
-                from_unixtime(lastvisit) as DateLastActive,
-                from_unixtime(joindate) as DateInserted,
-                from_unixtime(lastactivity) as DateUpdated,
                 case when avatarrevision > 0
-                        then concat('$cdn', 'userpics/avatar', u.userid, '_', avatarrevision, '.gif')
+                        then concat('userpics/avatar', u.userid, '_', avatarrevision, '.gif')
                      when av.avatarpath is not null then av.avatarpath
                      else null
                      end as filephoto,
                 {$this->avatarSelect},
-                case when ub.userid is not null then 1 else 0 end as Banned,
-                'vbulletin' as HashMethod
+                case when ub.userid is not null then 1 else 0 end as Banned
             from :_user u
-                left join :_customavatar a on u.userid = a.userid
-                left join :_avatar av on u.avatarid = av.avatarid
-                left join :_userban ub on u.userid = ub.userid and ub.liftdate <= now()",
-            $user_Map
+            left join :_customavatar a on u.userid = a.userid
+            left join :_avatar av on u.avatarid = av.avatarid
+            left join :_userban ub on u.userid = ub.userid and ub.liftdate <= now()",
+            $map,
+            $filters
         );
-
         $this->userMeta();
     }
 
     protected function userMeta(): void
     {
-        $this->query("drop table if exists VbulletinUserMeta");
-        $this->query("
-            create table VbulletinUserMeta(
+        $this->dbInput()->unprepared("drop table if exists VbulletinUserMeta");
+        $this->dbInput()->unprepared("create table VbulletinUserMeta(
                 `UserID` int not null,
                 `Name` varchar(255) not null,
-                `Value` text not null
-            );");
+                `Value` text not null);");
         // Standard vB user data
         $userFields = [
             'usertitle' => 'Title',
             'homepage' => 'Website',
             'styleid' => 'StyleID'
         ];
-        if ($this->hasInputSchema('user', ['skype']) === true) {
-            $userFields['skype'] = 'Skype';
-        }
 
         foreach ($userFields as $field => $insertAs) {
-            $this->query(
-                "insert into VbulletinUserMeta (UserID, Name, Value)
+            $this->dbInput()->unprepared("insert into VbulletinUserMeta (UserID, Name, Value)
                     select userid, 'Profile.$insertAs', $field
                     from :_user where $field != '' and $field != 'http://'
-
-                    union select userid as UserID,
-                        concat('Preferences.Popup.NewComment.', forumid), 1 as Value
-                        from :_subscribeforum
-                    union select userid as UserID,
-                        concat('Preferences.Popup.NewDiscussion.', forumid), 1 as Value
-                        from :_subscribeforum
-                    union select userid as UserID,
-                        concat('Preferences.Email.NewComment.', forumid), 1 as Value
-                        from :_subscribeforum where emailupdate > 1
-                    union select userid as UserID,
-                        concat('Preferences.Email.NewDiscussion.', forumid), 1 as Value
-                        from :_subscribeforum where emailupdate > 1"
-            );
+                    union 
+                    select userid as UserID, concat('Preferences.Popup.NewComment.', forumid), 1 as Value
+                    from :_subscribeforum
+                    union 
+                    select userid as UserID, concat('Preferences.Popup.NewDiscussion.', forumid), 1 as Value
+                    from :_subscribeforum
+                    union 
+                    select userid as UserID, concat('Preferences.Email.NewComment.', forumid), 1 as Value
+                    from :_subscribeforum where emailupdate > 1
+                    union 
+                    select userid as UserID, concat('Preferences.Email.NewDiscussion.', forumid), 1 as Value
+                    from :_subscribeforum where emailupdate > 1");
         }
 
         if ($this->hasInputSchema('phrase', ['product', 'fieldname']) === true) {
             // Dynamic vB user data (userfield)
-            $profileFields = $this->query(
-                "select distinct varname, text
+            $profileFields = $this->query("select distinct varname, text
                 from :_phrase
                 where product='vbulletin'
                     and fieldname='cprofilefield'
-                    and varname like 'field%_title'"
-            );
+                    and varname like 'field%_title'");
             if (is_object($profileFields)) {
                 $profileQueries = [];
                 while ($field = $profileFields->nextResultRow()) {
@@ -1039,15 +909,12 @@ class VBulletin extends Source
                     $name = preg_replace('/[^a-zA-Z0-9\s_-]/', '', $field['text']);
                     $profileQueries[] = "
                         insert into VbulletinUserMeta(UserID, Name, Value)
-                        select
-                            userid,
-                            'Profile." . $name . "',
-                            " . $column . "
+                        select userid, 'Profile." . $name . "', " . $column . "
                         from :_userfield
                         where " . $column . " != ''";
                 }
                 foreach ($profileQueries as $query) {
-                    $this->query($query);
+                    $this->dbInput()->unprepared($query);
                 }
             }
         }
@@ -1055,17 +922,11 @@ class VBulletin extends Source
         // Users meta informations
         $this->export(
             'UserMeta',
-            "select
-                    userid as UserID,
-                    'Plugin.Signatures.Sig' as Name,
-                    signature as Value
+            "select userid as UserID, 'Plugin.Signatures.Sig' as Name, signature as Value
                 from :_usertextfield
                 where nullif(signature, '') is not null
                 union
-                select
-                    userid,
-                    'Plugin.Signatures.Format',
-                    'BBCode'
+                select userid, 'Plugin.Signatures.Format', 'BBCode'
                 from :_usertextfield
                 where nullif(signature, '') is not null
                 union
@@ -1076,18 +937,6 @@ class VBulletin extends Source
 
     protected function comments(): void
     {
-        $comment_Map = [
-            'pagetext' => ['Column' => 'Body', 'Filter' => function ($value) {
-                return $value;
-            }
-            ],
-        ];
-
-        $minDiscussionWhere = '';
-        //if ($minDiscussionID) {
-        //    $minDiscussionWhere = "and p.threadid > $minDiscussionID";
-        //}
-
         $excludeFirstPost = '';
         $joinThreads = '';
         if ($this->getDiscussionBodyMode()) {
@@ -1095,103 +944,90 @@ class VBulletin extends Source
             $excludeFirstPost = 'p.postid <> t.firstpostid and';
             $joinThreads = 'inner join :_thread as t on p.threadid = t.threadid';
         }
+        $map = [
+            'postid' => 'CommentID',
+            'threadid' => 'DiscussionID',
+            'userid' => 'InsertUserID',
+            'pagetext' => 'Body',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
+        ];
         $this->export(
             'Comment',
-            "select
-                    p.postid as CommentID,
-                    p.threadid as DiscussionID,
-                    p.pagetext,
-                    p.ipaddress as InsertIPAddress,
-                    'BBCode' as Format,
-                    p.userid as InsertUserID,
-                    p.userid as UpdateUserID,
-                    from_unixtime(p.dateline) as DateInserted
-                from :_post as p
-                    $joinThreads
-                    left join :_deletionlog as d on (d.type='post' and d.primaryid=p.postid)
-                where $excludeFirstPost d.primaryid is null
-                    and p.visible = 1
-                    $minDiscussionWhere",
-            $comment_Map
+            "select p.postid, p.threadid, p.pagetext, p.dateline
+                from :_post as p 
+                $joinThreads
+                left join :_deletionlog as d on (d.type='post' and d.primaryid=p.postid)
+                where $excludeFirstPost d.primaryid is null and p.visible = 1",
+            $map,
+            $filters
         );
     }
 
-    protected function wallPosts(): void
+    protected function wallposts(): void
     {
         // Activity (from visitor messages in vBulletin 3.8+)
-        $minDiscussionWhere = '';
-        if ($this->hasInputSchema('visitormessage') === true) {
-            //if ($minDiscussionID) {
-            //    $minDiscussionWhere = "and dateline > $minDiscussionID";
-            //}
-
-            $activity_Map = [
-                'postuserid' => 'RegardingUserID',
-                'userid' => 'ActivityUserID',
-                'pagetext' => 'Story',
-                'NotifyUserID' => 'NotifyUserID',
-                'Format' => 'Format'
-            ];
-            $this->export(
-                'Activity',
-                "select
-                    vm.*,
-                    '{RegardingUserID,you} &rarr; {ActivityUserID,you}' as HeadlineFormat,
-                    from_unixtime(vm.dateline) as DateInserted,
-                    from_unixtime(vm.dateline) as DateUpdated,
-                    inet_ntoa(vm.ipaddress) as InsertIPAddress,
-                    vm.postuserid as InsertUserID,
-                    -1 as NotifyUserID,
-                    'BBCode' as Format,
-                    'WallPost' as ActivityType
-                from :_visitormessage as vm
-                where state='visible'
-                    $minDiscussionWhere",
-                $activity_Map
-            );
+        if (!$this->hasInputSchema('visitormessage') === true) {
+            return;
         }
+        $map = [
+            'postuserid' => 'RegardingUserID',
+            'userid' => 'ActivityUserID',
+            'pagetext' => 'Story',
+            'dateline' => 'DateInserted',
+            'NotifyUserID=-1',
+            'ActivityType=WallPost',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
+            'DateUpdated' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $this->export(
+            'Activity',
+            "select vm.*, vm.postuserid as InsertUserID, vm.dateline as DateUpdated  
+                '{RegardingUserID,you} &rarr; {ActivityUserID,you}' as HeadlineFormat
+                from :_visitormessage as vm
+                where state='visible'",
+            $map,
+            $filters
+        );
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
-            'title' => ['Column' => 'Name', 'Filter' => [$this, 'htmlDecode']],
-            'pagetext' => ['Column' => 'Body', 'Filter' => function ($value) {
-                return $value;
-            }
-            ],
+        $map = [
+            'threadid' => 'DiscussionID',
+            'forumid' => 'CategoryID',
+            'postuserid' => 'InsertUserID',
+            'dateline' => 'DateInserted',
+            'lastpost' => 'DateLastComment',
+            'title' => 'Name',
+            'pagetext' => 'Body',
+            'views' => 'CountViews',
+            'Format=BBCode',
         ];
-        $minDiscussionWhere = '';
-        //if ($minDiscussionID) {
-        //    $minDiscussionWhere = "and t.threadid > $minDiscussionID";
-        //}
+        $filters = [
+            'dateline' => \Porter\Filter\UnixtimeToDate::class,
+            'title' => \Porter\Filter\UnixtimeToDate::class,
+            'lastpost' => \Porter\Filter\UnixtimeToDate::class,
+        ];
         $this->export(
             'Discussion',
-            "select
-                    t.threadid as DiscussionID,
-                    t.forumid as CategoryID,
-                    t.postuserid as InsertUserID,
-                    t.postuserid as UpdateUserID,
-                    t.views as CountViews,
-                    t.sticky as Announce,
-                    t.title,
-                    p.postid as ForeignID,
-                    p.ipaddress as InsertIPAddress,
-                    p.pagetext,
-                    'BBCode' as Format,
+            "select t.threadid, t.forumid, t.postuserid, t.views, t.title, t.dateline, lastpost,
+                    p.postid as ForeignID, p.pagetext,
                     replycount+1 as CountComments,
                     convert(ABS(open-1), char(1)) as Closed,
                     if(convert(sticky, char(1)) > 0, 2, 0) as Announce,
-                    from_unixtime(t.dateline) as DateInserted,
-                    from_unixtime(lastpost) as DateLastComment,
                     if (t.pollid > 0, 'Poll', null) as Type
                 from :_thread as t
-                    left join :_deletionlog as d on d.type='thread' and d.primaryid=t.threadid
-                    left join :_post as p on p.postid = t.firstpostid
-                where d.primaryid is null
-                    and t.visible = 1
-                $minDiscussionWhere",
-            $discussion_Map
+                left join :_deletionlog as d on d.type='thread' and d.primaryid=t.threadid
+                left join :_post as p on p.postid = t.firstpostid
+                where d.primaryid is null and t.visible = 1",
+            $map,
+            $filters
         );
     }
 }

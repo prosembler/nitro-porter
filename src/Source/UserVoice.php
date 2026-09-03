@@ -20,15 +20,6 @@ class UserVoice extends Source
     ];
 
     /**
-     * Role IDs are crazy hex strings of hyphenated octets.
-     * Create an integer RoleID using the first 4 characters.
-     */
-    public function roleIDConverter(mixed $roleID): int
-    {
-        return (int)hexdec(substr($roleID, 0, 4));
-    }
-
-    /**
      * Avatars are hex-encoded in the database.
      */
     public function avatars(): void
@@ -36,11 +27,12 @@ class UserVoice extends Source
         $thumbnail = true;
         Log::comment("Exporting hex encoded columns...");
         $result = $this->query("select UserID, Length, ContentType, Content from :_UserAvatar");
-        $path = '/www/porter/userpics';
-        $count = 0;
         if (!$result) {
             return;
         }
+        // @todo convert to filemap!
+        $path = '/www/porter/userpics';
+        $count = 0;
         while ($row = $result->nextResultRow()) {
             // Build path
             if (!file_exists(dirname($path))) {
@@ -52,7 +44,6 @@ class UserVoice extends Source
 
             $photoPath = $path . '/pavatar' . $row['UserID'] . '.jpg';
             file_put_contents($photoPath, hex2bin($row['Content']));
-
             if ($thumbnail === true) {
                 $thumbnail = 50;
             }
@@ -61,7 +52,6 @@ class UserVoice extends Source
             self::generateThumbnail($photoPath, $thumbPath, $thumbnail, $thumbnail);
             $count++;
         }
-        //$port->status("$count Hex Encoded.\n");
         Log::comment("$count Hex Encoded.", false);
     }
 
@@ -82,21 +72,17 @@ class UserVoice extends Source
            from :_PostAttachments a
            left join :_Posts p on p.PostID = a.PostID
            where IsRemote = 0", $Media_Map);
-
         Log::comment("Exporting hex encoded columns...");
-
-        $result = $this->query(
-            "select a.*, p.PostID
+        $result = $this->query("select a.*, p.PostID
                 from :_PostAttachments a
                 left join :_Posts p on p.PostID = a.PostID
-                where IsRemote = 0"
-        );
-        $path = '/www/porter/attach';
-        $count = 0;
+                where IsRemote = 0");
         if (!$result) {
             return;
         }
-
+        // @todo convert to filemap!
+        $path = '/www/porter/attach';
+        $count = 0;
         while ($row = $result->nextResultRow()) {
             // Build path
             if (!file_exists(dirname($path))) {
@@ -105,56 +91,58 @@ class UserVoice extends Source
                     die("Could not create " . dirname($path));
                 }
             }
-
             file_put_contents($path . '/' . $row['FileName'], hex2bin($row['Content']));
             $count++;
         }
-        //$port->status("$count Hex Encoded.\n");
         Log::comment("$count Hex Encoded.", false);
     }
 
     protected function users(): void
     {
-        $user_Map = [
-            'LastActivity' => ['Column' => 'DateLastActive'],
-            'UserName' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
-            'CreateDate' => ['Column' => 'DateInserted'],
+        $map = [
+            'LastActivity' => 'DateLastActive',
+            'UserName' => 'Name',
+            'CreateDate' => 'DateInserted',
+            'HashMethod=django',
+        ];
+        $filter = [
+            'UserName' => \Porter\Filter\DecodeHtml::class,
         ];
         $this->export(
             'User',
             "select u.*,
                     concat('sha1$', m.PasswordSalt, '$', m.Password) as Password,
-                    'django' as HashMethod,
                     if(a.Content is not null, concat('import/userpics/avatar',u.UserID,'.jpg'), NULL) as Photo
                 from :_Users u
                 left join aspnet_Membership m on m.UserId = u.MembershipID
                 left join :_UserAvatar a on a.UserID = u.UserID",
-            $user_Map
+            $map,
+            $filter
         );
     }
 
     protected function roles(): void
     {
-        $role_Map = [
-            'RoleId' => ['Column' => 'RoleID', 'Filter' => [$this, 'roleIDConverter']],
-            'RoleName' => 'Name'
+        $map = [
+            'RoleId' => 'RoleID',
+            'RoleName' => 'Name',
         ];
-        $this->export(
-            'Role',
-            "select * from aspnet_Roles",
-            $role_Map
-        );
+        $filters = [
+            'RoleId' => \Porter\Filter\UserVoiceRoleID::class,
+        ];
+        $this->export('Role', "select * from aspnet_Roles", $map, $filters);
 
         // User Role.
         $userRole_Map = [
-            'RoleId' => ['Column' => 'RoleID', 'Filter' => [$this, 'roleIDConverter']],
+            'RoleId' => 'RoleID',
         ];
         $this->export(
             'UserRole',
             "select u.UserID, ur.RoleId
                 from aspnet_UsersInRoles ur
                 left join :_Users u on ur.UserId = u.MembershipID",
-            $userRole_Map
+            $userRole_Map,
+            $filters
         );
     }
 
@@ -175,7 +163,7 @@ class UserVoice extends Source
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'ThreadID' => 'DiscussionID',
             'SectionID' => 'CategoryID',
             'UserID' => 'InsertUserID',
@@ -186,54 +174,56 @@ class UserVoice extends Source
             'IsLocked' => 'Closed',
             'MostRecentPostAuthorID' => 'LastCommentUserID',
             'MostRecentPostID' => 'LastCommentID',
-            'Subject' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
-            'Body' => ['Column' => 'Body', 'Filter' => 'DecodeHtml'],
-            'IPAddress' => 'InsertIPAddress'
+            'Subject' => 'Name',
+            'Body' => 'Body',
+            'IPAddress' => 'InsertIPAddress',
+            'Format=Html',
+        ];
+        $filters = [
+            'Subject' => \Porter\Filter\DecodeHtml::class,
+            'Body' => \Porter\Filter\DecodeHtml::class,
         ];
         $this->export(
             'Discussion',
-            "select t.*,
-                    p.Subject,
-                    p.Body,
-                    'Html' as Format,
-                    p.IPAddress as InsertIPAddress,
-                    if(t.IsSticky  > 0, 2, 0) as Announce
+            "select t.*, p.Subject, p.Body, if(t.IsSticky  > 0, 2, 0) as Announce
                 from :_Threads t
                 left join :_Posts p on p.ThreadID = t.ThreadID
                 where p.SortOrder = 1",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'PostID' => 'CommentID',
             'ThreadID' => 'DiscussionID',
             'UserID' => 'InsertUserID',
             'IPAddress' => 'InsertIPAddress',
-            'Body' => ['Column' => 'Body', 'Filter' => 'DecodeHtml'],
             'PostDate' => 'DateInserted'
+        ];
+        $filters = [
+            'Body' => \Porter\Filter\DecodeHtml::class,
         ];
         $this->export(
             'Comment',
             "select p.* from :_Posts p where SortOrder > 1",
-            $comment_Map
+            $map,
+            $filters
         );
     }
 
     protected function bookmarks(): void
     {
-        $userDiscussion_Map = [
-            'ThreadID' => 'DiscussionID'
+        $map = [
+            'ThreadID' => 'DiscussionID',
+            'Bookmarked=1',
         ];
         $this->export(
             'UserDiscussion',
-            "select t.*,
-                    '1' as Bookmarked,
-                    NOW() as DateLastViewed
-                from :_TrackedThreads t",
-            $userDiscussion_Map
+            "select t.*, NOW() as DateLastViewed from :_TrackedThreads t",
+            $map
         );
     }
 }

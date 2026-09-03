@@ -31,19 +31,15 @@ class BbPress2 extends Source
 
     protected function users(): void
     {
-        $this->query("drop table if exists z_user;");
-        $this->query(
-            "create table `z_user` (
+        $this->dbInput()->unprepared("drop table if exists z_user;");
+        $this->dbInput()->unprepared("create table `z_user` (
                 `ID` bigint(20) unsigned not null AUTO_INCREMENT,
                 `user_login` varchar(60) NOT NULL DEFAULT '',
                 `user_pass` varchar(255) NOT NULL DEFAULT '',
                 `hash_method` varchar(10) DEFAULT NULL,
                 `user_email` varchar(100) NOT NULL DEFAULT '',
                 `user_registered` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
-                primary key (`ID`),
-                KEY `user_email` (`user_email`)
-            );"
-        );
+                primary key (`ID`), KEY `user_email` (`user_email`) );");
 
         $userQuery = "select ID,
                 user_login,
@@ -52,7 +48,7 @@ class BbPress2 extends Source
                 user_email,
                 user_registered
             from :_users";
-        $this->query("insert into z_user $userQuery");
+        $this->dbInput()->unprepared("insert into z_user $userQuery");
 
         $guestUserQuery = "select user_login,
                 'JL2AC3ORF2ZHDU00Z8V0Z1LFC58TY6NWA6IC5M1MIGGDCHNE7K' AS user_pass,
@@ -74,7 +70,7 @@ class BbPress2 extends Source
             where user_email not in (select user_email from z_user group by user_email)
             group by user_email";
 
-        $this->query("insert into z_user(
+        $this->dbInput()->unprepared("insert into z_user(
                 /* ID auto_increment yay! */
                 user_login,
                 user_pass,
@@ -156,39 +152,38 @@ class BbPress2 extends Source
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'ID' => 'DiscussionID',
             'post_parent' => 'CategoryID',
             'post_author' => 'InsertUserID',
             'post_title' => 'Name',
-            'Format' => 'Format',
             'post_date' => 'DateInserted',
             'menu_order' => 'Announce',
+            'Format=Html',
+            'Closed=0',
         ];
         $this->export(
             'Discussion',
             "select p.*,
                     /* override post_author value from p.* */
-                    if (p.post_author > 0, p.post_author, z_user.ID) as post_author,
-                    'Html' as Format,
-                    0 as Closed
+                    if (p.post_author > 0, p.post_author, z_user.ID) as post_author
                 from :_posts as p
                     left join :_postmeta as pm on pm.post_id = p.ID AND pm.meta_key = '_bbp_anonymous_email'
                     left join z_user on z_user.user_email = pm.meta_value
                 where post_type = 'topic';",
-            $discussion_Map
+            $map
         );
     }
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'ID' => 'CommentID',
             'post_parent_id' => 'DiscussionID',
-            'post_content' => 'Body',//array('Column'=>'Body', 'Filter'=>'BBPressBody'),
-            'Format' => 'Format',
+            'post_content' => 'Body',
             'post_author' => 'InsertUserID',
             'post_date' => 'DateInserted',
+            'Format=Html',
         ];
         $this->export(
             'Comment',
@@ -198,14 +193,13 @@ class BbPress2 extends Source
                 case
                     when p.post_type = 'topic' then p.ID
                     else p.post_parent
-                end as post_parent_id,
-                'Html' as format
+                end as post_parent_id
             from :_posts p
                 left join :_postmeta as pm on pm.post_id = p.ID AND pm.meta_key = '_bbp_anonymous_email'
                 left join z_user on z_user.user_email = pm.meta_value
             where post_type = 'topic'
                 or post_type = 'reply';",
-            $comment_Map
+            $map
         );
     }
 }

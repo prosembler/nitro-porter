@@ -94,7 +94,7 @@ class EsoTalk extends Source
     {
         $discussion_Map = [
             'conversationId' => 'DiscussionID',
-            'title' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'title' => 'Name',
             'channelId' => 'CategoryID',
             'memberId' => 'InsertUserID',
             'sticky' => 'Announce',
@@ -102,29 +102,26 @@ class EsoTalk extends Source
             //'countPosts' => 'CountComments',
             'lastPostMemberId' => 'LastCommentUserID',
             'content' => 'Body',
+            'startTime' => 'DateInserted',
+            'lastPostTime' => 'DateLastComment',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'title' => \Porter\Filter\DecodeHtml::class,
+            'startTime' => \Porter\Filter\UnixtimeToDate::class,
+            'lastPostTime' => \Porter\Filter\UnixtimeToDate::class,
         ];
         // The body of the OP is in the post table.
         $this->export(
             'Discussion',
-            "select
-                    c.conversationId,
-                    c.title,
-                    c.channelId,
-                    p.memberId,
-                    c.sticky,
-                    c.locked,
-                    c.lastPostMemberId,
-                    p.content,
-                    'BBCode' as Format,
-                    from_unixtime(startTime) as DateInserted,
-                    from_unixtime(lastPostTime) as DateLastComment
+            "select c.conversationId, c.title, c.channelId, p.memberId, startTime, lastPostTime,
+                    c.sticky, c.locked, c.lastPostMemberId, p.content
                 from :_conversation c
-                left join :_post p
-                    on p.conversationId = c.conversationId
+                left join :_post p on p.conversationId = c.conversationId
                 where private = 0
-                group by c.conversationId
-                order by p.time",
-            $discussion_Map
+                group by c.conversationId",
+            $discussion_Map,
+            $filters
         );
     }
 
@@ -136,24 +133,28 @@ class EsoTalk extends Source
             'content' => 'Body',
             'memberId' => 'InsertUserID',
             'editMemberId' => 'UpdateUserID',
+            'time' => 'DateInserted',
+            'editTime' => 'DateUpdated',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'time' => \Porter\Filter\UnixtimeToDate::class,
+            'editTime' => \Porter\Filter\UnixtimeToDate::class,
         ];
         // Now we need to omit the comments we used as the OP.
         $this->export(
             'Comment',
-            "select p.*,
-                    'BBCode' as Format,
-                    from_unixtime(time) as DateInserted,
-                    from_unixtime(editTime) as DateUpdated
+            "select p.*
                 from :_post p
-                inner join :_conversation c ON c.conversationId = p.conversationId
-                and c.private = 0
-                join
-                    ( select conversationId,
-                        min(postId) as m
+                inner join :_conversation c ON c.conversationId = p.conversationId and c.private = 0
+                join ( 
+                    select conversationId, min(postId) as m
                     from :_post
-                    group by conversationId) r on r.conversationId = c.conversationId
-                where p.postId<>r.m",
-            $comment_Map
+                    group by conversationId
+                ) r on r.conversationId = c.conversationId
+                where p.postId <> r.m",
+            $comment_Map,
+            $filters
         );
     }
 
@@ -178,33 +179,39 @@ class EsoTalk extends Source
             'conversationId' => 'ConversationID',
             'countPosts' => 'CountMessages',
             'startMemberId' => 'InsertUserID',
+            'time' => 'DateInserted',
+            'lastposttime' => 'DateUpdated',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'time' => \Porter\Filter\UnixtimeToDate::class,
+            'lastposttime' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Conversation',
-            "select p.*,
-                    'BBCode' as Format,
-                    from_unixtime(time) as DateInserted,
-                    from_unixtime(lastposttime) as DateUpdated
+            "select p.*
                 from :_post p
                 inner join :_conversation c on c.conversationId = p.conversationId
-                and c.private = 1",
-            $conversation_map
+                    and c.private = 1",
+            $conversation_map,
+            $filters
         );
 
         $userConversation_map = [
             'conversationId' => 'ConversationID',
             'memberId' => 'UserID',
-
         ];
         $this->export(
             'UserConversation',
-            "select distinct a.fromMemberId as memberId, a.type, c.private, c.conversationId from :_activity a
+            "select distinct a.fromMemberId as memberId, a.type, c.private, c.conversationId 
+                from :_activity a
                 inner join :_conversation c on c.conversationId = a.conversationId
-                and c.private = 1 and a.type = 'privateAdd'
+                    and c.private = 1 and a.type = 'privateAdd'
                 union all
-                select distinct a.memberId as memberId, a.type, c.private, c.conversationId from :_activity a
+                select distinct a.memberId as memberId, a.type, c.private, c.conversationId 
+                from :_activity a
                 inner join :_conversation c on c.conversationId = a.conversationId
-                and c.private = 1 and a.type = 'privateAdd'",
+                    and c.private = 1 and a.type = 'privateAdd'",
             $userConversation_map
         );
 
@@ -213,16 +220,19 @@ class EsoTalk extends Source
             'conversationId' => 'ConversationID',
             'content' => 'Body',
             'memberId' => 'InsertUserID',
-
+            'time' => 'DateInserted',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'time' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'ConversationMessage',
-            "select p.*,
-                    'BBCode' as Format,
-                    from_unixtime(time) as DateInserted
+            "select p.*
                 from :_post p
                 inner join :_conversation c on c.conversationId = p.conversationId and c.private = 1",
-            $userConversationMessage_map
+            $userConversationMessage_map,
+            $filters
         );
     }
 }

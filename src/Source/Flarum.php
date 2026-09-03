@@ -41,34 +41,11 @@ class Flarum extends Source
         'users' => [],
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
-    {
-        $this->users();
-        $this->roles(); // Groups
-        $this->categories(); // Tags
-        $this->discussions();
-        if ($this->hasInputSchema('discussion_user', ['subscription'])) {
-            $this->bookmarks(); // flarum/subscriptions
-        }
-        $this->comments(); // Posts
-
-        if ($this->hasInputSchema('badges')) {
-            $this->badges(); // 17development/flarum-user-badges
-        }
-        if ($this->hasInputSchema('recipients')) {
-            $this->conversations(); // fof/byobu
-        }
-    }
-
     protected function users(): void
     {
-        $user_Map = [
+        $map = [
             'id' => 'UserID',
-            'username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'username' => 'Name',
             'email' => 'Email',
             'password' => 'Password',
             'joined_at' => 'DateInserted',
@@ -77,40 +54,31 @@ class Flarum extends Source
             'discussion_count' => 'CountDiscussions',
             'comment_count' => 'CountComments',
         ];
-        $this->export(
-            'User',
-            "select *, 'phpass' as HashMethod from :_users",
-            $user_Map
-        );
+        $filters = [
+            'username' => \Porter\Filter\DecodeHtml::class,
+        ];
+        $this->export('User', "select *, 'phpass' as HashMethod from :_users", $map, $filters);
     }
 
     protected function roles(): void
     {
-        $role_Map = [
+        $map = [
             'id' => 'RoleID',
             'name_singular' => 'Name',
         ];
-        $this->export(
-            'Role',
-            "select * from `:_groups`",
-            $role_Map
-        );
+        $this->export('Role', "select * from `:_groups`", $map);
 
         // User Role.
-        $userRole_Map = [
+        $map = [
             'user_id' => 'UserID',
             'group_id' => 'RoleID',
         ];
-        $this->export(
-            'UserRole',
-            "select * from :_group_user",
-            $userRole_Map
-        );
+        $this->export('UserRole', "select * from :_group_user", $map);
     }
 
     protected function categories(): void
     {
-        $category_Map = [
+        $map = [
             'id' => 'CategoryID',
             'name' => 'Name',
             'slug' => 'UrlCode',
@@ -119,31 +87,29 @@ class Flarum extends Source
             'position' => 'Sort',
             'discussion_count' => 'CountDiscussions',
         ];
-        $this->export(
-            'Category',
-            "select * from :_tags",
-            $category_Map
-        );
+        $this->export('Category', "select * from :_tags", $map);
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'id' => 'DiscussionID',
             'user_id' => 'InsertUserID',
-            'title' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'title' => 'Name',
             'is_sticky' => 'Announce', // flarum/sticky — optional field
             'is_locked' => 'Closed', // flarum/lock — optional field
         ];
+        $filters = [
+            'title' => \Porter\Filter\DecodeHtml::class,
+        ];
 
+        // Put the OP in the body.
         $getBody = '';
         $joinPosts = '';
         if ($this->getDiscussionBodyMode()) {
-            // Put the OP in the body.
             $getBody = 'p.content as Body,';
             $joinPosts = 'join :_posts p on p.id = d.first_post_id';
         }
-
         $this->export(
             'Discussion',
             "select d.*, $getBody min(dt.tag_id) as CategoryID
@@ -152,19 +118,22 @@ class Flarum extends Source
                  join :_discussion_tag dt on dt.discussion_id = d.id
                  where d.is_private <> 1
                  group by d.id",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function bookmarks(): void
     {
+        if (!$this->hasInputSchema('discussion_user', ['subscription'])) {
+            return;
+        }
         $map = [
             'discussion_id' => 'DiscussionID',
             'user_id' => 'InsertUserID',
             'last_read_at' => 'DateLastViewed',
         ];
         $query = "select *, if (subscription = 'follow', 1, 0) as Bookmarked from :_discussion_user";
-
         $this->export('UserDiscussion', $query, $map);
     }
 
@@ -180,12 +149,11 @@ class Flarum extends Source
             'content' => 'Body',
         ];
 
+        // Skip the OP.
         $skipOP = '';
         if ($this->getDiscussionBodyMode()) {
-            // Skip the OP.
             $skipOP = 'and `number` > 1';
         }
-
         $this->export(
             'Comment',
             "select *, 'Html' as Format
@@ -198,7 +166,9 @@ class Flarum extends Source
 
     protected function badges(): void
     {
-        // Badges
+        if (!$this->hasInputSchema('badges')) {
+            return;
+        }
         $map = [
             'discussion_id' => 'BadgeID',
             'user_id' => 'InsertUserID',
@@ -206,7 +176,6 @@ class Flarum extends Source
             'is_visible' => 'Visible',
         ];
         $query = "select * from :_badges";
-
         $this->export('Badge', $query, $map);
 
         // User Badges
@@ -217,12 +186,14 @@ class Flarum extends Source
             'assigned_at' => 'DateCompleted',
         ];
         $query = "select * from :_badge_user";
-
         $this->export('UserBadge', $query, $map);
     }
 
     protected function conversations(): void
     {
+        if (!$this->hasInputSchema('recipients')) {
+            return;
+        }
         // Messages
         $map = [
             'discussion_id' => 'ConversationID',
@@ -230,9 +201,8 @@ class Flarum extends Source
         ];
         $query = "select *
             from :_posts p
-                left join :_discussions d on d.id = p.discussion_id
+            left join :_discussions d on d.id = p.discussion_id
             where d.is_private = 1";
-
         $this->export('ConversationMessage', $query, $map);
 
         // Conversations
@@ -242,7 +212,6 @@ class Flarum extends Source
             'title' => 'Subject',
         ];
         $query = "select * from :_discussions where is_private = 1";
-
         $this->export('Conversation', $query, $map);
 
         // Recipients
@@ -251,7 +220,6 @@ class Flarum extends Source
             'user_id' => 'UserID',
         ];
         $query = "select * from :_recipients";
-
         $this->export('UserConversation', $query, $map);
     }
 }

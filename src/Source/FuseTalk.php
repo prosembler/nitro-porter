@@ -35,79 +35,43 @@ class FuseTalk extends Source
         'users' => [],
     ];
 
-    /**
-     * Main export process.
-     *
-     */
-    public function run(): void
+    public function setup(): void
     {
         $this->createIndices(); // Speed up the export.
-
-        $this->users();
-        $this->signatures();
-        $this->roles();
-        $this->conversations();
-        $this->categories();
-        $this->discussions();
-        $this->comments();
-    }
-
-    /**
-     * Filter: Fix smileys URL
-     *
-     * @param mixed $value Value of the current row
-     * @param string $field Name associated with the current field value
-     * @param array $row Full data row columns
-     * @return string Body
-     */
-    public function fixSmileysURL($value, $field, $row): string
-    {
-        static $smileySearch = '<img src="i/expressions/';
-        static $smileyReplace;
-
-        if ($smileyReplace === null) {
-            $smileyReplace = '<img src=' . '/expressions/'; // @todo CDN support
-        }
-
-        if (strpos($value, $smileySearch) !== false) {
-            $value = str_replace($smileySearch, $smileyReplace, $value);
-        }
-
-        return $value;
     }
 
     protected function createIndices(): void
     {
-        Log::comment("Creating indexes... ");
-
+        Log::comment("Creating indexes...");
         if (!$this->indexExists('ix_users_userid', ':_users')) {
-            $this->query('create index ix_users_userid on :_users (iuserid)');
+            $this->dbInput()->unprepared('create index ix_users_userid on :_users (iuserid)');
         }
         if (!$this->indexExists('ix_banning_banstring', ':_banning')) {
-            $this->query('create index ix_banning_banstring on :_banning (vchbanstring)');
+            $this->dbInput()->unprepared('create index ix_banning_banstring on :_banning (vchbanstring)');
         }
         if (!$this->indexExists('ix_forumusers_userid', ':_forumusers')) {
-            $this->query('create index ix_forumusers_userid on :_forumusers (iuserid)');
+            $this->dbInput()->unprepared('create index ix_forumusers_userid on :_forumusers (iuserid)');
         }
         if (!$this->indexExists('ix_groupusers_userid', ':_groupusers')) {
-            $this->query('create index ix_groupusers_userid on :_groupusers (iuserid)');
+            $this->dbInput()->unprepared('create index ix_groupusers_userid on :_groupusers (iuserid)');
         }
         if (!$this->indexExists('ix_privatemessages_vchusagestatus', ':_privatemessages')) {
-            $this->query('create index ix_privatemessages_vchusagestatus on :_privatemessages (vchusagestatus)');
+            $this->dbInput()->unprepared(
+                'create index ix_privatemessages_vchusagestatus on :_privatemessages (vchusagestatus)'
+            );
         }
         if (!$this->indexExists('ix_threads_id_pollflag', ':_threads')) {
-            $this->query('create index ix_threads_id_pollflag on :_threads (ithreadid, vchpollflag)');
+            $this->dbInput()->unprepared('create index ix_threads_id_pollflag on :_threads (ithreadid, vchpollflag)');
         }
         if (!$this->indexExists('ix_threads_poll', ':_threads')) {
-            $this->query('create index ix_threads_poll on :_threads (vchpollflag)');
+            $this->dbInput()->unprepared('create index ix_threads_poll on :_threads (vchpollflag)');
         }
-
         Log::comment("Indexes done!");
     }
 
     protected function users(): void
     {
-        $user_Map = [];
+        $map = [];
         $this->export(
             'User',
             "select
@@ -128,28 +92,25 @@ class FuseTalk extends Source
                     left join :_banning as bemail on b.vchbanstring = user.vchemailaddress
                     left join :_banning as bname on b.vchbanstring = user.vchnickname
                 group by user.iuserid;",
-            $user_Map
+            $map
         );
     }
 
     protected function signatures(): void
     {
-        $this->export(
-            'UserMeta',
-            "select
-                    user.iuserid as UserID,
+        $query = "select user.iuserid as UserID,
                     'Plugin.Signatures.Sig' as Name,
                     user.txsignature as Value
                 from :_users as user
-                where nullif(nullif(user.txsignature, ''), char(0)) is not null
-                union all
-                select
-                    user.iuserid,
+                where nullif(nullif(user.txsignature, ''), char(0)) is not null";
+        $this->export('UserMeta', $query);
+
+        $query = "select user.iuserid,
                     'Plugin.Signatures.Format',
                     'Html'
                 from :_users as user
-                where nullif(nullif(user.txsignature, ''), char(0)) is not null"
-        );
+                where nullif(nullif(user.txsignature, ''), char(0)) is not null";
+        $this->export('UserMeta', $query);
     }
 
     protected function roles(): void
@@ -159,122 +120,98 @@ class FuseTalk extends Source
         if ($result && $row = $result->nextResultRow()) {
             $memberRoleID += $row['maxRoleID'];
         }
-
-        // Role.
         $this->export(
             'Role',
-            "select
-                    groups.igroupid as RoleID,
-                    groups.vchgroupname as Name
+            "select groups.igroupid as RoleID, groups.vchgroupname as Name
                 from :_groups as groups
                 union all
-                select
-                    $memberRoleID as RoleID,
-                    'Members'
+                select $memberRoleID as RoleID, 'Members'
                 from dual"
         );
 
         // User Role.
         $this->export(
             'UserRole',
-            "select
-                    user.iuserid as UserID,
+            "select user.iuserid as UserID,
                     ifnull (user_role.igroupid, $memberRoleID) as RoleID
                 from :_users as user
-                    left join :_groupusers as user_role using (iuserid)"
+                left join :_groupusers as user_role using (iuserid)"
         );
     }
 
     protected function conversations(): void
     {
-        $this->query("drop table if exists zConversations;");
-        $this->query(
-            "create table zConversations(
+        $this->dbInput()->unprepared("drop table if exists zConversations;");
+        $this->dbInput()->unprepared("create table zConversations(
                 `ConversationID` int(11) not null AUTO_INCREMENT,
                 `User1` int(11) not null,
                 `User2` int(11) not null,
                 `DateInserted` datetime not null,
                 primary key (`ConversationID`),
-                key `IX_zConversation_User1_User2` (`User1`,`User2`)
-            );"
-        );
-        $this->query(
-            "insert into zConversations(`User1`, `User2`, `DateInserted`)
-                select
-                    if (pm.iuserid < pm.iownerid, pm.iuserid, pm.iownerid) as User1,
+                key `IX_zConversation_User1_User2` (`User1`,`User2`));");
+        $this->dbInput()->unprepared("insert into zConversations(`User1`, `User2`, `DateInserted`)
+                select  if (pm.iuserid < pm.iownerid, pm.iuserid, pm.iownerid) as User1,
                     if (pm.iuserid < pm.iownerid, pm.iownerid, pm.iuserid) as User2,
                     min(pm.dtinsertdate)
                 from :_privatemessages as pm
-                group by User1, User2"
-        );
+                group by User1, User2");
 
         // Conversations.
         $this->export(
             'Conversation',
-            "select
-                    c.ConversationID as ConversationID,
-                    c.User1 as InsertUserID,
-                    c.DateInserted as DateInserted
-                from zConversations as c;"
+            "select  c.ConversationID, c.User1 as InsertUserID, c.DateInserted from zConversations as c;"
         );
 
         // Conversation Messages.
-        $conversationMessage_Map = [
-            'txmessage' => ['Column' => 'Body', 'Filter' => [$this, 'fixSmileysURL']],
+        $map = [
+            'txmessage' => 'Body',
+            'imessageid' => 'MessageID',
+            'iownerid' => 'InsertUserID',
+            'dtinsertdate' => 'DateInserted',
+            'Format=Html',
+        ];
+        $filters = [
+            'txmessage' => \Porter\Filter\FuseTalkSmileyUrl::class,
         ];
         $this->export(
             'ConversationMessage',
-            "select
-                    pm.imessageid as MessageID,
-                    c.ConversationID,
-                    pm.txmessage,
-                    'Html' as Format,
-                    pm.iownerid as InsertUserID,
-                    pm.dtinsertdate as DateInserted
+            "select pm.imessageid, c.ConversationID, pm.txmessage, pm.iownerid, pm.dtinsertdate
                 from zConversations as c
-                    inner join :_privatemessages as pm on pm.iuserid = c.User1 and pm.iownerid = c.User2
+                inner join :_privatemessages as pm on pm.iuserid = c.User1 and pm.iownerid = c.User2
                 where vchusagestatus = 'sent'
                 union all
-                select
-                    pm.imessageid as MessageID,
-                    c.ConversationID,
-                    pm.txmessage,
-                    'Html' as Format,
-                    pm.iownerid as InsertUserID,
-                    pm.dtinsertdate as DateInserted
+                select pm.imessageid, c.ConversationID, pm.txmessage, pm.iownerid, pm.dtinsertdate
                 from zConversations as c
-                    inner join :_privatemessages as pm on pm.iuserid = c.User2 and pm.iownerid = c.User1
+                inner join :_privatemessages as pm on pm.iuserid = c.User2 and pm.iownerid = c.User1
                 where vchusagestatus = 'sent';",
-            $conversationMessage_Map
+            $map,
+            $filters
         );
 
         // User Conversation.
         $this->export(
             'UserConversation',
-            "select
-                    c.ConversationID,
-                    c.User1 as UserID,
-                    now() as DateLastViewed
+            "select c.ConversationID, c.User1 as UserID, now() as DateLastViewed
                 from zConversations as c
                 union all
-                select
-                    c.ConversationID,
-                    c.User2 as UserID,
-                    now() as DateLastViewed
+                select c.ConversationID, c.User2 as UserID, now() as DateLastViewed
                 from zConversations as c;"
         );
     }
 
     protected function categories(): void
     {
+        $map = [
+            'icategoryid' => 'CategoryID',
+            'vchcategoryname' => 'Name',
+            'vchdescription' => 'Description',
+            'ParentCategoryID=-1',
+        ];
         $this->export(
             'Category',
-            "select
-                    categories.icategoryid as CategoryID,
-                    categories.vchcategoryname as Name,
-                    categories.vchdescription as Description,
-                    -1 as ParentCategoryID
-                from :_categories as categories"
+            "select categories.icategoryid, categories.vchcategoryname, categories.vchdescription
+                from :_categories as categories",
+            $map
         );
     }
 
@@ -282,38 +219,38 @@ class FuseTalk extends Source
     {
         // Skip "Body". It will be fixed at import.
         // The first comment is going to be used to fill the missing data and will then be deleted
+        $map = [
+            'ithreadid' => 'DiscussionID',
+            'icategoryid' => 'CategoryID',
+            'vchthreadname' => 'Name',
+            'iuserid' => 'InsertUserID',
+            'dtinsertdate' => 'DateInserted',
+            'Format=Html',
+        ];
         $this->export(
             'Discussion',
-            "select
-                    threads.ithreadid as DiscussionID,
-                    threads.vchthreadname as Name,
-                    threads.icategoryid as CategoryID,
-                    threads.iuserid as InsertUserID,
-                    threads.dtinsertdate as DateInserted,
-                    'HTML' as Format,
+            "select *,
                     if (threads.vchalertthread = 'Yes' and threads.dtstaydate > now(), 2, 0) as Announce,
                     if (threads.vchthreadlock = 'Locked', 1, 0) as Closed
-                from :_threads as threads"
+                from :_threads as threads",
+            $map
         );
     }
 
     protected function comments(): void
     {
         // The iparentid column doesn't make any sense since the display is ordered by date only (no "sub" comment)
-        $comment_Map = [
-            'txmessage' => ['Column' => 'Body', 'Filter' => [$this, 'fixSmileysURL']],
+        $map = [
+            'imessageid' => 'CommentID',
+            'ithreadid' => 'DiscussionID',
+            'iuserid' => 'InsertUserID',
+            'txmessage' => 'Body',
+            'dtmessagedate' => 'DateInserted',
+            'Format=Html',
         ];
-        $this->export(
-            'Comment',
-            "select
-                    messages.imessageid as CommentID,
-                    messages.ithreadid as DiscussionID,
-                    messages.iuserid as InsertUserID,
-                    messages.txmessage,
-                    'Html' as Format,
-                    messages.dtmessagedate as DateInserted
-                from :_messages as messages",
-            $comment_Map
-        );
+        $filters = [
+            'txmessage' => \Porter\Filter\FuseTalkSmileyUrl::class,
+        ];
+        $this->export('Comment', "select * from :_messages as messages", $map, $filters);
     }
 }

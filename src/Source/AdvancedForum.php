@@ -78,8 +78,11 @@ class AdvancedForum extends Source
 
     protected function discussions(): void
     {
-        $discussion_Map = [
-            'body_format' => ['Column' => 'Format', 'Filter' => [__CLASS__, 'translateFormatType']]
+        $map = [
+            'body_format' => 'Format',
+        ];
+        $filters = [
+            'body_format' => \Porter\Filter\MapDrupalFormat::class,
         ];
         $this->export(
             'Discussion',
@@ -93,14 +96,18 @@ class AdvancedForum extends Source
             FROM `:_forum_index` `fi`
                 JOIN `:_field_data_body` `fdb` ON (`fdb`.`bundle` = 'forum' AND `fi`.`nid`=`fdb`.`entity_id`)
                 LEFT JOIN `:_node` `n` USING (`nid`)",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
-        $comment_Map = [
-            'comment_body_format' => ['Column' => 'Format', 'Filter' => [__CLASS__, 'translateFormatType']]
+        $map = [
+            'comment_body_format' => 'Format',
+        ];
+        $filters = [
+            'comment_body_format' => \Porter\Filter\MapDrupalFormat::class,
         ];
         $this->export(
             'Comment',
@@ -110,7 +117,8 @@ class AdvancedForum extends Source
                     `fdcb`.`comment_body_value` AS `Body`, `fdcb`.`comment_body_format`
                 FROM `:_comment` `c` JOIN `:_field_data_comment_body` `fdcb` ON (`c`.`cid` = `fdcb`.`entity_id`)
                 ORDER BY `cid` ASC",
-            $comment_Map
+            $map,
+            $filters
         );
     }
 }

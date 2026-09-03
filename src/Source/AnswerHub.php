@@ -19,14 +19,6 @@ class AnswerHub extends Source
         'charsetTable' => 'nodes',
     ];
 
-    /**
-     * Filter: Get the filename from a path.
-     */
-    public function getFileName(string $value, string $field, array $row): mixed
-    {
-        return pathinfo($value, PATHINFO_FILENAME);
-    }
-
     protected function users(): void
     {
         $map = [
@@ -216,7 +208,7 @@ class AnswerHub extends Source
         ];
         $filters = [
             'Type' => 'ExtToMime',
-            'Name' => [$this, 'getFileName'],
+            'Name' => \Porter\Filter\ExtractFilenameFromPath::class,
         ];
         $query = "select
                     s.c_url as `Name`,

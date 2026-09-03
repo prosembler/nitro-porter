@@ -38,15 +38,13 @@ class Xenforo extends Source
 
     public function signatures(): void
     {
-        $sql = "select
-                user_id as UserID,
+        $sql = "select user_id as UserID,
                 'Plugin.Signatures.Sig' as Name,
                 signature as Value
             from :_user_profile
             where nullif(signature, '') is not null
             union
-            select
-                user_id,
+            select user_id,
                 'Plugin.Signatures.Format',
                 'BBCode'
             from :_user_profile
@@ -65,20 +63,18 @@ class Xenforo extends Source
             'last_activity' => 'DateLastActive',
             'is_admin' => 'Admin',
             'is_banned' => 'Banned',
-            'password' => 'Password',
-            'hash_method' => 'HashMethod',
+            'data' => 'Password',
+            'HashMethod=xenforo',
             'avatar' => 'Photo',
             'avatarFullPath' => 'SourceAvatarFullPath',
             'avatarThumbFullPath' => 'SourceAvatarThumbFullPath',
         ];
         $filter = [
-            'register_date' => 'UnixtimeToDate',
-            'last_activity' => 'UnixtimeToDate',
+            'register_date' => \Porter\Filter\UnixtimeToDate::class,
+            'last_activity' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $prx = $this->dbInput()->getTablePrefix();
         $query = $this->sourceQB()->from('user', 'u')->select()
-            ->selectRaw("'xenforo' as hash_method")
-            ->selectRaw("data as password")
             ->selectRaw("case when avatar_date > 0
                 then concat('/', {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
                 else null end as avatar")
@@ -91,24 +87,19 @@ class Xenforo extends Source
                     {$prx}u.user_id div 1000, '/', {$prx}u.user_id, '.jpg')
                 else null end as avatarThumbFullPath")
             ->join('user_authenticate as ua', 'u.user_id', '=', 'ua.user_id');
-
         $this->export('User', $query, $map, $filter);
     }
 
     protected function roles(): void
     {
-        $role_Map = [
+        $map = [
             'user_group_id' => 'RoleID',
             'title' => 'Name'
         ];
-        $this->export(
-            'Role',
-            "select * from :_user_group",
-            $role_Map
-        );
+        $this->export('Role', "select * from :_user_group", $map);
 
         // User Roles.
-        $userRole_Map = [
+        $map = [
             'user_id' => 'UserID',
             'user_group_id' => 'RoleID'
         ];
@@ -119,88 +110,84 @@ class Xenforo extends Source
                 union all
                 select u.user_id, ua.user_group_id
                 from :_user u
-                join :_user_group ua
-                    on find_in_set(ua.user_group_id, u.secondary_group_ids)",
-            $userRole_Map
+                join :_user_group ua on find_in_set(ua.user_group_id, u.secondary_group_ids)",
+            $map
         );
     }
 
     protected function categories(): void
     {
-        $category_Map = [
+        $map = [
             'node_id' => 'CategoryID',
             'title' => 'Name',
             'description' => 'Description',
-            'parent_node_id' => [
-                'Column' => 'ParentCategoryID',
-                'Filter' => function ($value) {
-                    return $value ?: null;
-                }
-            ],
+            'parent_node_id' => 'ParentCategoryID',
             'display_order' => 'Sort',
-            'display_in_list' => ['Column' => 'HideAllDiscussions', 'Filter' => 'InvertInt']
+            'display_in_list' => 'HideAllDiscussions',
         ];
-        $this->export(
-            'Category',
-            "select n.* from :_node n",
-            $category_Map
-        );
+        $filters = [
+            'display_in_list' => \Porter\Filter\InvertInt::class,
+            'parent_node_id' => function ($value) {
+                return $value ?: null;
+            },
+        ];
+        $this->export('Category', "select n.* from :_node n", $map, $filters);
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'thread_id' => 'DiscussionID',
             'node_id' => 'CategoryID',
             'title' => 'Name',
             'reply_count' => 'CountComments',
             'view_count' => 'CountViews',
             'user_id' => 'InsertUserID',
-            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'post_date' => 'DateInserted',
             'sticky' => 'Announce',
-            'discussion_open' => ['Column' => 'Closed', 'Filter' => 'InvertInt'],
-            'last_post_date' => ['Column' => 'DateLastComment', 'Filter' => 'UnixtimeToDate'],
+            'discussion_open' => 'Closed',
+            'last_post_date' => 'DateLastComment',
             'message' => 'Body',
-            'format' => 'Format',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'post_date' => \Porter\Filter\UnixtimeToDate::class,
+            'last_post_date' => \Porter\Filter\UnixtimeToDate::class,
+            'discussion_open' => \Porter\Filter\InvertInt::class,
         ];
         $this->export(
             'Discussion',
-            "select t.*,
-                p.message,
-                'BBCode' as format,
-                ip.ip
-            from :_thread t
-            join :_post p
-                on t.first_post_id = p.post_id
-            left join :_ip ip
-                on p.ip_id = ip.ip_id",
-            $discussion_Map
+            "select t.*, p.message
+                from :_thread t
+                join :_post p on t.first_post_id = p.post_id
+                left join :_ip ip on p.ip_id = ip.ip_id",
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'post_id' => 'CommentID',
             'thread_id' => 'DiscussionID',
             'user_id' => 'InsertUserID',
-            'post_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'post_date' => 'DateInserted',
             'message' => 'Body',
-            'format' => 'Format',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'post_date' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Comment',
-            "select p.*,
-                'BBCode' as format,
-                ip.ip
-            from :_post p
-            join :_thread t
-                on p.thread_id = t.thread_id
-            left join :_ip ip
-                on p.ip_id = ip.ip_id
-            where p.post_id <> t.first_post_id
-                and message_state = 'visible'",
-            $comment_Map
+            "select p.*
+                from :_post p
+                join :_thread t on p.thread_id = t.thread_id
+                left join :_ip ip on p.ip_id = ip.ip_id
+                where p.post_id <> t.first_post_id and message_state = 'visible'",
+            $map,
+            $filters
         );
     }
 
@@ -236,30 +223,24 @@ class Xenforo extends Source
             'height' => 'ImageHeight',
         ];
         $filters = [
-            'Type' => 'ExtToMime',
+            'Type' => \Porter\Filter\ExtToMime::class,
+            'upload_date' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $prx = $this->dbInput()->getTablePrefix();
-
         $query = $this->sourceQB()
             ->from('attachment', 'a')
             ->join('attachment_data as ad', 'ad.data_id', '=', 'a.data_id')
-            ->select(['a.attachment_id',
-                'ad.filename', 'ad.file_size', 'ad.user_id', 'ad.width', 'ad.height',
-                'ap.ForeignID', 'ap.ForeignTable',
+            ->select(['a.attachment_id', 'ap.ForeignID', 'ap.ForeignTable', 'ad.filename as Type',
+                'ad.filename', 'ad.file_size', 'ad.user_id', 'ad.width', 'ad.height', 'ad.upload_date',
             ])
-            ->selectRaw("{$prx}ad.filename as Type")
-            ->selectRaw("from_unixtime({$prx}ad.upload_date) as DateInserted")
-
             // Paths for platform relative to uploads root (flat, in this case).
             ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as Path")
             ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as ThumbPath")
-
             // Paths for FileTransfer.
             ->selectRaw("concat('{$this->getPath('attachment', true)}', '/',
                 {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceFullPath")
             ->selectRaw("concat('{$this->getPath('attachmentThumb', true)}', '/',
                 {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceThumbFullPath")
-
             // Build a CET of attached post data & join it.
             ->withExpression('ap', function (Builder $query) {
                 $prx = $query->connection->getTablePrefix(); // @phpstan-ignore method.notFound
@@ -279,56 +260,53 @@ class Xenforo extends Source
 
     protected function conversations(): void
     {
-        $conversation_Map = [
+        $map = [
             'conversation_id' => 'ConversationID',
             'title' => 'Subject',
             'user_id' => 'InsertUserID',
-            'start_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate']
+            'start_date' => 'DateInserted',
+        ];
+        $filters = [
+            'start_date' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Conversation',
             "select *, substring(title, 1, 200) as title from :_conversation_master",
-            $conversation_Map
+            $map,
+            $filters
         );
 
-        $conversationMessage_Map = [
+        $map = [
             'message_id' => 'MessageID',
             'conversation_id' => 'ConversationID',
-            'message_date' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'message_date' => 'DateInserted',
             'user_id' => 'InsertUserID',
             'message' => 'Body',
-            'format' => 'Format',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'message_date' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'ConversationMessage',
-            "select m.*,
-                    'BBCode' as format,
-                    ip.ip
-                from :_conversation_message m
-                left join :_ip ip
-                    on m.ip_id = ip.ip_id",
-            $conversationMessage_Map
+            "select * from :_conversation_message",
+            $map,
+            $filters
         );
 
-        $userConversation_Map = [
+        $map = [
             'conversation_id' => 'ConversationID',
             'user_id' => 'UserID',
             'Deleted' => 'Deleted'
         ];
         $this->export(
             'UserConversation',
-            "select
-                    r.conversation_id,
-                    user_id,
-                    case when r.recipient_state = 'deleted' then 1 else 0 end as Deleted
+            "select r.conversation_id,  user_id, case when r.recipient_state = 'deleted' then 1 else 0 end as Deleted
                 from :_conversation_recipient r
                 union all
-                select
-                    cu.conversation_id,
-                    cu.owner_user_id,
-                    0
+                select cu.conversation_id, cu.owner_user_id, 0
                 from :_conversation_user cu",
-            $userConversation_Map
+            $map
         );
     }
 }

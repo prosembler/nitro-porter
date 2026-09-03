@@ -20,9 +20,6 @@ class PhpBb3 extends Source
         'passwordHashMethod' => 'phpBB',
     ];
 
-    /**
-     * @var array Required tables => columns
-     */
     public array $sourceTables = [
         'users' => [
             'user_id',
@@ -66,176 +63,124 @@ class PhpBb3 extends Source
     protected function usernotes(): void
     {
         $corruptedRecords = [];
-        $userNote_Map = [
-            'log_id' => ['Column' => 'UserNoteID', 'Type' => 'int'],
-            'user_id' => ['Column' => 'InsertUserID', 'Type' => 'int'],
-            'reportee_id' => ['Column' => 'UserID', 'Type' => 'int'],
-            'log_ip' => ['Column' => 'InsertIPAddress', 'Type' => 'varchar(15)'],
-            'log_time' => ['Column' => 'DateInserted', 'Type' => 'datetime', 'Filter' => 'UnixtimeToDate'],
-            'log_operation' => [
-                'Column' => 'Type',
-                'Type' => 'varchar(10)',
-                'Filter' => function ($value) {
-                    switch (strtoupper($value)) {
-                        case 'LOG_USER_WARNING_BODY':
-                            return 'warning';
-                        default:
-                            return 'note';
-                    }
+        $map = [
+            'log_id' => 'UserNoteID',
+            'user_id' => 'InsertUserID',
+            'reportee_id' => 'UserID',
+            'log_ip' => 'InsertIPAddress',
+            'log_time' => 'DateInserted',
+            'log_operation' => 'Type',
+            'log_data' => 'Body',
+            'Format=Text',
+        ];
+        $filters = [
+            'log_time' => \Porter\Filter\UnixtimeToDate::class,
+            'log_operation' => function ($value, $field, $row) {
+                switch (strtoupper($value)) {
+                    case 'LOG_USER_WARNING_BODY':
+                        return 'warning';
+                    default:
+                        return 'note';
                 }
-            ],
-            'format' => ['Column' => 'Format', 'Type' => 'varchar(20)'],
-            'log_data' => [
-                'Column' => 'Body',
-                'Type' => 'text',
-                'Filter' => function ($value, $field, $row) use (&$corruptedRecords) {
-                    $unserializedValue = @unserialize($value);
-
-                    if (!$unserializedValue || !is_array($unserializedValue)) {
-                        $corruptedRecords[] = $row['log_id'];
-                        return '';
-                    }
-                    return array_pop($unserializedValue);
+            },
+            'log_data' => function ($value, $field, $row) use (&$corruptedRecords) {
+                $unserializedValue = @unserialize($value);
+                if (!$unserializedValue || !is_array($unserializedValue)) {
+                    $corruptedRecords[] = $row['log_id'];
+                    return '';
                 }
-            ]
+                return array_pop($unserializedValue);
+            }
         ];
         $this->export(
             'UserNote',
-            "select l.*, 'Text' as format
-                from :_log l
-                where reportee_id > 0
-                    and log_operation in ('LOG_USER_GENERAL', 'LOG_USER_WARNING_BODY')",
-            $userNote_Map
+            "select * from :_log
+                where reportee_id > 0 and log_operation in ('LOG_USER_GENERAL', 'LOG_USER_WARNING_BODY')",
+            $map,
+            $filters
         );
-
         if (count($corruptedRecords) > 0) {
-            Log::Comment("Corrupted records found in \"_log\" table while exporting to UserNote\n"
+            Log::comment("Corrupted records found in \"_log\" table while exporting to UserNote\n"
                 . print_r($corruptedRecords, true));
         }
-    }
-
-    /**
-     * Filter: Remove phpBB BBcode from message bodies.
-     */
-    public function removeBBCodeUIDs(mixed $r, string $field, array $row): mixed
-    {
-        if (empty($r)) {
-            return $r;
-        }
-
-        // Remove UIDs.
-        if (!empty($row['bbcode_uid'])) {
-            $UID = trim($row['bbcode_uid']);  // ex: '2zp03s9s';
-            $r = preg_replace("`((?::[a-zA-Z])?:$UID)`", '', $r);
-        }
-
-        // Remove smilies.
-        $r = preg_replace('#<!-- s(.*?) --><img src="\{SMILIES_PATH}/.*? /><!-- s -->#', '\1', $r);
-
-        // Remove links.
-        $regex = '`<!-- [a-z] --><a\s+class="[^"]+"\s+href="([^"]+)">([^<]+)</a><!-- [a-z] -->`';
-        $r = preg_replace($regex, '[url=$1]$2[/url]', $r);
-
-        // Allow mailto: links w/o a class.
-        $regex = '`<!-- [a-z] --><a\s+href="mailto:([^"]+)">([^<]+)</a><!-- [a-z] -->`i';
-        $r = preg_replace($regex, '[url=$1]$2[/url]', $r);
-
-        // Fix encoded characters.
-        return str_replace(['&quot;', '&#39;', '&#58;', 'Â', '&#46;', '&amp;'], ['"', "'", ':', '', '.', '&'], $r);
-    }
-
-    /**
-     * Filter: Used by $Media_Map to replace value for ThumbPath and ThumbWidth when the file is not an image.
-     *
-     * @return mixed Return the supplied value if the record's file is an image. Return null otherwise.
-     * @see    Migration::writeTableToFile
-     */
-    public function filterThumbnailData(mixed $value, string $field, array $row): mixed
-    {
-        if (!empty($row['mimetype']) && str_starts_with(strtolower($row['mimetype']), 'image/')) {
-            return $value;
-        }
-        return null;
     }
 
     protected function users(): void
     {
         // Grab the avatar salt.
         //$data = $port->get("select config_value from :_config where config_name = 'avatar_salt'");
-        $data = $this->dbInput()->table('config')
-            ->select(['config_value'])
-            ->where('config_name', '=', 'avatar_salt')
-            ->first();
+        $data = $this->dbInput()->table('config')->select(['config_value'])
+            ->where('config_name', '=', 'avatar_salt')->first();
         $px = $data->config_value ?? '';
-
-        $cdn = ''; //$this->param('cdn', '');
 
         $user_Map = [
             'user_id' => 'UserID',
-            'username' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'username' => 'Name',
             'user_password' => 'Password',
             'user_email' => 'Email',
-            //'user_timezone' => 'HourOffset',
-            'user_posts' => ['Column' => 'CountComments', 'Type' => 'int'],
-            'photo' => 'Photo',
+            'user_posts' => 'CountComments',
             'user_rank' => 'RankID',
-            'user_ip' => 'LastIPAddress'
+            'user_ip' => 'LastIPAddress',
+            'user_regdate' => 'DateInserted',
+            'user_lastvisit' => 'DateLastVisit',
+        ];
+        $filters = [
+            'username' => \Porter\Filter\DecodeHtml::class,
+            'user_regdate' => \Porter\Filter\UnixtimeToDate::class,
+            'user_lastvisit' => \Porter\Filter\UnixtimeToDate::class,
+            'DateFirstVisit' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'User',
-            "select *,
+            "select *, user_regdate as DateFirstVisit,
                     case user_avatar_type
-                       when 1 then concat('$cdn', 'phpbb/', '$px', '_', user_id,
+                       when 1 then concat('phpbb/', '$px', '_', user_id,
                             substr(user_avatar from locate('.', user_avatar)))
-                       when 'avatar.driver.upload' then concat('$cdn', 'phpbb/', '$px', '_', user_id,
+                       when 'avatar.driver.upload' then concat('phpbb/', '$px', '_', user_id,
                             substr(user_avatar from locate('.', user_avatar)))
                        when 2 then user_avatar
-                       else null end as photo,
-                    FROM_UNIXTIME(nullif(user_regdate, 0)) as DateFirstVisit,
-                    FROM_UNIXTIME(nullif(user_lastvisit, 0)) as DateLastActive,
-                    FROM_UNIXTIME(nullif(user_regdate, 0)) as DateInserted,
+                       else null end as Photo,
                     ban_userid is not null as Banned
                 from :_users
-                    left join :_banlist bl ON (ban_userid = user_id)",
-            $user_Map
+                left join :_banlist bl ON (ban_userid = user_id)",
+            $user_Map,
+            $filters
         );
     }
 
     protected function ranks(): void
     {
-        $rank_Map = [
+        $map = [
             'rank_id' => 'RankID',
-            'level' => [
-                'Column' => 'Level',
-                'Filter' => function ($value) {
-                    static $level = 0;
-                    $level++;
-                    return $level;
-                }
-            ],
+            'level' => 'Level',
             'rank_title' => 'Name',
             'title2' => 'Label',
-            'rank_min' => [
-                'Column' => 'Attributes',
-                'Filter' => function ($value, $field, $row) {
-                    $result = [];
-                    if ($row['rank_min']) {
-                        $result['Criteria']['CountPosts'] = $row['rank_min'];
-                    }
-                    if ($row['rank_special']) {
-                        $result['Criteria']['Manual'] = true;
-                    }
-
-                    return serialize($result);
+            'rank_min' => 'Attributes',
+        ];
+        $filters = [
+            'level' => function ($value, $field, $row) {
+                static $level = 0;
+                $level++;
+                return $level;
+            },
+            'rank_min' => function ($value, $field, $row) {
+                $result = [];
+                if ($row['rank_min']) {
+                    $result['Criteria']['CountPosts'] = $row['rank_min'];
                 }
-            ]
+                if ($row['rank_special']) {
+                    $result['Criteria']['Manual'] = true;
+                }
+                return serialize($result);
+            }
         ];
         $this->export(
             'Rank',
             "select r.*, r.rank_title as title2, 0 as level
                 from :_ranks r
                 order by rank_special, rank_min;",
-            $rank_Map
+            $map,
+            $filters
         );
     }
 
@@ -264,244 +209,211 @@ class PhpBb3 extends Source
 
     protected function signatures(): void
     {
-        $userMeta_Map = [
+        $map = [
             'user_id' => 'UserID',
             'name' => 'Name',
-            'user_sig' => ['Column' => 'Value', 'Filter' => [$this, 'removeBBCodeUIDs']]
+            'user_sig' => 'Value',
+        ];
+        $filters = [
+            'user_sig' => \Porter\Filter\RemoveBbCodeUids::class,
         ];
         $this->export(
             'UserMeta',
-            "select
-                    user_id,
-                    'Plugin.Signatures.Sig' as name,
-                    user_sig,
-                    user_sig_bbcode_uid as bbcode_uid
+            "select user_id, 'Plugin.Signatures.Sig' as name, user_sig, user_sig_bbcode_uid as bbcode_uid
                 from :_users
                 where length(user_sig) > 1
                 union
-                select
-                    user_id,
-                    'Plugin.Signatures.Format',
-                    'BBCode',
-                    null
+                select user_id, 'Plugin.Signatures.Format', 'BBCode', null
                 from :_users
                 where length(user_sig) > 1",
-            $userMeta_Map
+            $map,
+            $filters
         );
     }
 
     protected function categories(): void
     {
-        $category_Map = [
+        $map = [
             'forum_id' => 'CategoryID',
-            'forum_name' => ['Column' => 'Name', 'Filter' => 'DecodeHtml'],
+            'forum_name' => 'Name',
             'forum_desc' => 'Description',
             'left_id' => 'Sort'
         ];
-        $this->export(
-            'Category',
-            "select *,
-                    nullif(parent_id,0) as ParentCategoryID
-                from :_forums",
-            $category_Map
-        );
+        $filters = [
+            'forum_name' => \Porter\Filter\DecodeHtml::class,
+        ];
+        $this->export('Category', "select *, nullif(parent_id,0) as ParentCategoryID from :_forums", $map, $filters);
     }
 
     protected function discussions(): void
     {
-        $discussion_Map = [
+        $map = [
             'topic_id' => 'DiscussionID',
             'forum_id' => 'CategoryID',
             'topic_poster' => 'InsertUserID',
             'topic_title' => 'Name',
             'Format' => 'Format',
             'topic_views' => 'CountViews',
-            'topic_first_post_id' => ['Column' => 'FirstCommentID', 'Type' => 'int'],
-            'type' => 'Type'
+            'topic_first_post_id' => 'FirstCommentID',
+            'type' => 'Type',
+            'topic_time' => 'DateInserted',
+            'topic_last_post_time' => 'DateUpdated',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'topic_time' => \Porter\Filter\UnixtimeToDate::class,
+            'topic_last_post_time' => \Porter\Filter\UnixtimeToDate::class,
+            'DateLastComment' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Discussion',
-            "select t.*,
-                    'BBCode' as Format,
+            "select t.*, t.topic_last_post_time as DateLastComment
                     case t.topic_status when 1 then 1 else 0 end as Closed,
                     case t.topic_type when 1 then 2 when 2 then 2 else 0 end as Announce,
-                    case when t.poll_start > 0 then 'poll' else null end as type,
-                    FROM_UNIXTIME(t.topic_time) as DateInserted,
-                    FROM_UNIXTIME(t.topic_last_post_time) as DateUpdated,
-                    FROM_UNIXTIME(t.topic_last_post_time) as DateLastComment
+                    case when t.poll_start > 0 then 'poll' else null end as type
                 from :_topics t",
-            $discussion_Map
+            $map,
+            $filters
         );
     }
 
     protected function comments(): void
     {
-        $comment_Map = [
+        $map = [
             'post_id' => 'CommentID',
             'topic_id' => 'DiscussionID',
-            'post_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
+            'post_text' => 'Body',
             'Format' => 'Format',
             'poster_id' => 'InsertUserID',
-            'post_edit_user' => 'UpdateUserID'
+            'post_edit_user' => 'UpdateUserID',
+            'post_time' => 'DateInserted',
+            'post_edit_time' => 'DateUpdated',
+            'Format=BBCode',
         ];
-        $this->export(
-            'Comment',
-            "select p.*,
-                    'BBCode' as Format,
-                    FROM_UNIXTIME(p.post_time) as DateInserted,
-                    FROM_UNIXTIME(nullif(p.post_edit_time,0)) as DateUpdated
-                from :_posts p",
-            $comment_Map
-        );
+        $filters = [
+            'post_text' => \Porter\Filter\RemoveBbCodeUids::class,
+            'post_time' => \Porter\Filter\UnixtimeToDate::class,
+            'post_edit_time' => \Porter\Filter\UnixtimeToDate::class,
+        ];
+        $this->export('Comment', "select p.* from :_posts p", $map, $filters);
     }
 
     protected function bookmarks(): void
     {
+        $map = [
+            'forum_id' => 'UserID',
+            'topic_id' => 'DiscussionID',
+            'mark_time' => 'DateLastViewed',
+        ];
+        $filter = [
+            'mark_time' => \Porter\Filter\UnixtimeToDate::class,
+        ];
         $this->export(
             'UserDiscussion',
-            "select
-                    tt.user_id as UserID,
-                    tt.topic_id as DiscussionID,
-                     FROM_UNIXTIME(tt.mark_time) as DateLastViewed,
-                    if(b.topic_id is null, 0, 1) as Bookmarked
+            "select tt.*, if(b.topic_id is null, 0, 1) as Bookmarked
                 from :_topics_track tt
-                left join :_bookmarks b on b.user_id = tt.user_id and b.topic_id = tt.topic_id"
+                left join :_bookmarks b on b.user_id = tt.user_id and b.topic_id = tt.topic_id",
+            $map,
+            $filter
         );
     }
 
     protected function conversations(): void
     {
-        $this->query("drop table if exists z_pmto;");
-        $this->query(
-            "create table z_pmto(
+        $this->dbInput()->unprepared("drop table if exists z_pmto;");
+        $this->dbInput()->unprepared("create table z_pmto(
                 id int unsigned,
                 userid int unsigned,
-                primary key(id, userid)
-            );"
-        );
-        $this->query(
-            "insert ignore into z_pmto(id, userid)
-                select
-                    msg_id,
-                    author_id
-                from :_privmsgs"
-        );
-        $this->query(
-            "insert ignore into z_pmto(id, userid)
-                select
-                    msg_id,
-                    user_id
-                from :_privmsgs_to;"
-        );
-        $this->query(
-            "insert ignore into z_pmto(id, userid)
-                select
-                    msg_id,
-                    author_id
-                from :_privmsgs_to"
-        );
-        $this->query("drop table if exists z_pmto2;");
-        $this->query(
-            "create table z_pmto2 (
+                primary key(id, userid) );");
+        $this->dbInput()->unprepared("insert ignore into z_pmto(id, userid)
+                select msg_id, author_id
+                from :_privmsgs");
+        $this->dbInput()->unprepared("insert ignore into z_pmto(id, userid)
+                select msg_id, user_id
+                from :_privmsgs_to;");
+        $this->dbInput()->unprepared("insert ignore into z_pmto(id, userid)
+                select msg_id, author_id
+                from :_privmsgs_to");
+        $this->dbInput()->unprepared("drop table if exists z_pmto2;");
+        $this->dbInput()->unprepared("create table z_pmto2 (
                 id int unsigned,
                 userids varchar(250),
-                primary key (id)
-            );"
-        );
-        $this->query(
-            "insert ignore into z_pmto2(id, userids)
-                select
-                    id,
-                    group_concat(userid order by userid)
+                primary key (id) );");
+        $this->dbInput()->unprepared("insert ignore into z_pmto2(id, userids)
+                select id, group_concat(userid order by userid)
                 from z_pmto
-                group by id;"
-        );
-        $this->query("drop table if exists z_pm;");
-        $this->query(
-            "create table z_pm(
+                group by id;");
+        $this->dbInput()->unprepared("drop table if exists z_pm;");
+        $this->dbInput()->unprepared("create table z_pm(
                 id int unsigned,
                 subject varchar(255),
                 subject2 varchar(255),
                 userids varchar(250),
-                groupid int unsigned
-            );"
-        );
-        $this->query(
-            "insert into z_pm(id, subject, subject2, userids)
-                select
-                    pm.msg_id,
-                    pm.message_subject,
+                groupid int unsigned );");
+        $this->dbInput()->unprepared("insert into z_pm(id, subject, subject2, userids)
+                select  pm.msg_id, pm.message_subject, t.userids
                     case
                         when pm.message_subject like 'Re: %' then trim(substring(pm.message_subject, 4))
                         else pm.message_subject
-                    end as subject2,
-                    t.userids
+                    end as subject2
                 from :_privmsgs pm
-                    join z_pmto2 t on t.id = pm.msg_id;"
-        );
-        $this->query("create index z_idx_pm on z_pm(id);");
-        $this->query("drop table if exists z_pmgroup;");
-        $this->query(
-            "create table z_pmgroup(
+                join z_pmto2 t on t.id = pm.msg_id;");
+        $this->dbInput()->unprepared("create index z_idx_pm on z_pm(id);");
+        $this->dbInput()->unprepared("drop table if exists z_pmgroup;");
+        $this->dbInput()->unprepared("create table z_pmgroup(
                 groupid int unsigned,
                 subject varchar(255),
-                userids varchar(250)
-            );"
-        );
-        $this->query(
-            "insert into z_pmgroup(groupid, subject, userids)
-                select
-                    min(pm.id),
-                    pm.subject2,
-                    pm.userids
+                userids varchar(250) );");
+        $this->dbInput()->unprepared("insert into z_pmgroup(groupid, subject, userids)
+                select min(pm.id), pm.subject2, pm.userids
                 from z_pm pm
-                group by
-                    pm.subject2, pm.userids;"
-        );
-        $this->query("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
-        $this->query("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
-        $this->query(
-            "update z_pm pm
+                group by pm.subject2, pm.userids;");
+        $this->dbInput()->unprepared("create index z_idx_pmgroup on z_pmgroup (subject, userids);");
+        $this->dbInput()->unprepared("create index z_idx_pmgroup2 on z_pmgroup (groupid);");
+        $this->dbInput()->unprepared("update z_pm pm
                 join z_pmgroup g on pm.subject2 = g.subject
                     and pm.userids = g.userids
-            set pm.groupid = g.groupid;"
-        );
+            set pm.groupid = g.groupid;");
 
-        $conversation_Map = [
+        $map = [
             'msg_id' => 'ConversationID',
             'author_id' => 'InsertUserID',
-            'RealSubject' => [
-                'Column' => 'Subject',
-                'Type' => 'varchar(250)',
-                'Filter' => 'DecodeHtml'
-            ]
+            'RealSubject' => 'Subject',
+            'message_time' => 'DateInserted',
+        ];
+        $filters = [
+            'RealSubject' => \Porter\Filter\DecodeHtml::class,
+            'message_time' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Conversation',
-            "select pm.*,
-                    g.subject as RealSubject,
-                    from_unixtime(pm.message_time) as DateInserted
+            "select pm.*, g.subject as RealSubject
                 from :_privmsgs pm
-                    join z_pmgroup g on g.groupid = pm.msg_id",
-            $conversation_Map
+                join z_pmgroup g on g.groupid = pm.msg_id",
+            $map,
+            $filters
         );
 
         // Coversation Messages.
         $conversationMessage_Map = [
             'msg_id' => 'MessageID',
             'groupid' => 'ConversationID',
-            'message_text' => ['Column' => 'Body', 'Filter' => [$this, 'removeBBCodeUIDs']],
-            'author_id' => 'InsertUserID'
+            'message_text' => 'Body',
+            'author_id' => 'InsertUserID',
+            'message_time' => 'DateInserted',
+            'Format=BBCode',
+        ];
+        $filters = [
+            'message_time' => \Porter\Filter\UnixtimeToDate::class,
+            'message_text' => \Porter\Filter\RemoveBbCodeUids::class,
         ];
         $this->export(
             'ConversationMessage',
-            "select pm.*,
-                    pm2.groupid,
-                    'BBCode' as Format,
-                    FROM_UNIXTIME(pm.message_time) as DateInserted
+            "select pm.*, pm2.groupid
                 from :_privmsgs pm
-                    join z_pm pm2 on pm.msg_id = pm2.id",
-            $conversationMessage_Map
+                join z_pm pm2 on pm.msg_id = pm2.id",
+            $conversationMessage_Map,
+            $filters
         );
 
         // User Conversation.
@@ -517,31 +429,32 @@ class PhpBb3 extends Source
             $userConversation_Map
         );
 
-        $this->query('drop table if exists z_pmto');
-        $this->query('drop table if exists z_pmto2;');
-        $this->query('drop table if exists z_pm;');
-        $this->query('drop table if exists z_pmgroup;');
+        $this->dbInput()->unprepared('drop table if exists z_pmto');
+        $this->dbInput()->unprepared('drop table if exists z_pmto2;');
+        $this->dbInput()->unprepared('drop table if exists z_pm;');
+        $this->dbInput()->unprepared('drop table if exists z_pmgroup;');
     }
 
     protected function polls(): void
     {
-        $poll_Map = [
+        $map = [
             'poll_id' => 'PollID',
             'poll_title' => 'Name',
             'topic_id' => 'DiscussionID',
-            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
+            'topic_time' => 'DateInserted',
             'topic_poster' => 'InsertUserID',
-            'anonymous' => 'Anonymous'
+            'Anonymous=1',
+        ];
+        $filters = [
+            'topic_time' => \Porter\Filter\UnixtimeToDate::class,
         ];
         $this->export(
             'Poll',
-            "select distinct
-                    t.*,
-                    t.topic_id as poll_id,
-                    1 as anonymous
+            "select distinct t.*, t.topic_id as poll_id
                 from :_poll_options po
-                    join :_topics t on po.topic_id = t.topic_id",
-            $poll_Map
+                join :_topics t on po.topic_id = t.topic_id",
+            $map,
+            $filters
         );
 
         $pollOption_Map = [
@@ -549,21 +462,18 @@ class PhpBb3 extends Source
             'poll_option_id' => 'Sort',
             'topic_id' => 'PollID',
             'poll_option_text' => 'Body',
-            'format' => 'Format',
             'poll_option_total' => 'CountVotes',
-            'topic_time' => ['Column' => 'DateInserted', 'Filter' => 'UnixtimeToDate'],
-            'topic_poster' => 'InsertUserID'
+            'topic_time' => 'DateInserted',
+            'topic_poster' => 'InsertUserID',
+            'Format=Html',
         ];
         $this->export(
             'PollOption',
-            "select po.*,
-                    po.poll_option_id * 1000000 + po.topic_id as id,
-                    'Html' as format,
-                    t.topic_time,
-                    t.topic_poster
+            "select po.*, t.topic_time, t.topic_poster, po.poll_option_id * 1000000 + po.topic_id as id
                 from :_poll_options po
-                    join :_topics t on po.topic_id = t.topic_id",
-            $pollOption_Map
+                join :_topics t on po.topic_id = t.topic_id",
+            $pollOption_Map,
+            $filters
         );
 
         $pollVote_Map = [
@@ -572,8 +482,7 @@ class PhpBb3 extends Source
         ];
         $this->export(
             'PollVote',
-            "select v.*, v.poll_option_id * 1000000 + v.topic_id as id
-                from :_poll_votes v",
+            "select v.*, v.poll_option_id * 1000000 + v.topic_id as id from :_poll_votes v",
             $pollVote_Map
         );
     }

@@ -121,8 +121,6 @@ class Database extends Storage
      * Insert a batch of rows into the database.
      *
      * Ignore errors if table is in `ignoreErrorsTables` list.
-     *
-     * @param array $batch
      */
     private function sendBatch(array $batch): void
     {
@@ -138,8 +136,6 @@ class Database extends Storage
 
     /**
      * Add a table name to the list for ignoring insert errors. Adds the prefix for you.
-     *
-     * @param string $tableName
      */
     public function ignoreTable(string $tableName): void
     {
@@ -148,8 +144,6 @@ class Database extends Storage
 
     /**
      * Do not reset this table.
-     *
-     * @param string $tableName
      */
     public function protectTable(string $tableName): void
     {
@@ -157,8 +151,7 @@ class Database extends Storage
     }
 
     /**
-     * @param string $tableName
-     * @return bool Whether table is protected.
+     * Whether table is protected.
      */
     private function isProtectedTable(string $tableName): bool
     {
@@ -167,8 +160,6 @@ class Database extends Storage
 
     /**
      * Set table name that sendBatch() will target.
-     *
-     * @param string $tableName
      */
     private function setBatchTable(string $tableName): void
     {
@@ -177,8 +168,6 @@ class Database extends Storage
 
     /**
      * Get table name that sendBatch() will target.
-     *
-     * @return string
      */
     private function getBatchTable(): string
     {
@@ -187,9 +176,6 @@ class Database extends Storage
 
     /**
      * Create fresh table for storage. Use prefix.
-     *
-     * @param string $resourceName
-     * @param array $structure
      */
     public function prepare(string $resourceName, array $structure): void
     {
@@ -203,9 +189,6 @@ class Database extends Storage
 
     /**
      * Create a new table if it doesn't already exist.
-     *
-     * @param string $name
-     * @param array $structure
      */
     public function createOrUpdateTable(string $name, array $structure): void
     {
@@ -321,10 +304,6 @@ class Database extends Storage
         // noop
     }
 
-    /**
-     * @param string $type
-     * @return int
-     */
     private function getVarcharLength(string $type): int
     {
         $matches = [];

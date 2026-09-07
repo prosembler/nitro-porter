@@ -90,10 +90,6 @@ class File extends Storage
 
     /**
      * Start table write to file.
-     *
-     * @param resource $fp
-     * @param string $tableName
-     * @param mixed[] $exportStructure
      */
     public function writeBeginTable(mixed $fp, string $tableName, array $exportStructure): void
     {
@@ -185,9 +181,6 @@ class File extends Storage
 
     /**
      * Write CSV header row.
-     *
-     * @param string $resourceName
-     * @param array $structure
      */
     public function prepare(string $resourceName, array $structure): void
     {
@@ -203,10 +196,6 @@ class File extends Storage
         return is_writable($this->path);
     }
 
-    /**
-     * @param mixed $value
-     * @return string
-     */
     private function escapedValue(mixed $value): string
     {
         // Set the search and replace to escape strings.
@@ -230,9 +219,6 @@ class File extends Storage
 
     /**
      * Format the value for file storage.
-     *
-     * @param mixed $value
-     * @return int|string
      */
     private function formatValue(mixed $value): int|string
     {

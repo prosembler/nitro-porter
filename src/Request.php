@@ -1,9 +1,5 @@
 <?php
 
-/**
- *
- */
-
 namespace Porter;
 
 final readonly class Request

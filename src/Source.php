@@ -251,7 +251,6 @@ abstract class Source extends Package
     /**
      * Determine if an index exists in a table
      * @deprecated hasInputSchema()
-     *
      */
     public function indexExists(string $indexName, string $table): bool
     {
@@ -363,13 +362,8 @@ abstract class Source extends Package
 
     /**
      * Create a thumbnail from an image file.
-     *
-     * @param string $path
-     * @param string $thumbPath
-     * @param  int $height
-     * @param  int $width
      */
-    public static function generateThumbnail($path, $thumbPath, $height = 50, $width = 50): void
+    public static function generateThumbnail(string $path, string $thumbPath, int $height = 50, int $width = 50): void
     {
         $size = getimagesize($path);
         if ($size === false) {

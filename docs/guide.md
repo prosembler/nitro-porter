@@ -148,6 +148,17 @@ porter run -s Vanilla -i input -t NodeBb -o nodebb
     - **Passwords.** NodeBB uses bcrypt. Hashes only carry over if the source used a compatible algorithm; otherwise affected users must reset their password.
     - **Re-running.** Each run appends. Restore the database from before the last run rather than migrating twice.
 
+### Merging communities
+
+To merge a migration into an existing community:
+
+1. Use a copy of the existing community database (the one you want to keep, not migrate) as the **output** connection.
+1. For each type of data to be merged (e.g. users, comments, etc) note the current **highest ID for each** in that database.
+1. In `config.php`, find the `'offsets'` array.
+1. For each data type, change their value from `0` to a number higher than those IDs.
+
+Then run the migration normally. Your migrated data will be renumbered by adding the offsets (including their relationships to other data).
+
 ## Troubleshooting
 
 ### Command 'porter' not found

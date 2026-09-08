@@ -259,23 +259,13 @@ abstract class Target extends Package
     }
 
     /**
-     * @param string $tableName
-     * @param Builder $exp Connected to porterStorage.
-     * @param array $struct
-     * @param array $map
-     * @param array $filters
+     * Import data to the Target.
      */
     public function import(string $tableName, Builder $exp, array $struct, array $map = [], array $filters = []): void
     {
-<<<<<<< HEAD
-=======
-        // Start timer.
-        $start = microtime(true);
-
         // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)
         $filters = array_merge($filters, $this->setOffsets($map));
 
->>>>>>> bc5ec87 (Auto-offset select keys in Target)
         // Prepare the storage medium for the incoming structure.
         $this->outputStorage->prepare($tableName, $struct);
 

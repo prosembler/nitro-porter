@@ -7,6 +7,44 @@ use Staudenmeir\LaravelCte\Query\Builder;
 
 abstract class Target extends Package
 {
+    /** Map standard Porter schema keys to the config offsets they should use.  */
+    public const array MERGE_KEYS = [
+        // Users
+        'InsertUserID' => 'users',
+        'UpdateUserID' => 'users',
+        'DeleteUserID' => 'users',
+        'ForeignUserID' => 'users',
+        'LastCommentUserID' => 'users',
+
+        // Roles
+        'RoleID' => 'roles',
+
+        // Categories
+        'CategoryID' => 'categories',
+        'ParentCategoryID' => 'categories',
+
+        // Discussions
+        'DiscussionID' => 'discussions',
+        'LastDiscussionID' => 'discussions',
+
+        // Comments
+        'CommentID' => 'comments',
+        "parentCommentID" => "comments",
+        'LastCommentID' => 'comments',
+        'FirstCommentID' => 'comments',
+
+        // Attachments
+        'MediaID' => 'attachments',
+        'ForeignID' => 'attachments',
+        'ForeignTable' => 'attachments',
+
+        // Etc.
+        'PollID' => 'polls',
+        'PollOptionID' => 'polloptions',
+        'TagID' => 'tags',
+        'BadgeID' => 'badges',
+    ];
+
     /** @var StorageConnection  */
     public StorageConnection $connection;
 
@@ -56,6 +94,61 @@ abstract class Target extends Package
             ->selectRaw('max(`' . $name . '`) as id')
             ->limit(1)->get()->pluck('id');
         return $max[0] ?? 0;
+    }
+
+    /**
+     * Build array of UserID=>Email to evaluate user merges required.
+     */
+    protected function getUserMergeList(string $tableName, string $IdFieldName, string $EmailFieldName): array
+    {
+        static $list = null;
+        if (empty($list)) {
+            $list = $this->dbOutput()->table($tableName)
+                ->select([$IdFieldName, $EmailFieldName])->get()->toArray();
+            $list = array_column($list, $EmailFieldName, $IdFieldName);
+        }
+        return $list;
+    }
+
+    /**
+     * Creates closures in $filters that add the offset values or merge users.
+     */
+    protected function addKeyFilters(string $tableName, array $map, array $filters): array
+    {
+        // Preempt 'RecordID' special case.
+        if (array_key_exists('RecordID', $map)) {
+            $filters['RecordID'] = \Porter\Filter\OffsetRecordType::class;
+            unset($map['RecordID']);
+        }
+
+        // Remove ineligible $map fields.
+        $map = array_filter($map, fn ($key) => in_array($key, self::MERGE_KEYS), ARRAY_FILTER_USE_KEY);
+
+        // Evaluate remaining $map fields for required filters.
+        foreach ($map as $portName => $targetName) {
+            // Don't set a filter if offset=0.
+            if (!$offset = Config::getInstance()->getOffset(self::MERGE_KEYS[$portName])) {
+                continue;
+            }
+
+            if ('users' === self::MERGE_KEYS[$portName]) {
+                $targetUsers = $this->getUserMergeList($tableName, $map['UserID'], $map['Email']);
+                // Attach a special filter for merging user accounts.
+                $filters[$portName] = function ($value, $name, $row) use ($offset, $targetUsers) {
+                    if ($foundUser = array_search($row['Email'], $targetUsers)) {
+                        return $foundUser; // Merge users.
+                    }
+                    return $value + $offset; // Add new user with offset ID.
+                };
+            } else {
+                // Create a single-use filter with exactly the correct offset addition.
+                $filters[$portName] = function ($value) use ($offset) {
+                    return $value + $offset;
+                };
+                Log::comment(sprintf('Offset %s is set to: %s', $portName, $offset));
+            }
+        }
+        return $filters;
     }
 
     /**
@@ -181,14 +274,13 @@ abstract class Target extends Package
     }
 
     /**
-     * @param string $tableName
-     * @param Builder $exp Connected to porterStorage.
-     * @param array $struct
-     * @param array $map
-     * @param array $filters
+     * Import data to the Target.
      */
     public function import(string $tableName, Builder $exp, array $struct, array $map = [], array $filters = []): void
     {
+        // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)
+        $filters = $this->addKeyFilters($tableName, $map, $filters);
+
         // Prepare the storage medium for the incoming structure.
         $this->outputStorage->prepare($tableName, $struct);
 

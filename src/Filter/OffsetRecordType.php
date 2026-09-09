@@ -10,10 +10,9 @@ class OffsetRecordType extends Filter
     public function __invoke(): mixed
     {
         if (!empty($this->row['RecordType']) && is_int($this->value)) {
-            $offsets = \Porter\Config::getInstance()->getOffsets();
-            $offsetName = strtolower($this->row['RecordType']) . 's';
-            if (!empty($offsets[$offsetName])) { // e.g. ['comments'] = 1000
-                $this->value += (int)$offsets[strtolower($this->row['RecordType'])];
+            $offset = \Porter\Config::getInstance()->getOffset(strtolower($this->row['RecordType']) . 's');
+            if (!empty($offset)) { // e.g. ['comments'] = 1000
+                $this->value += $offset;
             }
         }
         return $this->value;

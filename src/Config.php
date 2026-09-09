@@ -86,11 +86,18 @@ class Config
     }
 
     /**
-     * Allow start IDs per key to be set in config.
+     * Get the configured offset value for starting IDs per key.
      */
-    public function getOffsets(): array
+    public function getOffset(string $name): int
     {
-        return $this->config['offsets'];
+        $valid = ['users', 'roles', 'categories', 'discussions', 'comments',
+            'attachments','polls', 'polloptions', 'tags', 'badges'];
+        if (!in_array($name, $valid)) {
+            Log::comment('Invalid offset name: ' . $name);
+            return 0;
+        }
+        $offsets = array_filter($this->config['offsets'], fn ($offset) => !empty($offset) ? $offset : false);
+        return (!empty($offsets[$name]) && is_numeric($offsets[$name])) ? (int) $offsets[$name] : 0;
     }
 
     /**

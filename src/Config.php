@@ -6,7 +6,7 @@ class Config
 {
     private static ?self $instance = null;
 
-    /** @var mixed[] */
+    /** In-memory config with defaults. */
     protected array $config = [
         'debug' => false,
         'test_alias' => 'test',
@@ -25,7 +25,7 @@ class Config
     }
 
     /**
-     * Retrieve the config.
+     * Retrieve the config from file.
      */
     public static function loadFile(): array
     {
@@ -37,7 +37,7 @@ class Config
     }
 
     /**
-     * @param mixed[] $config
+     * Set a config value (in memory).
      */
     public function set(array $config): void
     {
@@ -46,8 +46,6 @@ class Config
 
     /**
      * Get all connections available.
-     *
-     * @return mixed[]
      */
     public function getConnections(): array
     {
@@ -55,8 +53,7 @@ class Config
     }
 
     /**
-     * @param string $key
-     * @return ?string
+     * Get a config value.
      */
     public function get(string $key): ?string
     {
@@ -69,8 +66,6 @@ class Config
 
     /**
      * Whether debug mode is enabled in the config.
-     *
-     * @return bool
      */
     public function debugEnabled(): bool
     {
@@ -102,8 +97,6 @@ class Config
 
     /**
      * Get designated test connection.
-     *
-     * @return mixed[]
      * @throws \Exception
      */
     public function getTestConnection(): array
@@ -116,9 +109,6 @@ class Config
 
     /**
      * Get config data for a connection by its alias.
-     *
-     * @param string $alias
-     * @return mixed[]
      * @throws \Exception
      */
     public function getConnectionAlias(string $alias): array
@@ -138,9 +128,6 @@ class Config
 
     /**
      * Validate config has required info.
-     *
-     * @param string $alias
-     * @param mixed[] $info
      * @throws \Exception
      */
     protected function validateConnectionInfo(string $alias, array $info): void

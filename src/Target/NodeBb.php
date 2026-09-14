@@ -191,9 +191,6 @@ class NodeBb extends Target
      *
      * With the body mode on the OP is synthesized from `Discussion.Body`, taking its own pid from
      * the same space as the comments. With it off the OP is an existing comment.
-     *
-     * @param int $discussionID
-     * @return int
      */
     protected function opPid(int $discussionID): int
     {
@@ -426,8 +423,6 @@ class NodeBb extends Target
      * the groups holding it. Without them NodeBB shows the category to nobody, admin included, so
      * a migration that skips this produces a forum with invisible content.
      * @see NodeBB `categories/create.js` and `privileges/categories.js`
-     *
-     * @param int $cid
      */
     protected function grantCategoryPrivileges(int $cid): void
     {
@@ -606,10 +601,6 @@ class NodeBb extends Target
      *
      * Markdown stays raw so NodeBB's own renderer handles it (mentions, emoji); other formats are
      * rendered to HTML, which NodeBB also accepts.
-     *
-     * @param ?string $format
-     * @param ?string $body
-     * @return string
      */
     protected function formatContent(?string $format, ?string $body): string
     {
@@ -625,9 +616,7 @@ class NodeBb extends Target
      * `Discussion.FirstCommentID` is only populated by a handful of sources, so derive it from the
      * lowest CommentID per discussion instead. Memoized because discussions() and comments() must
      * agree on which post is the OP.
-     *
      * @todo In-memory map sized to the discussion count.
-     * @return array
      */
     protected function mainPids(): array
     {
@@ -685,8 +674,7 @@ class NodeBb extends Target
     }
 
     /**
-     * Write attachments as `upload:{md5}` hashes, plus the sorted sets tying them to their post
- * and uploader.
+     * Write attachments as `upload:{md5}` hashes, plus the sorted sets tying them to their post and uploader.
      *
      * NodeBB has no attachment records of its own: an upload is the file on disk, a hash keyed on
      * its path, and a link in the post content (which writePost() appends). We reproduce what
@@ -734,9 +722,7 @@ class NodeBb extends Target
      *
      * Keyed on the pid so writePost() can append links as it streams. Built from `Media.Path`, the
      * same value the file transfer copies to, so the records hold whether or not files are moved.
-     *
      * @todo In-memory map sized to the attachment count.
-     * @return array
      */
     protected function attachmentsByPid(): array
     {
@@ -779,10 +765,6 @@ class NodeBb extends Target
      *
      * Sources disagree on the case of `Media.ForeignTable` and also use it for records with no post
      * (e.g. 'embed', 'message'), so match case-insensitively and ignore the rest.
-     *
-     * @param string $foreignTable
-     * @param int $foreignID
-     * @return int
      */
     protected function resolveAttachmentPid(string $foreignTable, int $foreignID): int
     {
@@ -797,9 +779,6 @@ class NodeBb extends Target
      * Render a post's attachments as content, since that is the only place NodeBB shows them.
      *
      * HTML rather than Markdown because it survives either renderer.
-     *
-     * @param int $pid
-     * @return string
      */
     protected function attachmentLinks(int $pid): string
     {
@@ -838,8 +817,6 @@ class NodeBb extends Target
      * With the body mode on a first post was synthesized from `Discussion.Body`, so every topic is
      * worth one more post than it has comments. With it off the OP is already a comment and counting
      * it again would inflate every total.
-     *
-     * @return int
      */
     protected function firstPostCount(): int
     {
@@ -990,8 +967,6 @@ class NodeBb extends Target
 
     /**
      * Highest pid this migration assigned, across both ways the OP can arrive.
-     *
-     * @return int
      */
     protected function maxPid(): int
     {
@@ -1061,8 +1036,6 @@ class NodeBb extends Target
 
     /**
      * The output storage, typed for the document primitives.
-     *
-     * @return Mongo
      */
     protected function mongo(): Mongo
     {
@@ -1173,8 +1146,6 @@ class NodeBb extends Target
      *
      * Always clears the posts the target install already has. With the body mode on it clears the
      * synthesized first posts too, which occupy one pid per discussion directly above those.
-     *
-     * @return int
      */
     protected function pidOffset(): int
     {
@@ -1188,9 +1159,6 @@ class NodeBb extends Target
 
     /**
      * Convert a SQL datetime to milliseconds since epoch (NodeBB's time format).
-     *
-     * @param mixed $datetime
-     * @return int
      */
     protected function toMillis(mixed $datetime): int
     {
@@ -1202,9 +1170,7 @@ class NodeBb extends Target
     }
 
     /**
-     * Current time in m illiseconds since epoch.
-     *
-     * @return int
+     * Current time in milliseconds since epoch.
      */
     protected function now(): int
     {

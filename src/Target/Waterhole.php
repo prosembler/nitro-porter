@@ -103,10 +103,9 @@ class Waterhole extends Target
         $map = [
             'RoleID' => 'id',
             'Name' => 'name',
+            'is_public=0',
         ];
-        $query = $this->porterQB()->from('Role')
-            ->select()
-            ->selectRaw('0 as is_public');
+        $query = $this->porterQB()->from('Role')->select();
         $this->import('groups', $query, $map);
 
         // User Role.
@@ -126,8 +125,7 @@ class Waterhole extends Target
             'UrlCode' => 'slug',
             'Description' => 'description',
         ];
-        $query = $this->porterQB()->from('Category')
-            ->select()
+        $query = $this->porterQB()->from('Category')->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
         $this->import('channels', $query, $map);
     }
@@ -148,9 +146,7 @@ class Waterhole extends Target
             'slug' => 'FormatUrl',
         ];
         // CountComments needs to be double-mapped so it's included as an alias also.
-        $query = $this->porterQB()->from('Discussion')
-            ->select()
-            ->selectRaw('DiscussionID as slug');
+        $query = $this->porterQB()->from('Discussion')->select()->selectRaw('DiscussionID as slug');
         $this->import('posts', $query, $map, $filters);
     }
 
@@ -164,14 +160,7 @@ class Waterhole extends Target
             'DateUpdated' => 'edited_at',
             'Body' => 'body'
         ];
-        $query = $this->porterQB()->from('Comment')
-            ->select(['CommentID',
-                'DiscussionID',
-                'InsertUserID',
-                'DateInserted',
-                'DateUpdated',
-                'Body',
-                'Format']);
+        $query = $this->porterQB()->from('Comment')->select();
         $this->import('comments', $query, $map);
     }
 }

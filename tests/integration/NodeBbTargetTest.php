@@ -254,7 +254,7 @@ class NodeBbTargetTest extends TestCase
      * @param bool $useDiscussionBody Whether the OP arrives on the discussion record.
      * @return Database
      */
-    protected function migrate(
+    protected function mockImport(
         bool $useDiscussionBody = true,
         array $installed = [],
         array $sets = [],
@@ -328,7 +328,7 @@ class NodeBbTargetTest extends TestCase
 
     public function testWritesUploadHashKeyedOnPath(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
         $path = $this->getUploadPath(1);
 
         $upload = $this->getObject($db, 'upload:' . md5($path));
@@ -338,7 +338,7 @@ class NodeBbTargetTest extends TestCase
 
     public function testWritesImageDimensionsForImagesOnly(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         $image = $this->getObject($db, 'upload:' . md5($this->getUploadPath(2)));
         $this->assertEquals(640, $image['width']);
@@ -351,7 +351,7 @@ class NodeBbTargetTest extends TestCase
 
     public function testAssociatesUploadWithItsPostAndUploader(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
         $path = $this->getUploadPath(1);
 
         // The discussion's file belongs to the OP, whose pid is the topic ID in this mode.
@@ -372,7 +372,7 @@ class NodeBbTargetTest extends TestCase
 
     public function testWritesPostUploadsAsJsonString(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         // NodeBB stores this as a JSON string, not an array. @see `Posts.uploads.associate()`
         $post = $this->getObject($db, 'post:1');
@@ -382,7 +382,7 @@ class NodeBbTargetTest extends TestCase
 
     public function testLinksAttachmentsInPostContent(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         // Uploads are only visible to readers as links in the content.
         $post = $this->getObject($db, 'post:1');
@@ -427,7 +427,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testFirstPostIsNotAlsoListedAsAReply(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
         $tid = 1;
 
         $mainPid = $this->getObject($db, "topic:$tid")['mainPid'];
@@ -449,7 +449,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testFirstPostIsNotAlsoListedAsAReplyWithoutDiscussionBody(): void
     {
-        $db = $this->migrate(false);
+        $db = $this->mockImport(false);
         $tid = 1;
 
         $this->assertEquals(
@@ -472,7 +472,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testWritesNoDuplicateSortedSetMembers(): void
     {
-        $db = $this->migrate(
+        $db = $this->mockImport(
             true,
             ['group:registered-users' => ['name' => 'registered-users', 'memberCount' => 1],
              'global' => ['nextUid' => 1, 'nextCid' => 1, 'nextTid' => 0, 'nextPid' => 0]],
@@ -501,7 +501,7 @@ class NodeBbTargetTest extends TestCase
     public function testAttributesGuestContentToGuestNotAdmin(): void
     {
         // Install admin at uid 1, so the offset is 1 and the bug would map guest -> uid 1.
-        $db = $this->migrate(
+        $db = $this->mockImport(
             true,
             ['user:1' => ['uid' => 1, 'username' => 'admin'],
              'global' => ['nextUid' => 1, 'nextCid' => 1, 'nextTid' => 0, 'nextPid' => 0]],
@@ -525,7 +525,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testIgnoresTheVanillaRootCategory(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         $this->assertNotNull($this->getObject($db, 'category:1'), 'A real category still migrates.');
         $this->assertEquals(
@@ -540,7 +540,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testPrunesOrphanedRoleAssignments(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         $this->assertEquals(
             ['1'],
@@ -554,7 +554,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testRenamesDuplicateDeletedUsers(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         $this->assertEquals('deleted_user_2', $this->getObject($db, 'user:2')['username']);
         $this->assertEquals('deleted_user_3', $this->getObject($db, 'user:3')['username']);
@@ -572,7 +572,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testFinalizesCounts(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         // 1 synthesized OP + 2 comments.
         $this->assertEquals(3, $this->getObject($db, 'topic:1')['postcount'], 'topic.postcount');
@@ -589,7 +589,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testCountsDoNotDoubleCountTheOpAsAComment(): void
     {
-        $db = $this->migrate(false);
+        $db = $this->mockImport(false);
 
         $this->assertEquals(2, $this->getObject($db, 'topic:1')['postcount'], 'topic.postcount');
         $this->assertEquals(2, $this->getObject($db, 'category:1')['post_count'], 'category.post_count');
@@ -601,7 +601,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testAdvancesGlobalCountersPastMigratedIds(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
         $global = $this->getObject($db, 'global');
 
         $this->assertGreaterThan(
@@ -622,7 +622,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testAddsUsersToRegisteredUsers(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         $this->assertEquals(
             ['1', '2', '3'],
@@ -637,7 +637,7 @@ class NodeBbTargetTest extends TestCase
     public function testPreservesAnExistingInstall(): void
     {
         // Stands in for what NodeBB's own setup wrote: config, the admin, a default category.
-        $db = $this->migrate(true, [
+        $db = $this->mockImport(true, [
             'config' => ['title' => 'Existing Forum'],
             'user:1' => ['uid' => 1, 'username' => 'admin'],
             'category:1' => ['cid' => 1, 'name' => 'Announcements'],
@@ -673,7 +673,7 @@ class NodeBbTargetTest extends TestCase
     public function testSkipsDuplicateAndReservedGroupNames(): void
     {
         $storage = Factory::storage(self::$porterAlias, 'PORT_');
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         // Two roles sharing a name, plus one shadowing a NodeBB system group.
         $storage->getHandle()->table('Role')->insert([
@@ -698,7 +698,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testMigratesAttachmentsWithoutAFileTransfer(): void
     {
-        $db = $this->migrate();
+        $db = $this->mockImport();
 
         $this->assertNull(
             Factory::storage(self::$porterAlias, 'PORT_')->getHandle()->table('Media')
@@ -721,7 +721,7 @@ class NodeBbTargetTest extends TestCase
     public function testUploadPathMatchesTheFileTransferDestination(): void
     {
         $storage = Factory::storage(self::$porterAlias, 'PORT_');
-        $this->migrate();
+        $this->mockImport();
 
         // Run the mapping the file transfer would use.
         $target = Factory::target('NodeBb', $storage, Factory::storage(self::$mongoAlias));
@@ -743,7 +743,7 @@ class NodeBbTargetTest extends TestCase
      */
     public function testResolvesAttachmentPidWithoutDiscussionBody(): void
     {
-        $db = $this->migrate(false);
+        $db = $this->mockImport(false);
 
         // Nothing synthesizes a post at the topic ID, and comment pids pass through unoffset.
         $this->assertNull($this->getObject($db, 'post:1'), 'No post should reuse the topic ID in this mode.');

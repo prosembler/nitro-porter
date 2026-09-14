@@ -21,7 +21,7 @@ use Porter\Target\NodeBb;
  *
  * @see https://github.com/NodeBB/NodeBB/blob/master/src/posts/uploads.js
  */
-class NodeBbTest extends TestCase
+class NodeBbTargetTest extends TestCase
 {
     /** @var string Connection holding the `PORT_` tables. */
     protected static string $porterAlias = 'test';

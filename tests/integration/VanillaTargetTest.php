@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\NullOutput;
 
-class VanillaTest extends TestCase
+class VanillaTargetTest extends TestCase
 {
     /**
      * Shared fixture that runs exactly once prior to ALL the tests in this class.

@@ -54,47 +54,6 @@ return [
         'Views' => 'int',
         'EmbedViews' => 'int'
     ),*/
-    /*'article' => array(
-        'articleID' => 'int',
-        'foreignID' => 'varchar(32)',
-        'knowledgeCategoryID' => 'int',
-        'sort' => 'int',
-        'score' => 'int',
-        'views' => 'int',
-        'insertUserID' => 'int',
-        'dateInserted' => 'datetime',
-        'updateUserID' => 'int',
-        'dateUpdated' => 'datetime',
-        'featured' => 'tinyint',
-        'dateFeatured' => 'datetime',
-        'status' => array('undeleted','deleted','published')
-    ),
-    'articleReaction' => array(
-        'articleReactionID' => 'int',
-        'articleID' => 'int',
-        'reactionType' => 'varchar(64)',
-        'positiveCount' => 'int',
-        'negativeCount' => 'int',
-        'neutralCount' => 'int',
-        'allCount' => 'int'
-    ),
-    'articleRevision' => array(
-        'articleRevisionID' => 'int',
-        'articleID' => 'int',
-        'status' => 'varchar(20)',
-        'name' => 'varchar(255)',
-        'format' => 'varchar(20)',
-        'body' => 'mediumtext',
-        'bodyRendered' => 'mediumtext',
-        'outline' => 'text',
-        'plainText' => 'mediumtext',
-        'excerpt' => 'text',
-        'seoImage' => 'varchar(255)',
-        'locale' => 'varchar(10)',
-        'translationStatus' => array('not-translated','out-of-date','up-to-date'),
-        'insertUserID' => 'int',
-        'dateInserted' => 'datetime',
-    ),*/
     'Attachment' => [
         'AttachmentID' => 'int',
         'Type' => 'varchar(64)',
@@ -345,56 +304,6 @@ return [
         'AcceptedUserID' => 'int',
         'DateExpires' => 'datetime'
     ),*/
-    /*'knowledgeBase' => array(
-        'knowledgeBaseID' => 'int',
-        'foreignID' => 'varchar(32)',
-        'name' => 'varchar(255)',
-        'siteSectionGroup' => 'varchar(64)',
-        'description' => 'text',
-        'urlCode' => 'varchar(191)',
-        'icon' => 'varchar(255)',
-        'bannerImage' => 'varchar(255)',
-        'bannerContentImage' => 'varchar(255)',
-        'sourceLocale' => 'varchar(5)',
-        'viewType' => array('guide','help'),
-        'sortArticles' => array('manual','name','dateInserted','dateInsertedDesc'),
-        'insertUserID' => 'int',
-        'dateInserted' => 'datetime',
-        'updateUserID' => 'int',
-        'dateUpdated' => 'datetime',
-        'countArticles' => 'int' ,
-        'countCategories' => 'int' ,
-        'rootCategoryID' => 'int',
-        'defaultArticleID' => 'int',
-        'hasCustomPermission' => 'int',
-        'permissionKnowledgeBaseID' => 'int',
-        'sort' => 'int(11)',
-        'isUniversalSource' => 'tinyint(4)',
-        'status' => array('deleted','published'),
-        'sitemapNotTranslated' => 'tinyint(4)'
-    ),
-    'knowledgeCategory' => array(
-        'knowledgeCategoryID' => 'int',
-        'foreignID' => 'varchar(32)',
-        'name' => 'varchar(255)',
-        'parentID' => 'int',
-        'knowledgeBaseID' => 'int',
-        'sortChildren' => array('name','dateInserted','dateInsertedDesc','manual'),
-        'sort' => 'int',
-        'insertUserID' => 'int',
-        'dateInserted' => 'datetime',
-        'updateUserID' => 'int',
-        'dateUpdated' => 'datetime',
-        'lastUpdatedArticleID' => 'int',
-        'lastUpdatedUserID' => 'int',
-        'articleCount' => 'int',
-        'articleCountRecursive' => 'int',
-        'childCategoryCount' => 'int'
-    ),
-    'knowledgeUniversalSource' => array(
-        'sourceKnowledgeBaseID' => 'int',
-        'targetKnowledgeBaseID' => 'int'
-    ),*/
     'Log' => [
         'LogID' => 'int',
         //'Operation' => array('Delete','Edit','Spam','Moderate','Pending','Ban','Error'),
@@ -451,45 +360,6 @@ return [
         'AssetTarget' => 'varchar(20)',
         'CssClass' => 'varchar(20)',
         'Sort' => 'int'
-    ),*/
-    /*'Permission' => array(
-        'PermissionID' => 'int',
-        'RoleID' => 'int',
-        'JunctionTable' => 'varchar(100)',
-        'JunctionColumn' => 'varchar(100)',
-        'JunctionID' => 'int',
-        '_Permissions' => 'varchar(255)',
-        'Garden.Email.View' => 'tinyint',
-        'Garden.Settings.Manage' => 'tinyint',
-        'Garden.Settings.View' => 'tinyint',
-        'Garden.SignIn.Allow' => 'tinyint',
-        'Garden.Users.Add' => 'tinyint',
-        'Garden.Users.Edit' => 'tinyint',
-        'Garden.Users.Delete' => 'tinyint',
-        'Garden.Users.Approve' => 'tinyint',
-        'Garden.Activity.Delete' => 'tinyint',
-        'Garden.Activity.View' => 'tinyint',
-        'Garden.Profiles.View' => 'tinyint',
-        'Garden.Profiles.Edit' => 'tinyint',
-        'Garden.Curation.Manage' => 'tinyint',
-        'Garden.Moderation.Manage' => 'tinyint',
-        'Garden.PersonalInfo.View' => 'tinyint',
-        'Garden.AdvancedNotifications.Allow' => 'tinyint',
-        'Garden.Community.Manage' => 'tinyint',
-        'Conversations.Moderation.Manage' => 'tinyint',
-        'Conversations.Conversations.Add' => 'tinyint',
-        'Vanilla.Approval.Require' => 'tinyint',
-        'Vanilla.Comments.Me' => 'tinyint',
-        'Vanilla.Discussions.View' => 'tinyint',
-        'Vanilla.Discussions.Add' => 'tinyint',
-        'Vanilla.Discussions.Edit' => 'tinyint',
-        'Vanilla.Discussions.Announce' => 'tinyint',
-        'Vanilla.Discussions.Sink' => 'tinyint',
-        'Vanilla.Discussions.Close' => 'tinyint',
-        'Vanilla.Discussions.Delete' => 'tinyint',
-        'Vanilla.Comments.Add' => 'tinyint',
-        'Vanilla.Comments.Edit' => 'tinyint',
-        'Vanilla.Comments.Delete' => 'tinyint'
     ),*/
     'Poll' => [
         'PollID' => 'int',
@@ -567,39 +437,6 @@ return [
         'CanSession' => 'tinyint',
         'PersonalInfo' => 'tinyint'
     ],
-    /*'Session' => array(
-        'SessionID' => 'char(32)',
-        'UserID' => 'int',
-        'DateInserted' => 'datetime',
-        'DateUpdated' => 'datetime',
-        'TransientKey' => 'varchar(12)',
-        'Attributes' => 'text'
-    ),
-    'Spammer' => array(
-        'UserID' => 'int',
-        'CountSpam' => 'smallint',
-        'CountDeletedSpam' => 'smallint'
-    ),*/
-    /*'Subcommunity' => array(
-        'SubcommunityID' => 'int',
-        'Name' => 'varchar(255)',
-        'Description' => 'varchar(500)',
-        'Folder' => 'varchar(191)',
-        'CategoryID' => 'int' ,
-        'Locale' => 'varchar(20)',
-        'DateInserted' => 'datetime',
-        'InsertUserID' => 'int' ,
-        'DateUpdated' => 'datetime',
-        'UpdateUserID' => 'int',
-        'Attributes' => 'text',
-        'Sort' => 'smallint',
-        'IsDefault' => 'tinyint',
-        'ProductID' => 'smallint',
-        'defaultController' => 'varchar(30)',
-        'knowledgeBase' => 'tinyint',
-        'forum' => 'tinyint',
-        'themeID' => 'varchar(30)'
-    ),*/
     'Status' => [ // Ideation
         'StatusID' => 'int',
         'Name' => 'varchar(100)',
@@ -682,11 +519,6 @@ return [
         'ProviderKey' => 'varchar(64)',
         'UserID' => 'int'
     ),
-    'UserAuthenticationNonce' => array(
-        'Nonce' => 'varchar(200)',
-        'Token' => 'varchar(128)',
-        'Timestamp' => 'timestamp'
-    ),
     'UserAuthenticationProvider' => array(
         'AuthenticationKey' => 'varchar(64)',
         'AuthenticationSchemeAlias' => 'varchar(32)',
@@ -703,16 +535,6 @@ return [
         'Attributes' => 'text',
         'Active' => 'tinyint',
         'IsDefault' => 'tinyint'
-    ),
-    'UserAuthenticationToken' => array(
-        'Token' => 'varchar(128)',
-        'ProviderKey' => 'varchar(64)',
-        'ForeignUserKey' => 'varchar(255)',
-        'TokenSecret' => 'varchar(64)',
-        //'TokenType' => array('request','access'),
-        'Authorized' => 'tinyint',
-        'Timestamp' => 'timestamp',
-        'Lifetime' => 'int'
     ),*/
     'UserBadge' => [
         'UserID' => 'int',

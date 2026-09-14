@@ -49,7 +49,7 @@ class Discourse extends Target
         $filters = [];
         $query = $this->porterQB()->from('User')
             ->select();
-        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
+        $this->import('users', $query, $map, $filters);
     }
 
     /**
@@ -66,7 +66,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('Role')
             ->select();
-        $this->import('groups', $query, $this->getSchema('groups'), $map);
+        $this->import('groups', $query, $map);
 
         // User Role.
         $map = [
@@ -75,7 +75,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('UserRole')
             ->select();
-        $this->import('group_users', $query, $this->getSchema('group_users'), $map);
+        $this->import('group_users', $query, $map);
     }
 
     protected function categories(): void
@@ -98,7 +98,7 @@ class Discourse extends Target
         $query = $this->porterQB()->from('Category')
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('categories', $query, $this->getSchema('categories'), $map, $filters);
+        $this->import('categories', $query, $map, $filters);
     }
 
     /**
@@ -124,7 +124,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('Discussion')
             ->select();
-        $this->import('topics', $query, $this->getSchema('topics'), $map);
+        $this->import('topics', $query, $map);
     }
 
     /**
@@ -144,7 +144,7 @@ class Discourse extends Target
         ];
         $query = $this->porterQB()->from('Comment')
             ->select();
-        $this->import('posts', $query, $this->getSchema('posts'), $map);
+        $this->import('posts', $query, $map);
     }
 
     protected function reactions(): void
@@ -161,7 +161,7 @@ class Discourse extends Target
             ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
             ->select()
             ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
-        $this->import('discourse_reactions_reactions', $query, $this->getSchema('discourse_reactions_reactions'), $map);
+        $this->import('discourse_reactions_reactions', $query, $map);
 
 
         //$this->import('discourse_reactions_reaction_users', $query, self::SCHEMA_REACTION_USER, $map);
@@ -186,7 +186,7 @@ class Discourse extends Target
             //'animated',
         ];
         $query = $this->porterQB()->from('Media')->select();
-        $this->import('uploads', $query, $this->getSchema('uploads'), $map);
+        $this->import('uploads', $query, $map);
     }
 
     protected function avatars(): void

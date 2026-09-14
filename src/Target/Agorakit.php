@@ -46,7 +46,7 @@ class Agorakit extends Target
         ];
         $filters = [];
         $query = $this->porterQB()->from('User')->select();
-        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
+        $this->import('users', $query, $map, $filters);
     }
 
     /**
@@ -60,7 +60,7 @@ class Agorakit extends Target
             'Description' => 'body',
         ];
         $query = $this->porterQB()->from('Role')->select();
-        $this->import('groups', $query, $this->getSchema('groups'), $map);
+        $this->import('groups', $query, $map);
 
         // User Role.
         $map = [
@@ -68,7 +68,7 @@ class Agorakit extends Target
             'RoleID' => 'group_id',
         ];
         $query = $this->porterQB()->from('UserRole')->select();
-        $this->import('membership', $query, $this->getSchema('membership'), $map);
+        $this->import('membership', $query, $map);
     }
 
     protected function categories(): void
@@ -86,7 +86,7 @@ class Agorakit extends Target
         ];
         $query = $this->porterQB()->from('Category')->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('tags', $query, $this->getSchema('tags'), $map, $filters);
+        $this->import('tags', $query, $map, $filters);
     }
 
     protected function discussions(): void
@@ -103,7 +103,7 @@ class Agorakit extends Target
             //'Announce'/'Closed' => 'status',
         ];
         $query = $this->porterQB()->from('Discussion')->select();
-        $this->import('discussions', $query, $this->getSchema('discussions'), $map);
+        $this->import('discussions', $query, $map);
     }
 
     /**
@@ -120,7 +120,7 @@ class Agorakit extends Target
             'Body' => 'body'
         ];
         $query = $this->porterQB()->from('Comment')->select();
-        $this->import('posts', $query, $this->getSchema('posts'), $map);
+        $this->import('posts', $query, $map);
     }
 
     /**
@@ -140,7 +140,7 @@ class Agorakit extends Target
         $query = $this->porterQB()->from('UserTag ut')->select()
             ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
             ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
-        $this->import('reactions', $query, $this->getSchema('reactions'), $map);
+        $this->import('reactions', $query, $map);
     }
 
     /**
@@ -164,7 +164,7 @@ class Agorakit extends Target
             //'group_id',
         ];
         $query = $this->porterQB()->from('Media')->select();
-        $this->import('files', $query, $this->getSchema('files'), $map);
+        $this->import('files', $query, $map);
     }
 
     /**

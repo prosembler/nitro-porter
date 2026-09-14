@@ -52,7 +52,7 @@ abstract class Package
     protected bool $transferFiles = false;
 
     /** @var array */
-    protected array $schema = [];
+    protected array $schemas = [];
 
     /** Main process. Run the MANIFEST methods if not overridden. */
     public function run(): void
@@ -124,7 +124,12 @@ abstract class Package
 
     protected function getSchema(string $name): array
     {
-        return $this->schema[$name] ?? [];
+        return $this->schemas[$name] ?? [];
+    }
+
+    protected function setSchema(string $name, array $schema): void
+    {
+        $this->schemas[$name] = $schema;
     }
 
     /**

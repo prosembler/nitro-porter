@@ -53,7 +53,7 @@ abstract class Target extends Package
         public ?Storage $outputStorage = null,
         public string $packageName = '',
     ) {
-        $this->schema = Schema::load(strtolower($packageName));
+        $this->schemas = Schema::load(strtolower($packageName));
     }
 
     /**
@@ -268,20 +268,28 @@ abstract class Target extends Package
     /**
      * Create empty import tables.
      */
-    public function importEmpty(string $tableName, array $structure): void
+    public function importEmpty(string $tableName): void
     {
-        $this->outputStorage->prepare($tableName, $structure);
+        $struct = $this->getSchema($tableName);
+        if (empty($struct)) {
+            Log::comment(sprintf('Empty structure for table %s', $tableName));
+        }
+        $this->outputStorage->prepare($tableName, $struct);
     }
 
     /**
      * Import data to the Target.
      */
-    public function import(string $tableName, Builder $exp, array $struct, array $map = [], array $filters = []): void
+    public function import(string $tableName, Builder $exp, array $map = [], array $filters = []): void
     {
         // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)
         $filters = $this->addKeyFilters($tableName, $map, $filters);
 
         // Prepare the storage medium for the incoming structure.
+        $struct = $this->getSchema($tableName);
+        if (empty($struct)) {
+            Log::comment(sprintf('Empty structure for table %s', $tableName));
+        }
         $this->outputStorage->prepare($tableName, $struct);
 
         // Store the data.

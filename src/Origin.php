@@ -23,7 +23,7 @@ abstract class Origin extends Package
         protected ?Storage\Database $extractStorage = null, // Second connection for simultaneous read/write.
         public string $packageName = '',
     ) {
-        $this->schema = Schema::load(strtolower($packageName));
+        $this->schemas = Schema::load(strtolower($packageName));
     }
 
     public function setConfig(array $config): void

@@ -137,7 +137,7 @@ class Flarum extends Target
             ->select()
             ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
 
-        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
+        $this->import('users', $query, $map, $filters);
     }
 
     /**
@@ -148,14 +148,6 @@ class Flarum extends Target
      */
     protected function roles(): void
     {
-        // Verify support.
-        if (!$this->hasPortSchema('UserRole')) {
-            Log::comment('Skipping import: Roles (Source lacks support)');
-            $this->importEmpty('groups', $this->getSchema('groups'));
-            $this->importEmpty('group_user', $this->getSchema('group_user'));
-            return;
-        }
-
         // Delete orphaned user role associations (deleted users).
         $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
@@ -168,7 +160,7 @@ class Flarum extends Target
             ->selectRaw('COALESCE(Name, CONCAT("role", RoleID)) as name_plural') // Cannot be null.
             // Hiding roles is an uncommon feature; hide none.
             ->selectRaw('0 as is_hidden');
-        $this->import('groups', $query, $this->getSchema('groups'));
+        $this->import('groups', $query);
 
         // User Roles.
         $map = [
@@ -178,7 +170,7 @@ class Flarum extends Target
         $query = $this->porterQB()->from('UserRole')
             ->select(['UserID'])
             ->selectRaw("(RoleID + 4) as RoleID"); // Match above offset
-        $this->import('group_user', $query, $this->getSchema('group_user'), $map);
+        $this->import('group_user', $query, $map);
 
         // Add defaults.
         $this->dbOutput()->table('groups')
@@ -233,7 +225,7 @@ class Flarum extends Target
             ->selectRaw("0 as is_restricted")
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
 
-        $this->import('tags', $query, $this->getSchema('tags'), $map, $filters);
+        $this->import('tags', $query, $map, $filters);
     }
 
     /**
@@ -267,6 +259,7 @@ class Flarum extends Target
             $map['CountViews'] = 'view_count';
             $filters['CountViews'] = 'emptyToZero';
         }
+        $this->setSchema('discussions', $structure);
 
         // CountComments needs to be double-mapped so it's included as an alias also.
         $query = $this->porterQB()->from('Discussion')
@@ -279,7 +272,7 @@ class Flarum extends Target
             ->selectRaw('0 as hotness')
             ->selectRaw('1 as best_answer_notified');
 
-        $this->import('discussions', $query, $structure, $map, $filters);
+        $this->import('discussions', $query, $map, $filters);
 
         // Discussion Tags pivot table.
         $map = [
@@ -297,7 +290,7 @@ class Flarum extends Target
                     ->leftJoin('Category', 'Discussion.CategoryID', '=', 'Category.CategoryID')
                     ->whereNotNull('ParentCategoryID')
             );
-        $this->import('discussion_tag', $query, $this->getSchema('discussion_tag'), $map, $filters);
+        $this->import('discussion_tag', $query, $map, $filters);
     }
 
     /**
@@ -320,7 +313,7 @@ class Flarum extends Target
             ->select()
             ->selectRaw("if (Bookmarked > 0, 'follow', null) as subscription")
             ->where('UserID', '>', 0); // Vanilla can have zeroes here, can't remember why.
-        $this->import('discussion_user', $query, $this->getSchema('discussion_user'), $map);
+        $this->import('discussion_user', $query, $map);
     }
 
     /**
@@ -383,7 +376,7 @@ class Flarum extends Target
             $query->union($discussions);
         }
 
-        $this->import('posts', $query, $this->getSchema('posts'), $map, $filters);
+        $this->import('posts', $query, $map, $filters);
     }
 
     /**
@@ -432,7 +425,7 @@ class Flarum extends Target
                 else 'file'
                 end as tag");
 
-        $this->import('fof_upload_files', $query, $this->getSchema('fof_upload_files'), $map);
+        $this->import('fof_upload_files', $query, $map);
     }
 
     /**
@@ -464,7 +457,7 @@ class Flarum extends Target
         $query = $this->porterQB()->from('Badge')
             ->select()
             ->selectRaw('1 as badge_category_id');
-        $this->import('badges', $query, $this->getSchema('badges'), $map);
+        $this->import('badges', $query, $map);
 
         // User Badges
         $map = [
@@ -474,7 +467,7 @@ class Flarum extends Target
             'DateCompleted' => 'assigned_at',
         ];
         $query = $this->porterQB()->from('UserBadge')->select('*');
-        $this->import('badge_user', $query, $this->getSchema('badge_user'), $map);
+        $this->import('badge_user', $query, $map);
 
         // Add default badge category for all imported badges.
         if ($this->hasOutputSchema('badge_category')) {
@@ -515,7 +508,7 @@ class Flarum extends Target
             ->selectRaw('"{}" as settings') // cannot be null
             // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');
-        $this->import('polls', $query, $this->getSchema('polls'), $map, $filters);
+        $this->import('polls', $query, $map, $filters);
 
         // Poll Options
         $map = [
@@ -527,7 +520,7 @@ class Flarum extends Target
             'CountVotes' => 'vote_count',
         ];
         $query = $this->porterQB()->from('PollOption')->select('*');
-        $this->import('poll_options', $query, $this->getSchema('poll_options'), $map);
+        $this->import('poll_options', $query, $map);
 
         // Poll Votes
         $map = [
@@ -540,7 +533,7 @@ class Flarum extends Target
                 'PollOption.PollID as poll_id',
                 'PollOption.DateInserted as created_at', // Total hack for approximate vote dates.
                 'PollOption.DateUpdated as updated_at']);
-        $this->import('poll_votes', $query, $this->getSchema('poll_votes'), $map);
+        $this->import('poll_votes', $query, $map);
     }
 
     /**
@@ -565,7 +558,7 @@ class Flarum extends Target
             ->select('*')
             ->selectRaw('COALESCE(Active, 1) as enabled')
             ->selectRaw('"emoji" as type');
-        $this->import('reactions', $query, $this->getSchema('reactions'), $map);
+        $this->import('reactions', $query, $map);
 
         // Post Reactions
         $map = [
@@ -602,7 +595,7 @@ class Flarum extends Target
             $query->union($discussionReactions);
         }
 
-        $this->import('post_reactions', $query, $this->getSchema('post_reactions'), $map);
+        $this->import('post_reactions', $query, $map);
     }
 
     /**
@@ -631,11 +624,11 @@ class Flarum extends Target
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
         ];
-
         // fof/gamification — no data, just prevent failure (no default value is set)
         if ($this->hasOutputSchema('discussions', ['votes'])) {
             $structure['votes'] = 'int';
         }
+        $this->setSchema('discussions', $structure);
 
         $query = $this->porterQB()->from('Conversation')
             ->select(['InsertUserID', 'DateInserted'])
@@ -654,7 +647,7 @@ class Flarum extends Target
             ->selectRaw('ifnull(Subject,
                 concat("Private discussion ", (ConversationID + ' . $MaxDiscussionID . '))) as title');
 
-        $this->import('discussions', $query, $structure, $map);
+        $this->import('discussions', $query, $map);
 
         // Messages — Comments
         $MaxCommentID = $this->messagePostOffset = $this->getMaxValue('id', 'posts');
@@ -674,7 +667,7 @@ class Flarum extends Target
             ->selectRaw('1 as is_private')
             ->selectRaw('"comment" as type');
 
-        $this->import('posts', $query, $this->getSchema('posts'), $map, $filters);
+        $this->import('posts', $query, $map, $filters);
 
         // Recipients
         $structure = [
@@ -686,6 +679,7 @@ class Flarum extends Target
             'updated_at' => 'datetime',
             'removed_at' => 'datetime',
         ];
+        $this->setSchema('recipients', $structure);
         $map = [
             'UserID' => 'user_id',
             'DateConversationUpdated' => 'updated_at',
@@ -694,7 +688,7 @@ class Flarum extends Target
             ->select(['UserID', 'DateConversationUpdated'])
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as discussion_id');
 
-        $this->import('recipients', $query, $structure, $map);
+        $this->import('recipients', $query, $map); // @todo
     }
 
     /**

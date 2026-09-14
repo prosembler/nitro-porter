@@ -86,7 +86,7 @@ class Waterhole extends Target
             'Email' => 'BlankEmails',
         ];
         $query = $this->porterQB()->from('User')->select();
-        $this->import('users', $query, $this->getSchema('users'), $map, $filters);
+        $this->import('users', $query, $map, $filters);
     }
 
     /**
@@ -97,14 +97,6 @@ class Waterhole extends Target
      */
     protected function roles(): void
     {
-        // Verify support.
-        if (!$this->hasOutputSchema('UserRole')) {
-            Log::comment('Skipping import: Roles (Source lacks support)');
-            $this->importEmpty('groups', $this->getSchema('groups'));
-            $this->importEmpty('group_user', $this->getSchema('group_user'));
-            return;
-        }
-
         // Delete orphaned user role associations (deleted users).
         $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
@@ -115,7 +107,7 @@ class Waterhole extends Target
         $query = $this->porterQB()->from('Role')
             ->select()
             ->selectRaw('0 as is_public');
-        $this->import('groups', $query, $this->getSchema('groups'), $map);
+        $this->import('groups', $query, $map);
 
         // User Role.
         $map = [
@@ -123,7 +115,7 @@ class Waterhole extends Target
             'RoleID' => 'group_id',
         ];
         $query = $this->porterQB()->from('UserRole')->select();
-        $this->import('group_user', $query, $this->getSchema('group_user'), $map);
+        $this->import('group_user', $query, $map);
     }
 
     protected function categories(): void
@@ -137,7 +129,7 @@ class Waterhole extends Target
         $query = $this->porterQB()->from('Category')
             ->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('channels', $query, $this->getSchema('channels'), $map);
+        $this->import('channels', $query, $map);
     }
 
     protected function discussions(): void
@@ -159,7 +151,7 @@ class Waterhole extends Target
         $query = $this->porterQB()->from('Discussion')
             ->select()
             ->selectRaw('DiscussionID as slug');
-        $this->import('posts', $query, $this->getSchema('posts'), $map, $filters);
+        $this->import('posts', $query, $map, $filters);
     }
 
     protected function comments(): void
@@ -180,6 +172,6 @@ class Waterhole extends Target
                 'DateUpdated',
                 'Body',
                 'Format']);
-        $this->import('comments', $query, $this->getSchema('comments'), $map);
+        $this->import('comments', $query, $map);
     }
 }

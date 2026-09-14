@@ -330,9 +330,6 @@ abstract class Source extends Package
             ->select("show table status like '{$table}'")[0]->Collation;
         $charset = $this->dbInput()
             ->select("show collation like '{$collation}'")[0]->Charset ?? 'utf8mb4';
-        if (\Porter\Config::getInstance()->debugEnabled()) {
-            Log::comment('? Found charset: ' . $charset);
-        }
 
         return match ($charset) {
             'latin1' => 'ISO-8859-1', // Western European

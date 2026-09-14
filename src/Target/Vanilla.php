@@ -16,8 +16,8 @@ class Vanilla extends Target
     public const array INFO = [
         'name' => 'Vanilla',
         'defaultTablePrefix' => '',
-        'avatarPath' => 'uploads/avatars/',
-        'attachmentPath' => 'uploads/attachments/',
+        //'avatarPath' => 'uploads/avatars/',
+        //'attachmentPath' => 'uploads/attachments/',
     ];
 
     protected const array FLAGS = [

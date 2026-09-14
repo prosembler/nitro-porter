@@ -199,7 +199,7 @@ class AttachmentsTest extends TestCase
         $targets = [];
         foreach (Package::list('targets') as $name) {
             $support = ('\Porter\Target\\' . $name)::getSupport();
-            if (!empty($support['attachmentPath']) && !empty($support['features']['Attachments'])) {
+            if (!empty($support['attachmentPath'])) {
                 $targets[$name] = [$name];
             }
         }

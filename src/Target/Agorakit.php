@@ -54,8 +54,11 @@ class Agorakit extends Target
      */
     protected function roles(): void
     {
-        // Roles.
-        $map = [];
+        $map = [
+            'RoleID' => 'id',
+            'Name' => 'name',
+            'Description' => 'body',
+        ];
         $query = $this->porterQB()->from('Role')->select();
         $this->import('groups', $query, $this->getSchema('groups'), $map);
 

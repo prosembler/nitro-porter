@@ -47,9 +47,6 @@ class Flarum extends Target
     /** @var int Offset for inserting PMs into posts table. */
     protected int $messagePostOffset = 0;
 
-    /** @var int  Offset for inserting PMs into discussions table. */
-    protected int $messageDiscussionOffset = 0;
-
     /**
      * Check for issues that will break the import.
      */
@@ -133,10 +130,8 @@ class Flarum extends Target
             'Name' => 'DeletedNameDuplicates',
             'Email' => 'BlankEmails',
         ];
-        $query = $this->porterQB()->from('User')
-            ->select()
+        $query = $this->porterQB()->from('User')->select()
             ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
-
         $this->import('users', $query, $map, $filters);
     }
 
@@ -151,7 +146,6 @@ class Flarum extends Target
         // Delete orphaned user role associations (deleted users).
         $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
 
-        // Roles.
         $query = $this->porterQB()->from('Role')
             // Flarum reserves 1-3 & uses 4 for mods by default.
             ->selectRaw("(RoleID + 4) as id")
@@ -212,19 +206,17 @@ class Flarum extends Target
             'ParentCategoryID' => 'parent_id',
             'Sort' => 'position',
             'CountDiscussions' => 'discussion_count',
+            'is_hidden=0',
+            'is_restricted=0',
         ];
         $filters = [
             'CountDiscussions' => 'emptyToZero',
         ];
-        $query = $this->porterQB()->from('Category')
-            ->select()
+        $query = $this->porterQB()->from('Category')->select()
             ->selectRaw('COALESCE(Name, CONCAT("category", CategoryID)) as name') // Cannot be null.
             ->selectRaw('COALESCE(UrlCode, CategoryID) as slug') // Cannot be null.
             ->selectRaw("if(ParentCategoryID = -1, null, ParentCategoryID) as ParentCategoryID")
-            ->selectRaw("0 as is_hidden")
-            ->selectRaw("0 as is_restricted")
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-
         $this->import('tags', $query, $map, $filters);
     }
 
@@ -246,13 +238,16 @@ class Flarum extends Target
             'CountComments' => 'comment_count',
             'Announce' => 'is_sticky', // Flarum doesn't mind if this is '2' so straight map it.
             'Closed' => 'is_locked',
+            'is_private=0',
+            'votes=0',
+            'hotness=0',
+            'best_answer_notified=1',
         ];
         $filters = [
             'slug' => 'FormatUrl', // 'DiscussionID as slug' (below).
             'Announce' => 'emptyToZero',
             'Closed' => 'emptyToZero',
         ];
-
         // flarumite/simple-discussion-views
         if ($this->hasOutputSchema('discussions', ['view_count'])) {
             $structure['view_count'] = 'int';
@@ -262,16 +257,10 @@ class Flarum extends Target
         $this->setSchema('discussions', $structure);
 
         // CountComments needs to be double-mapped so it's included as an alias also.
-        $query = $this->porterQB()->from('Discussion')
-            ->select()
+        $query = $this->porterQB()->from('Discussion')->select()
             ->selectRaw('COALESCE(CountComments, 0) as post_number_index')
             ->selectRaw('CONCAT(DiscussionID, "-", Name) as slug')
-            ->selectRaw('CountComments as last_post_number')
-            ->selectRaw('0 as is_private')
-            ->selectRaw('0 as votes')
-            ->selectRaw('0 as hotness')
-            ->selectRaw('1 as best_answer_notified');
-
+            ->selectRaw('CountComments as last_post_number');
         $this->import('discussions', $query, $map, $filters);
 
         // Discussion Tags pivot table.
@@ -279,13 +268,9 @@ class Flarum extends Target
             'DiscussionID' => 'discussion_id',
             'CategoryID' => 'tag_id',
         ];
-        $query = $this->porterQB()->from('Discussion')
-            ->select(['DiscussionID', 'CategoryID'])
-            ->union(
-                // Also tag discussion with the parent category.
-                $this->dbPorter()
-                    ->table('Discussion')
-                    ->select(['DiscussionID'])
+        $query = $this->porterQB()->from('Discussion')->select(['DiscussionID', 'CategoryID'])
+            ->union( // Also tag discussion with the parent category.
+                $this->dbPorter()->table('Discussion')->select(['DiscussionID'])
                     ->selectRaw('ParentCategoryID as CategoryID')
                     ->leftJoin('Category', 'Discussion.CategoryID', '=', 'Category.CategoryID')
                     ->whereNotNull('ParentCategoryID')
@@ -303,14 +288,12 @@ class Flarum extends Target
             Log::comment('Skipping import: Bookmarks (Source lacks support)');
             return;
         }
-
         $map = [
             'DiscussionID' => 'discussion_id',
             'UserID' => 'user_id',
             'DateLastViewed' => 'last_read_at',
         ];
-        $query = $this->porterQB()->from('UserDiscussion')
-            ->select()
+        $query = $this->porterQB()->from('UserDiscussion')->select()
             ->selectRaw("if (Bookmarked > 0, 'follow', null) as subscription")
             ->where('UserID', '>', 0); // Vanilla can have zeroes here, can't remember why.
         $this->import('discussion_user', $query, $map);
@@ -328,14 +311,14 @@ class Flarum extends Target
             'DateInserted' => 'created_at',
             'DateUpdated' => 'edited_at',
             'UpdateUserID' => 'edited_user_id',
-            'Body' => 'content'
+            'Body' => 'content',
+            'type=comment',
         ];
         $filters = [
             'Body' => 'FlarumBody',
         ];
         $query = $this->porterQB()->from('Comment')
-            // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
-            ->select([
+            ->select([ // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
                 'DiscussionID',
                 'InsertUserID',
                 'DateInserted',
@@ -344,14 +327,12 @@ class Flarum extends Target
                 'Body',
                 'Format'])
             ->selectRaw('CommentID as CommentID')
-            ->selectRaw('"comment" as type')
             ->selectRaw('null as number');
 
         // Extract OP from the discussion.
         if ($this->getDiscussionBodyMode()) {
             // Get highest CommentID.
-            $result = $this->porterQB()
-                ->from('Comment')
+            $result = $this->porterQB()->from('Comment')
                 ->selectRaw('max(CommentID) as LastCommentID')
                 ->first();
 
@@ -369,7 +350,6 @@ class Flarum extends Target
                     'Body',
                     'Format'])
                 ->selectRaw('(DiscussionID + ' . $this->discussionPostOffset . ') as CommentID')
-                ->selectRaw('"comment" as type')
                 ->selectRaw('null as number');
 
             // Combine discussions.body with the comments to get all posts.
@@ -392,15 +372,14 @@ class Flarum extends Target
             Log::comment('Skipping import: Attachments (Source lacks support)');
             return;
         }
-
         $map = [
             'MediaID' => 'id',
             'InsertUserID' => 'actor_id',
             'Size' => 'size',
+            'discussion_id=0',
+            'upload_method=local',
         ];
-        $query = $this->porterQB()->from('Media')
-            ->select()
-            ->selectRaw('0 as discussion_id')
+        $query = $this->porterQB()->from('Media')->select()
             ->selectRaw("concat('imported/', Path) as path")
             ->selectRaw("concat('/" . self::INFO['attachmentPath'] . "/',
                 trim(leading '/' from COALESCE(Path, ''))) as url") // @todo Only a relative URL so far.
@@ -413,7 +392,6 @@ class Flarum extends Target
                 when ForeignTable = 'embed' then 0
                 when ForeignTable = 'message' then ifnull((ForeignID + " . $this->messagePostOffset . "), 0)
                 end as post_id")
-            ->selectRaw('"local" as upload_method')
             // MIME type cannot be null, so default to "application/octet-stream" as most generic default.
             ->selectRaw('COALESCE(Type, "application/octet-stream") as type')
             // fof_upload_files disallows null for base_name or created_at.
@@ -424,7 +402,6 @@ class Flarum extends Target
                 when Type like 'image/%' then 'image-preview'
                 else 'file'
                 end as tag");
-
         $this->import('fof_upload_files', $query, $map);
     }
 
@@ -438,11 +415,6 @@ class Flarum extends Target
             Log::comment('Skipping import: Badges (Source lacks support)');
             return;
         }
-
-        // Badge Categories
-        // One category is added in postscript.
-
-        // Badges
         $map = [
             'Name' => 'name',
             'BadgeID' => 'id',
@@ -453,10 +425,9 @@ class Flarum extends Target
             'DateInserted' => 'created_at',
             'DateLastViewed' => 'last_read_at',
             'Visible' => 'is_visible',
+            'badge_category_id=1',
         ];
-        $query = $this->porterQB()->from('Badge')
-            ->select()
-            ->selectRaw('1 as badge_category_id');
+        $query = $this->porterQB()->from('Badge')->select();
         $this->import('badges', $query, $map);
 
         // User Badges
@@ -471,8 +442,7 @@ class Flarum extends Target
 
         // Add default badge category for all imported badges.
         if ($this->hasOutputSchema('badge_category')) {
-            $this->dbOutput()
-                ->table('badge_category')
+            $this->dbOutput()->table('badge_category')
                 ->insertOrIgnore(['id' => 1, 'name' => 'Imported Badges', 'created_at' => date('Y-m-d h:m:s')]);
             Log::comment('Added badge category "Imported Badges".');
         }
@@ -488,8 +458,6 @@ class Flarum extends Target
             Log::comment('Skipping import: Polls (Source lacks support)');
             return;
         }
-
-        // Polls
         $map = [
             'PollID' => 'id',
             'Name' => 'question',
@@ -499,13 +467,12 @@ class Flarum extends Target
             'DateInserted' => 'created_at',
             'DateUpdated' => 'updated_at',
             'CountVotes' => 'vote_count',
+            'settings={}', // cannot be null
         ];
         $filters = [
             'CountVotes' => 'emptyToZero',
         ];
-        $query = $this->porterQB()->from('Poll')
-            ->select(['*', 'DateInserted as end_date'])
-            ->selectRaw('"{}" as settings') // cannot be null
+        $query = $this->porterQB()->from('Poll')->select(['*', 'DateInserted as end_date'])
             // Whether its public or anonymous are inverse conditions, so flip the value.
             ->selectRaw('if(Anonymous>0, 0, 1) as public_poll');
         $this->import('polls', $query, $map, $filters);
@@ -552,12 +519,10 @@ class Flarum extends Target
             'TagID' => 'id',
             'Name' => 'identifier',
             //'Active' => 'enabled',
+            'type=emoji', // @todo Setting type='emoji' is a kludge since it won't render Vanilla defaults that way.
         ];
-        $query = $this->porterQB()->from('ReactionType')
-            // @todo Setting type='emoji' is a kludge since it won't render Vanilla defaults that way.
-            ->select('*')
-            ->selectRaw('COALESCE(Active, 1) as enabled')
-            ->selectRaw('"emoji" as type');
+        $query = $this->porterQB()->from('ReactionType')->select()
+            ->selectRaw('COALESCE(Active, 1) as enabled');
         $this->import('reactions', $query, $map);
 
         // Post Reactions
@@ -568,9 +533,7 @@ class Flarum extends Target
             'DateInserted' => 'created_at',
         ];
         // SELECT ORDER IS SENSITIVE DUE TO THE UNION() BELOW.
-        $query = $this->porterQB()->from('UserTag')
-            ->select(['UserID', 'TagID'])
-            ->selectRaw('RecordID as RecordID')
+        $query = $this->porterQB()->from('UserTag')->select(['UserID', 'TagID', 'RecordID'])
             ->selectRaw('TIMESTAMP(DateInserted) as DateInserted')
             ->where('RecordType', '=', 'Comment')
             ->where('UserID', '>', 0);
@@ -584,8 +547,7 @@ class Flarum extends Target
             $lastCommentID = $result->LastCommentID ?? 0;
 
             /* @see Target\Flarum::comments() —  replicate our math in the post split */
-            $discussionReactions = $this->porterQB()->from('UserTag')
-                ->select(['UserID', 'TagID'])
+            $discussionReactions = $this->porterQB()->from('UserTag')->select(['UserID', 'TagID'])
                 ->selectRaw('(RecordID + ' . $lastCommentID . ') as RecordID')
                 ->selectRaw('TIMESTAMP(DateInserted) as DateInserted')
                 ->where('RecordType', '=', 'Discussion')
@@ -594,7 +556,6 @@ class Flarum extends Target
             // Combine discussion reactions + comment reactions => post reactions.
             $query->union($discussionReactions);
         }
-
         $this->import('post_reactions', $query, $map);
     }
 
@@ -617,36 +578,34 @@ class Flarum extends Target
         }
 
         // Messages — Discussions
-        $MaxDiscussionID = $this->messageDiscussionOffset = $this->getMaxValue('id', 'discussions');
+        $MaxDiscussionID = $this->getMaxValue('id', 'discussions');
         Log::comment('Discussions offset for PMs is ' . $MaxDiscussionID);
         $structure = $this->getDiscussionSchema();
         $map = [
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
+            'post_number_index=0',
+            'is_sticky=0',
+            'is_locked=0',
+            'is_private=1',
+            'votes=0', // Hedge against fof/gamification
+            'hotness=0', // Hedge against fof/gamification
+            'view_count=0',
+            'best_answer_notified=1', // fof/best-answer
         ];
         // fof/gamification — no data, just prevent failure (no default value is set)
         if ($this->hasOutputSchema('discussions', ['votes'])) {
             $structure['votes'] = 'int';
         }
         $this->setSchema('discussions', $structure);
-
         $query = $this->porterQB()->from('Conversation')
             ->select(['InsertUserID', 'DateInserted'])
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as id')
             ->selectRaw('DateInserted as last_posted_at') // @todo Orders old PMs by OP instead of last comment.
-            ->selectRaw('0 as post_number_index')
-            ->selectRaw('0 as is_sticky')
-            ->selectRaw('0 as is_locked')
-            ->selectRaw('1 as is_private')
-            ->selectRaw('0 as votes') // Hedge against fof/gamification
-            ->selectRaw('0 as hotness') // Hedge against fof/gamification
-            ->selectRaw('0 as view_count')
-            ->selectRaw('1 as best_answer_notified') // fof/best-answer
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as slug')
             // Use a numbered title "Private discussion 1234" if there's no Subject line.
             ->selectRaw('ifnull(Subject,
                 concat("Private discussion ", (ConversationID + ' . $MaxDiscussionID . '))) as title');
-
         $this->import('discussions', $query, $map);
 
         // Messages — Comments
@@ -656,6 +615,8 @@ class Flarum extends Target
             'Body' => 'content',
             'InsertUserID' => 'user_id',
             'DateInserted' => 'created_at',
+            'is_private=1',
+            'type=comment'
         ];
         $filters = [
             'Body' => 'FlarumBody',
@@ -663,10 +624,7 @@ class Flarum extends Target
         $query = $this->porterQB()->from('ConversationMessage')
             ->select(['Body', 'Format', 'InsertUserID', 'DateInserted'])
             ->selectRaw('(MessageID + ' . $MaxCommentID . ') as id')
-            ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as discussion_id')
-            ->selectRaw('1 as is_private')
-            ->selectRaw('"comment" as type');
-
+            ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as discussion_id');
         $this->import('posts', $query, $map, $filters);
 
         // Recipients
@@ -687,7 +645,6 @@ class Flarum extends Target
         $query = $this->porterQB()->from('UserConversation')
             ->select(['UserID', 'DateConversationUpdated'])
             ->selectRaw('(ConversationID + ' . $MaxDiscussionID . ') as discussion_id');
-
         $this->import('recipients', $query, $map); // @todo
     }
 

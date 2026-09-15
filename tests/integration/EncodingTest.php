@@ -2,19 +2,10 @@
 
 use PHPUnit\Framework\TestCase;
 use Porter\Factory;
-use Staudenmeir\LaravelCte\Query\Builder;
 
-class CoreTest extends TestCase
+class EncodingTest extends TestCase
 {
     public const string ENV_ALIAS = 'test';
-
-    /**
-     * Shared fixture that runs exactly once prior to ALL the tests in this class.
-     */
-    public static function setUpBeforeClass(): void
-    {
-        // noop
-    }
 
     /**
      * @throws Exception

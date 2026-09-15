@@ -5,8 +5,6 @@ use PHPUnit\Framework\TestCase;
 use Porter\Config;
 use Porter\Factory;
 use Porter\Package;
-use Porter\Schema;
-use Porter\Storage;
 use Porter\Storage\Database;
 use Porter\Target;
 
@@ -66,10 +64,6 @@ class AttachmentsTest extends TestCase
      *
      * These tests rebuild `PORT_` tables, so pointing them at a connection that holds real
      * migration data destroys it. Refuse rather than trust the operator to have read a comment.
-     *
-     * @param array $config
-     * @param string $alias
-     * @return string|null
      */
     protected static function findUnsafeAlias(array $config, string $alias): ?string
     {
@@ -95,8 +89,6 @@ class AttachmentsTest extends TestCase
      *
      * Attachments cover the cases Targets have to tell apart: one on the discussion, one on the
      * comment, one with no source file, and one attached to a record Targets don't migrate.
-     *
-     * @param Database $storage
      */
     protected static function seed(Database $storage): void
     {
@@ -189,8 +181,6 @@ class AttachmentsTest extends TestCase
 
     /**
      * Every Target declaring attachment support, so new ones get held to this too.
-     *
-     * @return array
      */
     public static function getAttachmentTargets(): array
     {
@@ -264,10 +254,6 @@ class AttachmentsTest extends TestCase
 
     /**
      * Run a Target's file mapping over the seeded attachments.
-     *
-     * @param string $name
-     * @param bool $transferFiles
-     * @return Target
      */
     protected function mapAttachments(string $name, bool $transferFiles = true): Target
     {
@@ -290,8 +276,6 @@ class AttachmentsTest extends TestCase
 
     /**
      * A fresh query builder over the seeded attachments.
-     *
-     * @return Builder
      */
     protected function getMedia(): Builder
     {

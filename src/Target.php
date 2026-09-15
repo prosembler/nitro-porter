@@ -53,7 +53,7 @@ abstract class Target extends Package
         public ?Storage $outputStorage = null,
         public string $packageName = '',
     ) {
-        $this->schemas = Schema::load(strtolower($packageName));
+        $this->schemas = Schema::load($packageName);
     }
 
     /**

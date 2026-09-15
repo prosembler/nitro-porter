@@ -6,12 +6,12 @@ class Schema
 {
     /** @var array|string[] Files with schema arrays in /schemas. */
     public const array VALID_SCHEMAS = [
-        'agorakit',
-        'discord',
-        'discourse',
-        'flarum',
-        'porter',
-        'waterhole',
+        'Agorakit',
+        'Discord',
+        'Discourse',
+        'Flarum',
+        'Porter',
+        'Waterhole',
     ];
 
     /**
@@ -19,8 +19,15 @@ class Schema
      */
     public static function load(string $name): array
     {
-        if (in_array($name, self::VALID_SCHEMAS, true)) {
-            return include(ROOT_DIR . '/schemas/' . $name . '.php');
+        list($schemaName, $tableName) = explode('.', $name);
+        if (in_array($schemaName, self::VALID_SCHEMAS, true)) {
+            $src = ROOT_DIR . '/schemas/' . $schemaName . '.php';
+            if (empty($tableName)) {
+                return include($src);
+            }
+            // One table's schema.
+            $schema = include($src);
+            return $schema[$tableName];
         } else {
             return [];
         }

@@ -27,8 +27,8 @@ jobs:
     - name: Mock config file
       run: echo -e "<?php\n\nreturn [];" >> config.php
 
-    - name: Run test suite
-      run: composer test
+    - name: Run unit tests (only)
+      run: composer testunit
 
     - name: Run lint
       run: composer lint

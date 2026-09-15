@@ -4,6 +4,8 @@ namespace Porter\Storage;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
+use Porter\MockData;
+use Porter\Schema;
 use Porter\StorageConnection;
 use Porter\Log;
 use Porter\Storage;
@@ -253,6 +255,16 @@ class Database extends Storage
             $keys = $tableInfo['keys'] ?? [];
             unset($tableInfo['keys']);
 
+            // Collation & character set.
+            if (!empty($tableInfo['collation'])) {
+                $table->collation($tableInfo['collation']);
+                unset($tableInfo['collation']);
+            }
+            if (!empty($tableInfo['charset'])) {
+                $table->charset($tableInfo['charset']);
+                unset($tableInfo['charset']);
+            }
+
             // One statement per column to be created.
             foreach ($tableInfo as $columnName => $type) {
                 if (is_array($type)) {
@@ -309,5 +321,38 @@ class Database extends Storage
         $matches = [];
         preg_match('/varchar\(([0-9]{1,3})\)/', $type, $matches);
         return (int) ($matches[1] ?? 100);
+    }
+
+    /**
+     * Seed the database with fixed and/or faked data.
+     *
+     * @param string $schemaName Allows dot syntax: `Porter.User`
+     * @param array $data An array of records.
+     * @param MockData|null $mock Configured data faker.
+     * @param bool $truncate Whether the table will be emptied first.
+     */
+    public function seed(string $schemaName, array $data = [], ?MockData $mock = null, bool $truncate = true): void
+    {
+        // Load schema from name.
+        $schema = Schema::load($schemaName);
+        $tableName = substr($schemaName, strrpos($schemaName, '.') + 1);
+
+        // Prepare the storage medium for the incoming structure.
+        if (!$truncate) {
+            $this->protectTable($tableName);
+        }
+        $this->prepare($tableName, $schema);
+
+        $filters = [
+            'Password' => \Porter\Filter\Sha1::class, // Allows plaintext seeding.
+        ];
+
+        // Fixed data.
+        $this->store($tableName, [], $schema, $data, $filters);
+
+        // Mocked data.
+        if (!empty($mock)) {
+            $this->store($tableName, [], $schema, $mock->generate(), $filters);
+        }
     }
 }

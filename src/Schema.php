@@ -19,7 +19,10 @@ class Schema
      */
     public static function load(string $name): array
     {
-        list($schemaName, $tableName) = explode('.', $name);
+        $namePieces = explode('.', $name);
+        $schemaName = $namePieces[0];
+        $tableName = $namePieces[1] ?? null;
+
         if (in_array($schemaName, self::VALID_SCHEMAS, true)) {
             $src = ROOT_DIR . '/schemas/' . $schemaName . '.php';
             if (empty($tableName)) {

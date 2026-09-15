@@ -116,18 +116,12 @@ class NodeBbTargetTest extends TestCase
     /**
      * Build the `PORT_` tables from Porter's own structure, then fill in one topic and its files.
      *
-     * @param Storage $storage
+     * @param Storage\Database $storage
      * @param bool $withGuest Add a comment authored by user 0 (guest).
      */
-    protected function seed(Storage $storage, bool $withGuest = false): void
+    protected function seed(Storage\Database $storage, bool $withGuest = false): void
     {
-        $structure = Schema::load('porter');
-        foreach (['User', 'Role', 'UserRole', 'Category', 'Discussion', 'Comment', 'Media'] as $table) {
-            $storage->prepare($table, $structure[$table]);
-        }
-
-        $db = $storage->getHandle();
-        $db->table('User')->insert([
+        $storage->seed('Porter.User', [
             [
                 'UserID' => 1,
                 'Name' => 'Linc',
@@ -152,30 +146,32 @@ class NodeBbTargetTest extends TestCase
                 'SourceAvatarFullPath' => null,
             ],
         ]);
-        $db->table('Role')->insert(['RoleID' => 1, 'Name' => 'Members']);
-        $db->table('UserRole')->insert([
+        $storage->seed('Porter.Role', [['RoleID' => 1, 'Name' => 'Members']]);
+        $storage->seed('Porter.UserRole', [
             ['UserID' => 1, 'RoleID' => 1],
             ['UserID' => self::DELETED_USER_ID, 'RoleID' => 1], // Points at no User row.
         ]);
-        $db->table('Category')->insert([
+        $storage->seed('Porter.Category', [
             // Vanilla's root category is a placeholder, not a real forum section.
             ['CategoryID' => -1, 'Name' => 'Root', 'UrlCode' => 'root', 'Sort' => 0],
             ['CategoryID' => 1, 'Name' => 'General', 'UrlCode' => 'general', 'Sort' => 1],
         ]);
-        $db->table('Discussion')->insert([
-            'DiscussionID' => 1,
-            'CategoryID' => 1,
-            'InsertUserID' => 1,
-            'Name' => 'Hello World',
-            'Body' => 'This is the [b]opening[/b] post.',
-            'Format' => 'BBCode',
-            'CountViews' => 7,
-            'DateInserted' => '2020-02-01 00:00:00',
-            'DateLastComment' => '2020-02-02 00:00:00',
+        $storage->seed('Porter.Discussion', [
+            [
+                'DiscussionID' => 1,
+                'CategoryID' => 1,
+                'InsertUserID' => 1,
+                'Name' => 'Hello World',
+                'Body' => 'This is the [b]opening[/b] post.',
+                'Format' => 'BBCode',
+                'CountViews' => 7,
+                'DateInserted' => '2020-02-01 00:00:00',
+                'DateLastComment' => '2020-02-02 00:00:00',
+            ]
         ]);
         // CommentIDs deliberately don't start at 1: a fixture where they collide with DiscussionID
         // can't tell the two ways of resolving the OP's pid apart.
-        $db->table('Comment')->insert([
+        $comments = [
             [
                 'CommentID' => self::OP_COMMENT_ID,
                 'DiscussionID' => 1,
@@ -192,20 +188,22 @@ class NodeBbTargetTest extends TestCase
                 'Format' => 'BBCode',
                 'DateInserted' => '2020-02-02 00:00:00',
             ],
-        ]);
+        ];
         if ($withGuest) {
             // Vanilla uses user 0 for guest/authorless content; it must not land on a real account.
-            $db->table('Comment')->insert([
+            $comments[] = [
                 'CommentID' => self::GUEST_COMMENT_ID,
                 'DiscussionID' => 1,
                 'InsertUserID' => 0,
                 'Body' => 'Posted by a guest.',
                 'Format' => 'BBCode',
                 'DateInserted' => '2020-02-03 00:00:00',
-            ]);
+            ];
         }
+        $storage->seed('Porter.Comment', $comments);
+
         // One file on the discussion and one (an image) on a comment, so both paths get exercised.
-        $db->table('Media')->insert([
+        $storage->seed('Porter.Media', [
             [
                 'MediaID' => 1,
                 'Name' => 'report.pdf',
@@ -261,8 +259,9 @@ class NodeBbTargetTest extends TestCase
         bool $withGuest = false
     ): Database {
         $porterStorage = Factory::storage(self::$porterAlias, 'PORT_');
-        $this->seed($porterStorage, $withGuest);
-
+        if ($porterStorage instanceof Storage\Database) {
+            $this->seed($porterStorage, $withGuest);
+        }
         $outputStorage = Factory::storage(self::$mongoAlias);
         $this->assertInstanceOf(Mongo::class, $outputStorage, 'Expected a document store.');
 

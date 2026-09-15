@@ -1,11 +1,8 @@
 <?php
 
-use Phinx\Config\Config;
-use Phinx\Migration\Manager;
 use PHPUnit\Framework\TestCase;
 use Porter\Factory;
-use Symfony\Component\Console\Input\StringInput;
-use Symfony\Component\Console\Output\NullOutput;
+use Staudenmeir\LaravelCte\Query\Builder;
 
 class CoreTest extends TestCase
 {
@@ -13,18 +10,10 @@ class CoreTest extends TestCase
 
     /**
      * Shared fixture that runs exactly once prior to ALL the tests in this class.
-     *
-     * @see https://book.cakephp.org/phinx/0/en/commands.html
-     * "PDOException: SQLSTATE[42S02]: Base table or view not found" = `truncate table phinxlog`
      */
     public static function setUpBeforeClass(): void
     {
-        $configArray = array_merge(require('tests/integration/phinx.php'), ['paths' => [
-            'migrations' => __DIR__ . '/migrations/Core',
-        ]]);
-        $config = new Config($configArray);
-        $manager = new Manager($config, new StringInput(' '), new NullOutput());
-        $manager->migrate(self::ENV_ALIAS);
+        // noop
     }
 
     /**
@@ -37,6 +26,26 @@ class CoreTest extends TestCase
             Factory::storage(self::ENV_ALIAS),
             Factory::storage(self::ENV_ALIAS)
         );
+
+        // Create sample tables with various collations.
+        $structure = [
+            'Name' => 'varchar(50)',
+            'DiscussionID' => 'int',
+            'InsertUserID' => 'int',
+            'Body' => 'text',
+            'DateInserted' => 'datetime',
+        ];
+        $tables = [
+            'EncodingA' => array_merge(['collation' => 'utf8mb4_unicode_ci'], $structure),
+            'EncodingB' => array_merge(['collation' => 'latin1_swedish_ci'], $structure),
+            'EncodingC' => array_merge(['collation' => 'utf8mb3_general_ci'], $structure),
+            'EncodingD' => array_merge(['collation' => 'cp1250_general_ci'], $structure),
+        ];
+        foreach ($tables as $tableName => $tableInfo) {
+            $source->porterStorage->prepare($tableName, $tableInfo);
+        }
+
+        // Test our code detects the real collations.
         $tests = [
             'EncodingA' => 'UTF-8', // utf8mb4_unicode_ci
             'EncodingB' => 'ISO-8859-1', // latin1_swedish_ci

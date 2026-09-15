@@ -3,11 +3,11 @@
 use Illuminate\Database\Query\Builder;
 use PHPUnit\Framework\TestCase;
 use Porter\Config;
-use Porter\Data;
 use Porter\Factory;
 use Porter\Package;
 use Porter\Schema;
 use Porter\Storage;
+use Porter\Storage\Database;
 use Porter\Target;
 
 /**
@@ -48,7 +48,10 @@ class AttachmentsTest extends TestCase
         // Config::set() replaces wholesale, so put the loaded config back alongside it.
         Config::getInstance()->set(array_merge($config, ['target_root' => self::TARGET_ROOT]));
 
-        self::seed(Factory::storage(self::$alias, 'PORT_'));
+        $storage = Factory::storage(self::$alias, 'PORT_');
+        if ($storage instanceof Database) {
+            self::seed($storage);
+        }
     }
 
     protected function setUp(): void
@@ -93,17 +96,12 @@ class AttachmentsTest extends TestCase
      * Attachments cover the cases Targets have to tell apart: one on the discussion, one on the
      * comment, one with no source file, and one attached to a record Targets don't migrate.
      *
-     * @param Storage $storage
+     * @param Database $storage
      */
-    protected static function seed(Storage $storage): void
+    protected static function seed(Database $storage): void
     {
-        $structure = Schema::load('porter');
-        foreach (['User', 'Category', 'Discussion', 'Comment', 'Media'] as $table) {
-            $storage->prepare($table, $structure[$table]);
-        }
 
-        $db = $storage->getHandle();
-        $db->table('User')->insert([
+        $storage->seed('Porter.User', [[
             'UserID' => 1,
             'Name' => 'Linc',
             'Email' => 'lincoln@example.com',
@@ -112,11 +110,11 @@ class AttachmentsTest extends TestCase
             'DateInserted' => '2020-01-01 00:00:00',
             'DateLastActive' => '2020-06-01 00:00:00',
             'SourceAvatarFullPath' => self::SOURCE_UPLOADS . '/userpics/avatar.jpg',
-        ]);
-        $db->table('Category')->insert([
+        ]]);
+        $storage->seed('Porter.Category', [[
             'CategoryID' => 1, 'Name' => 'General', 'UrlCode' => 'general', 'Sort' => 1,
-        ]);
-        $db->table('Discussion')->insert([
+        ]]);
+        $storage->seed('Porter.Discussion', [[
             'DiscussionID' => 1,
             'CategoryID' => 1,
             'InsertUserID' => 1,
@@ -126,15 +124,15 @@ class AttachmentsTest extends TestCase
             'CountViews' => 7,
             'DateInserted' => '2020-02-01 00:00:00',
             'DateLastComment' => '2020-02-02 00:00:00',
-        ]);
-        $db->table('Comment')->insert([
+        ]]);
+        $storage->seed('Porter.Comment', [[
             'CommentID' => 1,
             'DiscussionID' => 1,
             'InsertUserID' => 1,
             'Body' => 'This is a reply.',
             'Format' => 'BBCode',
             'DateInserted' => '2020-02-02 00:00:00',
-        ]);
+        ]]);
         // Every row needs the same keys in the same order for a bulk insert.
         $media = [
             [   // On the discussion (the OP).
@@ -186,7 +184,7 @@ class AttachmentsTest extends TestCase
                 'SourceFullPath' => self::SOURCE_UPLOADS . '/attachments/embedded.gif',
             ],
         ];
-        $db->table('Media')->insert(array_map(fn($row) => $row + ['InsertUserID' => 1], $media));
+        $storage->seed('Porter.Media', array_map(fn($row) => $row + ['InsertUserID' => 1], $media));
     }
 
     /**

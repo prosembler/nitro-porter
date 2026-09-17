@@ -3,9 +3,7 @@
 use MongoDB\Database;
 use PHPUnit\Framework\TestCase;
 use Porter\Config;
-use Porter\Data;
 use Porter\Factory;
-use Porter\Schema;
 use Porter\Storage;
 use Porter\Storage\Mongo;
 use Porter\Target\NodeBb;

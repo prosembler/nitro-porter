@@ -97,7 +97,6 @@ class Config
 
     /**
      * Get designated test connection.
-     * @throws \Exception
      */
     public function getTestConnection(): array
     {
@@ -109,7 +108,6 @@ class Config
 
     /**
      * Get config data for a connection by its alias.
-     * @throws \Exception
      */
     public function getConnectionAlias(string $alias): array
     {
@@ -121,7 +119,12 @@ class Config
             }
         }
 
-        $this->validateConnectionInfo($alias, $result);
+        try {
+            $this->validateConnectionInfo($alias, $result);
+        } catch (\Exception $e) {
+            Log::comment($e->getMessage());
+            exit();
+        }
 
         return $result;
     }

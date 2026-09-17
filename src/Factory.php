@@ -92,7 +92,7 @@ class Factory
     }
 
     /**
-     * @throws Exception
+     * Get named Storage handler.
      */
     public static function storage(string $name, ?string $prefix = ''): Storage
     {

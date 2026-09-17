@@ -27,7 +27,6 @@ class StorageConnection
 
     /**
      * If no connect alias is give, initiate a test connection.
-     * @throws \Exception
      */
     public function __construct(string $alias = '', string $prefix = '')
     {

@@ -4,7 +4,7 @@ namespace Porter\Storage;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
-use Porter\MockData;
+use Porter\Seeder;
 use Porter\Schema;
 use Porter\StorageConnection;
 use Porter\Log;
@@ -328,10 +328,10 @@ class Database extends Storage
      *
      * @param string $schemaName Allows dot syntax: `Porter.User`
      * @param array $data An array of records.
-     * @param MockData|null $mock Configured data faker.
+     * @param Seeder|null $mock Configured data faker.
      * @param bool $truncate Whether the table will be emptied first.
      */
-    public function seed(string $schemaName, array $data = [], ?MockData $mock = null, bool $truncate = true): void
+    public function seed(string $schemaName, array $data = [], ?Seeder $mock = null, bool $truncate = true): void
     {
         // Load schema from name.
         $schema = Schema::load($schemaName);

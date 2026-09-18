@@ -6,11 +6,10 @@ use Faker\Generator;
 
 /**
  * Setup mock data for seeding by wrapping Faker.
- * @see \Porter\Seed
  * @see https://fakerphp.org/#create-fake-data
  * @todo $testLocales = ['en_US', 'fr_BE', 'ja_JP', 'fa_IR', 'es_VE'];
  */
-class MockData
+class Seeder
 {
     private Generator $faker;
 

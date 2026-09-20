@@ -2,8 +2,6 @@
 
 namespace Porter;
 
-use Faker\Generator;
-
 /**
  * Setup mock data for seeding by wrapping Faker.
  * @see https://fakerphp.org/#create-fake-data
@@ -11,23 +9,14 @@ use Faker\Generator;
  */
 class Seeder
 {
-    private Generator $faker;
-
-    public function __construct(
-        public array $seedmap, // @see Faker\Generator for valid values.
-        public int $count,
-        public string $locale = 'en_US',
-    ) {
-        $this->faker = \Faker\Factory::create($locale);
-    }
-
-    public function generate(): array
+    public static function generate(array $seedmap, int $count, string $locale = 'en_US'): array
     {
+        $faker = \Faker\Factory::create($locale);
         $data = [];
-        for ($i = 0; $i < $this->count; $i++) {
-            $data[] = array_map(function ($method) {
-                return $this->faker->$method;
-            }, $this->seedmap);
+        for ($i = 0; $i < $count; $i++) {
+            $data[] = array_map(function ($method) use ($faker) {
+                return $faker->$method;
+            }, $seedmap);
         }
         return $data;
     }

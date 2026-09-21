@@ -36,7 +36,7 @@ use Porter\Source;
 
 class VBulletin extends Source
 {
-    public const INFO = [
+    public const array INFO = [
         'name' => 'vBulletin 3 & 4',
         'defaultTablePrefix' => 'vb_',
         'charsetTable' => 'post',

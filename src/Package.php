@@ -6,7 +6,7 @@ use ReflectionClass;
 
 abstract class Package
 {
-    public const INFO = [
+    public const array INFO = [
         'name' => '',
         'defaultTablePrefix' => '',
         'charsetTable' => '', // Source-only
@@ -35,15 +35,13 @@ abstract class Package
         'renumberIndices' => false,
     ];
 
-    public const TYPES = ['origins', 'sources', 'targets'];
+    public const array TYPES = ['origins', 'sources', 'targets'];
 
     /**
      * If this is 'false', skip extract first post content from `Discussions.Body`.
      *
      * Do not change this default in child Sources.
      * Use `'hasDiscussionBody' => false` in FLAGS to declare your Source can skip this step.
-     *
-     * @var bool
      * @see Source::getDiscussionBodyMode()
      * @see Source::skipDiscussionBody()
      */
@@ -54,14 +52,25 @@ abstract class Package
     /** @var array */
     protected array $schemas = [];
 
+    /** @var array<Component> */
+    protected array $components = [];
+
     /** Main process. Run the MANIFEST methods if not overridden. */
     public function run(): void
     {
         foreach (Support::list() as $step) { // @todo Add to packages via Factory::package().
             if (method_exists($this, $step)) { // @todo Check $this::FEATURE_REQUIREMENTS[$feature]['schema']
-                $this->$step();
+                $component = $this->$step();
+                if (!empty($component)) {
+                    $this->runComponent($component);
+                }
             }
         }
+    }
+
+    public function runComponent(Component $component): void
+    {
+        throw new \LogicException('Not implemented');
     }
 
     /**

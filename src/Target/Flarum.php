@@ -7,9 +7,13 @@
 
 namespace Porter\Target;
 
+use Illuminate\Database\Query\Builder;
+use Porter\Component;
+use Porter\Filter;
 use Porter\Log;
 use Porter\Formatter;
 use Porter\Target;
+use Porter\Transformation;
 
 /**
  * You'll notice a seemingly random mix of datetime and timestamp in the Flarum database.
@@ -113,26 +117,31 @@ class Flarum extends Target
         return $structure;
     }
 
-    protected function users(): void
+    protected function users(): Component
     {
-        $map = [
-            'UserID' => 'id',
-            'Name' => 'username',
-            'Email' => 'email',
-            'Password' => 'password',
-            'Photo' => 'avatar_url',
-            'DateInserted' => 'joined_at',
-            'DateLastActive' => 'last_seen_at',
-            'CountDiscussions' => 'discussion_count',
-            'CountComments' => 'comment_count',
-        ];
-        $filters = [
-            'Name' => 'DeletedNameDuplicates',
-            'Email' => 'BlankEmails',
-        ];
-        $query = $this->porterQB()->from('User')->select()
-            ->selectRaw('COALESCE(Confirmed, 1) as is_email_confirmed'); // Cannot be null.
-        $this->import('users', $query, $map, $filters);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'users',
+                data: 'User',
+                map: [
+                    'UserID' => 'id',
+                    'Name' => 'username',
+                    'Email' => 'email',
+                    'Password' => 'password',
+                    'Photo' => 'avatar_url',
+                    'DateInserted' => 'joined_at',
+                    'DateLastActive' => 'last_seen_at',
+                    'CountDiscussions' => 'discussion_count',
+                    'CountComments' => 'comment_count',
+                    'Confirmed' => 'is_email_confirmed',
+                ],
+                filters: [
+                    'Name' => \Porter\Filter\DeletedNameDuplicates::class,
+                    'Email' => \Porter\Filter\BlankEmails::class,
+                    'Confirmed' => fn($val, $name, $row) => (empty($val)) ? 1 : $val, // COALESCE(Confirmed, 1)
+                ],
+            )
+        ]);
     }
 
     /**

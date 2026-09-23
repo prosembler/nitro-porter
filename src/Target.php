@@ -56,25 +56,19 @@ abstract class Target extends Package
         $this->schemas = Schema::load($packageName);
     }
 
-    /**
-     * Provide the output database connection.
-     */
+    /** Provide the output database connection. */
     public function dbPorter(): Connection
     {
         return $this->porterStorage->getHandle();
     }
 
-    /**
-     * Provide the output database connection.
-     */
+    /** Provide the output database connection. */
     public function dbOutput(): Connection
     {
         return $this->outputStorage->getHandle();
     }
 
-    /**
-     * Provide a query builder for the porter database.
-     */
+    /** Provide a query builder for the porter database. */
     public function porterQB(): Builder
     {
         return new Builder($this->dbPorter());
@@ -187,7 +181,6 @@ abstract class Target extends Package
     /**
      * Enforce unique emails. Report users skipped (because of `insert ignore`).
      * @see uniqueUserNames
-     *
      */
     protected function uniqueUserEmails(): void
     {
@@ -239,17 +232,13 @@ abstract class Target extends Package
         return $folder;
     }
 
-    /**
-     * Check if the output storage schema exists.
-     */
+    /** Check if the output storage schema exists. */
     public function hasOutputSchema(string $table, array $columns = []): bool
     {
         return $this->outputStorage->exists($table, $columns);
     }
 
-    /**
-     * Ignore duplicates for a SQL storage target table. Adds prefix for you.
-     */
+    /** Ignore duplicates for a SQL storage target table. Adds prefix for you. */
     public function ignoreOutputDuplicates(string $tableName): void
     {
         if (method_exists($this->outputStorage, 'ignoreTable')) {
@@ -257,17 +246,13 @@ abstract class Target extends Package
         }
     }
 
-    /**
-     * Check if the porter storage schema exists.
-     */
+    /** Check if the porter storage schema exists. */
     public function hasPortSchema(string $table, array $columns = []): bool
     {
         return $this->porterStorage->exists($table, $columns);
     }
 
-    /**
-     * Create empty import tables.
-     */
+    /** Create empty import tables. */
     public function importEmpty(string $tableName): void
     {
         $struct = $this->getSchema($tableName);
@@ -277,9 +262,19 @@ abstract class Target extends Package
         $this->outputStorage->prepare($tableName, $struct);
     }
 
-    /**
-     * Import data to the Target.
-     */
+    /** Automate import transformations specified by a Component. */
+    public function runComponent(Component $component): void
+    {
+        foreach ($component->transformations as $tf) {
+            $data = $tf->data;
+            if (is_string($data)) { // Table name was passed.
+                $data = $this->porterQB()->from($data)->select();
+            }
+            $this->import($tf->outputSchemaName, $data, $tf->map, $tf->filters);
+        }
+    }
+
+    /** Import data to the Target. */
     public function import(string $tableName, Builder $exp, array $map = [], array $filters = []): void
     {
         // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)

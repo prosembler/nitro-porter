@@ -262,14 +262,16 @@ abstract class Target extends Package
         $this->outputStorage->prepare($tableName, $struct);
     }
 
+    public function selectFrom(string $tableName): Builder
+    {
+        return $this->porterQB()->from($tableName)->select();
+    }
+
     /** Automate import transformations specified by a Component. */
     public function runComponent(Component $component): void
     {
         foreach ($component->transformations as $tf) {
-            $data = $tf->data;
-            if (is_string($data)) { // Table name was passed.
-                $data = $this->porterQB()->from($data)->select();
-            }
+            $data = (is_string($tf->data)) ? $this->selectFrom($tf->data) : $tf->data;
             $this->import($tf->outputSchemaName, $data, $tf->map, $tf->filters);
         }
     }

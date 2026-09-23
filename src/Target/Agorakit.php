@@ -6,7 +6,9 @@
 
 namespace Porter\Target;
 
+use Porter\Component;
 use Porter\Target;
+use Porter\Transformation;
 
 /**
  *
@@ -24,103 +26,120 @@ class Agorakit extends Target
         'hasDiscussionBody' => true,
     ];
 
-    /**
-     * Check for issues that will break the import.
-     */
+    /** Check for issues that will break the import. */
     public function validate(): void
     {
         //
     }
 
-    protected function users(): void
+    protected function users(): Component
     {
-        $map = [
-            'UserID' => 'id',
-            'Name' => 'username',
-            'FullName' => 'name',
-            'Email' => 'email',
-            'Password' => 'password',
-            'Confirmed' => 'verified',
-            'DateInserted' => 'created_at',
-            'Admin' => 'admin',
-        ];
-        $filters = [];
-        $query = $this->porterQB()->from('User')->select();
-        $this->import('users', $query, $map, $filters);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'users',
+                data: 'User',
+                map: [
+                    'UserID' => 'id',
+                    'Name' => 'username',
+                    'FullName' => 'name',
+                    'Email' => 'email',
+                    'Password' => 'password',
+                    'Confirmed' => 'verified',
+                    'DateInserted' => 'created_at',
+                    'Admin' => 'admin',
+                ],
+                filters: [],
+            )
+        ]);
     }
 
-    /**
-     * 'Groups' in Agorakit.
-     */
-    protected function roles(): void
+    /** 'Groups' in Agorakit. */
+    protected function roles(): Component
     {
-        $map = [
-            'RoleID' => 'id',
-            'Name' => 'name',
-            'Description' => 'body',
-        ];
-        $query = $this->porterQB()->from('Role')->select();
-        $this->import('groups', $query, $map);
-
-        // User Role.
-        $map = [
-            'UserID' => 'user_id',
-            'RoleID' => 'group_id',
-        ];
-        $query = $this->porterQB()->from('UserRole')->select();
-        $this->import('membership', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'groups',
+                data: 'Role',
+                map: [
+                    'RoleID' => 'id',
+                    'Name' => 'name',
+                    'Description' => 'body',
+                ],
+                filters: [],
+            ),
+            new Transformation(
+                outputSchemaName: 'membership',
+                data: 'UserRole',
+                map: [
+                    'UserID' => 'user_id',
+                    'RoleID' => 'group_id',
+                ],
+                filters: [],
+            )
+        ]);
     }
 
-    protected function categories(): void
+    protected function categories(): Component
     {
-        $map = [
-            'CategoryID' => 'id',
-            'Name' => 'name',
-            'Description' => 'description',
-            'ParentCategoryID' => 'parent_id',
-            'Sort' => 'position',
-            'CountDiscussions' => 'discussion_count',
-        ];
-        $filters = [
-            'CountDiscussions' => 'emptyToZero',
-        ];
-        $query = $this->porterQB()->from('Category')->select()
-            ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('tags', $query, $map, $filters);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'tags',
+                data: $this->selectFrom('Category')->where('CategoryID', '!=', -1),
+                map: [
+                    'CategoryID' => 'id',
+                    'Name' => 'name',
+                    'Description' => 'description',
+                    'ParentCategoryID' => 'parent_id',
+                    'Sort' => 'position',
+                    'CountDiscussions' => 'discussion_count',
+                ],
+                filters: [
+                    'CountDiscussions' => \Porter\Filter\EmptyToZero::class,
+                ],
+            )
+        ]);
     }
 
-    protected function discussions(): void
+    protected function discussions(): Component
     {
-        $map = [
-            'DiscussionID' => 'id',
-            'InsertUserID' => 'user_id',
-            'CategoryID' => 'group_id',
-            'Name' => 'name',
-            'Body' => 'body',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-            'CountComments' => 'total_comments',
-            //'Announce'/'Closed' => 'status',
-        ];
-        $query = $this->porterQB()->from('Discussion')->select();
-        $this->import('discussions', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'discussions',
+                data: 'Discussion',
+                map: [
+                    'DiscussionID' => 'id',
+                    'InsertUserID' => 'user_id',
+                    'CategoryID' => 'group_id',
+                    'Name' => 'name',
+                    'Body' => 'body',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                    'CountComments' => 'total_comments',
+                    //'Announce'/'Closed' => 'status',
+                ],
+                filters: [],
+            )
+        ]);
     }
 
-    /**
-     * 'Posts' in Agorakit,
-     */
-    protected function comments(): void
+    /** 'Posts' in Agorakit. */
+    protected function comments(): Component
     {
-        $map = [
-            'CommentID' => 'id',
-            'DiscussionID' => 'discussion_id',
-            'InsertUserID' => 'user_id',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-            'Body' => 'body'
-        ];
-        $query = $this->porterQB()->from('Comment')->select();
-        $this->import('posts', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'posts',
+                data: 'Comment',
+                map: [
+                    'CommentID' => 'id',
+                    'DiscussionID' => 'discussion_id',
+                    'InsertUserID' => 'user_id',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                    'Body' => 'body'
+                ],
+                filters: [],
+            )
+        ]);
     }
 
     /**
@@ -128,48 +147,52 @@ class Agorakit extends Target
      * Agorakit only supports a subset of named emoji reactions hard-coded to /images/reactions/{type}.png
      * so you'd need to pass those files along as well.
      */
-    protected function reactions(): void
+    protected function reactions(): Component
     {
-        $map = [
-            'UserID' => 'user_id',
-            'RecordID' => 'reactable_id',
-            'RecordType' => 'reactable_type',
-            'Name' => 'type', // Expects /images/reactions/{filename}.png.
-            'DateInserted' => 'created_at',
-        ];
-        $query = $this->porterQB()->from('UserTag ut')->select()
-            ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
-            ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
-        $this->import('reactions', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'reactions',
+                data: $this->selectFrom('UserTag ut')
+                    ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
+                    ->whereIn('ut.RecordType', ['Discussion', 'Comment']),
+                map: [
+                    'UserID' => 'user_id',
+                    'RecordID' => 'reactable_id',
+                    'RecordType' => 'reactable_type',
+                    'Name' => 'type', // Expects /images/reactions/{filename}.png.
+                    'DateInserted' => 'created_at',
+                ],
+                filters: [],
+            )
+        ]);
     }
 
-    /**
-     * 'Files' in Agorakit.
-     */
-    protected function attachments(): void
+    /** 'Files' in Agorakit. */
+    protected function attachments(): Component
     {
-        $map = [
-            'MediaID' => 'id',
-            'ForeignID' => 'parent_id',
-            'InsertUserID' => 'user_id',
-            'ForeignTable' => 'item_type',
-            'Size' => 'filesize',
-            //'Active' => 'status', // filter required?
-            'Name' =>  'name',
-            'Type' => 'mime',
-            'Path' => 'path',
-            'DateInserted' => 'created_at',
-            //'original_extension'
-            //'original_filename'
-            //'group_id',
-        ];
-        $query = $this->porterQB()->from('Media')->select();
-        $this->import('files', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'files',
+                data: 'Media',
+                map: [
+                    'MediaID' => 'id',
+                    'ForeignID' => 'parent_id',
+                    'InsertUserID' => 'user_id',
+                    'ForeignTable' => 'item_type',
+                    'Size' => 'filesize',
+                    //'Active' => 'status', // filter required?
+                    'Name' =>  'name',
+                    'Type' => 'mime',
+                    'Path' => 'path',
+                    'DateInserted' => 'created_at',
+                    //'original_extension', 'original_filename', 'group_id',
+                ],
+                filters: [],
+            )
+        ]);
     }
 
-    /**
-     * Avatars are auto-detected by filename in Agorakit.
-     */
+    /** Avatars are auto-detected by filename in Agorakit. */
     protected function avatars(): void
     {
         // noop

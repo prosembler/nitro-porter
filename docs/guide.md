@@ -165,6 +165,10 @@ Then run the migration normally. Your migrated data will be renumbered by adding
 
 Verify Composer is in your PATH with `echo $PATH`. On MacOS, you should see `/Users/{username}/.composer/vendor/bin` in there somewhere.
 
+### SQL errors like 'SQLSTATE[HY000]'
+
+Add the `-u` flag to get a clearer error. Nitro Porter attempts to insert batches of 1000 records for performance which can cause obscure SQL errors. This flag disables that behavior to inspect the underlying problem. When reporting a problem, please include the error after adding this flag, not the original output.
+
 ### Follow the logs
 
 Nitro Porter logs to `porter.log` in its installation root (e.g. `~/.composer/vendor/prosembler/nitro-porter` on MacOS). Open it with your favorite log viewer to follow along with its progress.

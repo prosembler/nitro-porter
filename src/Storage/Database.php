@@ -4,7 +4,6 @@ namespace Porter\Storage;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
-use Porter\Seeder;
 use Porter\Schema;
 use Porter\StorageConnection;
 use Porter\Log;
@@ -14,7 +13,7 @@ use Porter\StorageInfo;
 class Database extends Storage
 {
     /** @var int How many rows to insert at once. */
-    public const int INSERT_BATCH = 1000; // Set this to 1 for debugging SQL inserts.
+    public const int INSERT_BATCH = 1000; // Set this to 1 for debugging SQL inserts with --unbatch.
 
     /** @var int When to start reporting on incremental storage (in the logs). */
     public const int LOG_THRESHOLD = 100000;
@@ -101,7 +100,8 @@ class Database extends Storage
         // Measure highest memory usage before potential send.
         $memory = max(memory_get_usage(), $info->memory);
 
-        if (self::INSERT_BATCH === count($batch) || $final) {
+        $size = (defined('PORTER_UNBATCH_STORAGE')) ? 1 : self::INSERT_BATCH;
+        if ($size === count($batch) || $final) {
             $this->sendBatch($batch);
             $batch = [];
         }

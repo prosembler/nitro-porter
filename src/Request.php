@@ -26,6 +26,7 @@ final readonly class Request
     private ?string $outputTablePrefix;
     private ?string $cdnPrefix;
     private ?string $dataTypes;
+    private bool $unbatch;
 
     /**
      * Build a valid Porter request.
@@ -53,6 +54,7 @@ final readonly class Request
         ?string $outputTablePrefix = null,
         ?string $cdnPrefix = null,
         ?string $dataTypes = null,
+        ?bool $unbatch = false,
     ) {
         $this->originName = $originPackage ?? Config::getInstance()->get('origin');
         $this->sourceName = $sourcePackage ?? Config::getInstance()->get('source');
@@ -82,6 +84,10 @@ final readonly class Request
             throw new \Exception('Invalid data types in request.');
         } else {
             $this->dataTypes = Config::getInstance()->get('option_data_types');
+        }
+
+        if ($unbatch) { /** @see \Porter\Storage\Database */
+            define('PORTER_UNBATCH_STORAGE', true);
         }
     }
 

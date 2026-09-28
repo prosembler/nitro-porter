@@ -126,11 +126,16 @@ class Database extends Storage
      */
     private function sendBatch(array $batch): void
     {
+        static $errors = [];
         $tableName = $this->getBatchTable();
+        if (isset($errors[$tableName])) {
+            return;
+        }
         $action = (in_array($tableName, $this->ignoreErrorsTables)) ? 'insertOrIgnore' : 'insert';
         try {
             $this->porterConnection->dbConnection()->table($tableName)->$action($batch);
         } catch (\Illuminate\Database\QueryException $e) {
+            $errors[$tableName] = $e->getMessage();
             echo "\n\nBatch insert error: " . substr($e->getMessage(), 0, 500);
             echo "\n[...]\n" . substr($e->getMessage(), -300) . "\n";
         }

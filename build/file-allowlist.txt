@@ -1,10 +1,14 @@
 assets/
 bin/
-data/
+schemas/
 src/
 vendor/
 bootstrap.php
 index.php
+manifest.php
+packages.php
+.docker/
+compose.yml
 config-sample.php
 LICENSE.txt
 README.md

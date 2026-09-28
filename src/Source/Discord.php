@@ -149,6 +149,7 @@ class Discord extends Source
         $map = [
             'new_id' => 'MediaID',
             'new_message_id' => 'ForeignID', // Always a message_id
+            'ForeignTable=Comment',
             'filename' => 'Name',
             'width' => 'ImageWidth',
             'height' => 'ImageHeight',

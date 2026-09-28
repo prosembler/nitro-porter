@@ -26,7 +26,6 @@ final readonly class Request
     private ?string $outputTablePrefix;
     private ?string $cdnPrefix;
     private ?string $dataTypes;
-    private bool $unbatch;
 
     /**
      * Build a valid Porter request.

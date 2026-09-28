@@ -32,6 +32,7 @@ class Schema
             $schema = include($src);
             return $schema[$tableName];
         } else {
+            Log::comment('Invalid schema: ' . $name);
             return [];
         }
     }
@@ -40,6 +41,7 @@ class Schema
      * Prepare a record for storage.
      *
      * Beware sensitive order of operations.
+     * @todo Use \Porter\Transformation to replace $schema, $map, $filters.
      *
      * @param array $row Record to operate on.
      * @param array $schema fieldName => type
@@ -92,16 +94,26 @@ class Schema
     private static function filter(array $row, array $filters): array
     {
         foreach ($filters as $columnName => $filterName) {
-            if (is_callable($filterName)) {
+            // Initialize missing columns to null.
+            if (!array_key_exists($columnName, $row)) {
+                $row[$columnName] = null;
+            }
+
+            if (is_callable($filterName)) { // Inlined a closure
                 $row[$columnName] = $filterName($row[$columnName], $columnName, $row);
-            } else { // @todo deprecated
+            } elseif (class_exists($filterName) && is_subclass_of($filterName, '\Porter\Filter')) {
+                // Fully-qualified class name with parent of 'Filter' was declared.
+                $filter = new $filterName($row[$columnName], $columnName, $row);
+                $row[$columnName] = $filter();
+            } elseif (class_exists('\Porter\\Filter\\' . $filterName)) { // @todo deprecated
+                Log::comment('Calling a filter as string is deprecated: ' . $filterName);
                 $filterName = '\Porter\\Filter\\' . $filterName;
-                if (array_key_exists($columnName, $row) && class_exists($filterName)) {
-                    $filter = new $filterName($row[$columnName], $columnName, $row);
-                    if ($filter instanceof Filter) {
-                        $row[$columnName] = $filter();
-                    }
+                if (!is_subclass_of($filterName, '\Porter\Filter')) {
+                    Log::comment('Invalid filter: ' . $filterName);
+                    continue;
                 }
+                $filter = new $filterName($row[$columnName], $columnName, $row);
+                $row[$columnName] = $filter();
             }
         }
         return $row;
@@ -112,17 +124,25 @@ class Schema
      *
      * Use cases of $map:
      * 1) 'src' => 'dest' — maps key `src` in $row to column `dest`. Simplest and original use.
-     * 2) `src' => [] — maps array list in `src` up a level into $row ("flattens" up 1 level).
+     * 1b) 'src' => ['dest1', 'dest2'] — maps key `src` to both `dest1` and `dest2`.
+     * 2) `src' => ['src2' => 'dest'] — maps assoc array in `src` up a level into $row ("flattens" up 1 level).
      *      Ex: API response {'foo':[],'meta':0} where 'foo' is the list to be stored, not the top-level metadata.
      * 3) `dest=1` — maps literal value on right side of `=` to the column `dest`.
      */
     private static function map(array $row, array $map): array
     {
         foreach ($map as $src => $dst) {
-            // Allow flattening of nested data (1 level).
             if (is_array($dst)) {
-                $row = self::mapNestedData($row, $dst, $src);
-                continue; // No need to map again & do not unset so raw data can be preserved.
+                if (array_is_list($dst)) { // Allow multi-map.
+                    foreach ($dst as $dstKey) {
+                        $row[$dstKey] = $row[$src]; // Add column with new name.
+                    }
+                    unset($row[$src]); // Drop remapped column.
+                } else { // Allow flattening of nested data (1 level).
+                    $row = self::mapNestedData($row, $dst, $src);
+                    // Do not unset so raw data can be preserved.
+                }
+                continue; // No need to map again.
             }
 
             // Allow filling literals (e.g. 'Admin=0') with non-assoc keys (is_int() first to fail fast).
@@ -133,7 +153,7 @@ class Schema
             }
 
             // Simple-map remaining values.
-            if (!empty($row[$src])) {
+            if (isset($row[$src]) && $src !== $dst) {
                 $row[$dst] = $row[$src]; // Add column with new name.
                 unset($row[$src]); // Drop remapped column.
             }
@@ -185,7 +205,7 @@ class Schema
     private static function mapNestedData(array $row, array $submap, string $columnName): array
     {
         foreach ($submap as $src => $dest) {
-            if (isset($row[$columnName][$src])) {
+            if (isset($row[$columnName][$src]) && is_string($src)) {
                 $row[$dest] = $row[$columnName][$src];
             }
         }

@@ -186,6 +186,10 @@ class Database extends Storage
      */
     public function prepare(string $resourceName, array $structure): void
     {
+        if (empty($structure)) {
+            Log::comment(sprintf('Empty structure for table %s', $resourceName));
+        }
+
         // Only drop/truncate tables that already exist if they're not protected.
         if (!$this->exists($resourceName) || !$this->isProtectedTable($resourceName)) {
             $this->createOrUpdateTable($this->prefix . $resourceName, $structure);

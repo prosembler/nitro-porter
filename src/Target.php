@@ -48,12 +48,15 @@ abstract class Target extends Package
     /** @var StorageConnection  */
     public StorageConnection $connection;
 
+    /** @var array Real found schema on the output connection. */
+    public array $foundSchema = [];
+
     public function __construct(
         public ?Storage $porterStorage = null,
         public ?Storage $outputStorage = null,
         public string $packageName = '',
     ) {
-        $this->schemas = Schema::load($packageName);
+        $this->schemas = Schema::load($packageName); // Porter's stored copy of known schemas.
     }
 
     /** Provide the output database connection. */
@@ -143,6 +146,45 @@ abstract class Target extends Package
             }
         }
         return $filters;
+    }
+
+    /**
+     * Automatically adds filters to avoid null values on non-nullable columns.
+     */
+    protected function addNullFilters(string $tableName, array $map, array $filters): array
+    {
+        $tableSchema = $this->findSchema($tableName);
+        foreach ($tableSchema as $column) {
+            if (!empty($column['auto_increment']) || !empty($column['default'])) {
+                continue;
+            }
+            if (false === $column['nullable']) {
+                // @todo If we reverse filter anchoring to be on output, undo this.
+                $portColumnName = array_search($column['name'], $map);
+                if (false === $portColumnName) {
+                    $portColumnName = $column['name'];
+                    $map[$column['name']] = $column['name']; // Kludge an empty static value into $map.
+                    //Log::comment('Added missing map for ' . $column['name'] . ' to use filter.');
+                }
+                if (!empty($filters[$portColumnName])) {
+                    continue; // Don't overwrite existing filter.
+                }
+                $filters[$portColumnName] = match (true) {
+                        str_contains($column['name'], 'email') => \Porter\Filter\BlankEmails::class,
+                        str_contains($column['type'], 'char'),
+                        str_contains($column['type'], 'text') => \Porter\Filter\EmptyToStringEmpty::class,
+                        str_contains($column['type'], 'date') => \Porter\Filter\EmptyToDate::class,
+                        default => \Porter\Filter\EmptyToZero::class, // int, float, catch-all
+                };
+                /** @todo Make a proper debug-only log; useful when building a new package.
+                if (\Porter\Config::getInstance()->debugEnabled()) {
+                    Log::comment('Added filter ' .
+                        str_replace('Porter\Filter\\', '', $filters[$portColumnName]) .
+                        ' to ' . $portColumnName . ' => ' . $tableName . '.' . $column['name']);
+                }*/
+            }
+        }
+        return [$map, $filters];
     }
 
     /**
@@ -262,9 +304,18 @@ abstract class Target extends Package
         $this->outputStorage->prepare($tableName, $struct);
     }
 
-    public function selectFrom(string $tableName): Builder
+    /** Lazy-load the output schema as-needed. */
+    private function findSchema(string $tableName): array
     {
-        return $this->porterQB()->from($tableName)->select();
+        if (empty($this->foundSchema[$tableName])) {
+            $this->foundSchema[$tableName] = $this->dbOutput()->getSchemaBuilder()->getColumns($tableName);
+        }
+        return $this->foundSchema[$tableName];
+    }
+
+    public function selectFrom(string $tableName, ?string $as = null): Builder
+    {
+        return $this->porterQB()->from($tableName, $as)->select();
     }
 
     /** Automate import transformations specified by a Component. */
@@ -282,15 +333,15 @@ abstract class Target extends Package
         // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)
         $filters = $this->addKeyFilters($tableName, $map, $filters);
 
+        // Automate defaults for non-nullable fields missing defaults.
+        list($map, $filters) = $this->addNullFilters($tableName, $map, $filters);
+
         // Prepare the storage medium for the incoming structure.
-        $struct = $this->getSchema($tableName);
-        if (empty($struct)) {
-            Log::comment(sprintf('Empty structure for table %s', $tableName));
-        }
-        $this->outputStorage->prepare($tableName, $struct);
+        $schema = $this->getCombinedSchema($tableName);
+        $this->outputStorage->prepare($tableName, $schema);
 
         // Store the data.
-        $info = $this->outputStorage->store($tableName, $map, $struct, $exp, $filters);
+        $info = $this->outputStorage->store($tableName, $map, $schema, $exp, $filters);
 
         // Report.
         Log::storage('import', $info);
@@ -344,5 +395,14 @@ abstract class Target extends Package
             );
             Log::storage('map', $info);
         }
+    }
+
+    /**
+     * Combine Porter's stored simple schema (colName => colType) with any columns in the output connection.
+     */
+    protected function getCombinedSchema(string $tableName): array
+    {
+        $foundStruct = array_column($this->findSchema($tableName), 'type', 'name');
+        return array_merge($this->getSchema($tableName), $foundStruct);
     }
 }

@@ -80,7 +80,7 @@ abstract class Source extends Package
         public ?Storage $porterStorage = null,
         public string $packageName = '',
     ) {
-        $this->porterStructure = Schema::load('porter');
+        $this->porterStructure = Schema::load('Porter');
     }
 
     public function sourceQB(): Builder
@@ -198,7 +198,7 @@ abstract class Source extends Package
 
         // Validate table structure exists.
         if (!array_key_exists($tableName, $this->porterStructure)) {
-            Log::comment("Error: $tableName is not a valid table for export.");
+            Log::comment("Error: Table `$tableName` not present in Porter's schema.");
             return;
         }
         $structure = $this->porterStructure[$tableName];

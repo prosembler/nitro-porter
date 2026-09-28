@@ -38,7 +38,7 @@ class PdoDB
             return false;
         }
         $row = $this->result->fetch(\PDO::FETCH_ASSOC);
-        if (isset($row)) {
+        if (false !== $row) {
             return $row;
         }
         $this->result->closeCursor();

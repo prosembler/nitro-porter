@@ -41,9 +41,6 @@ class Config
      */
     public function setAll(array $config): void
     {
-        if (empty($config['offsets'])) {
-            Log::comment('INFO: No offsets specified in config.');
-        }
         $this->config = $config;
     }
 

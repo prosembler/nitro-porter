@@ -24,18 +24,21 @@ class Storage
         ResultSet|Builder|array $data,
         array $filters
     ): StorageInfo {
+        $start = microtime(true);
         $info = new StorageInfo(
-            startTime: microtime(true),
+            startTime: $start,
         );
         if (is_array($data)) {
             // Iterate on API data.
             foreach ($data as $row) {
+                $this->outputTimer($name, $start);
                 $row = Schema::normalizeRow((array)$row, $structure, $map, $filters);
                 $info = $this->stream($row, $info);
             }
         } elseif (is_a($data, '\Porter\Database\ResultSet')) {
             // Iterate on @deprecated ResultSet.
             while ($row = $data->nextResultRow()) {
+                $this->outputTimer($name, $start);
                 $row = Schema::normalizeRow($row, $structure, $map, $filters);
                 $info = $this->stream($row, $info);
             }
@@ -45,11 +48,13 @@ class Storage
                 Log::comment("\n[SQL] " . $data->toSql());
             }
             foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
+                $this->outputTimer($name, $start);
                 $row = Schema::normalizeRow((array)$row, $structure, $map, $filters);
                 $info = $this->stream($row, $info);
             }
         }
         $info = $this->stream([], $info, true); // Insert remaining records.
+        $this->outputTimer($name, 0); // Reset the table timer (in case of second batch).
 
         return new StorageInfo(
             name: $name,
@@ -58,6 +63,25 @@ class Storage
             startTime: $info->startTime,
             endTime: $info->endTime,
         );
+    }
+
+    /**
+     * Output dots to terminal every 5 seconds to indicate we haven't stalled.
+     */
+    public function outputTimer(string $name, float|int $start): void
+    {
+        static $timeCheck = [];
+        if (0 === $start) { // Reset the table timer.
+            unset($timeCheck[$name]);
+            return;
+        }
+        $delta = floor(microtime(true) - $start);
+        // Start progress output after 6 seconds, adding a dot every ~2 thereafter.
+        if (!isset($timeCheck[$name][$delta]) && $delta % 2 === 0 && $delta > 5) {
+            $output = isset($timeCheck[$name]) ? ' .' : "\n[$name in progress]";
+            $timeCheck[$name][$delta] = 1;
+            echo $output;
+        }
     }
 
     /**

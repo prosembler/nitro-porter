@@ -7,6 +7,7 @@
 namespace Porter\Target;
 
 use Porter\Component;
+use Porter\Log;
 use Porter\Target;
 use Porter\Transformation;
 
@@ -29,7 +30,17 @@ class Agorakit extends Target
     /** Check for issues that will break the import. */
     public function validate(): void
     {
-        //
+        $this->uniqueUserNames();
+        $this->uniqueUserEmails();
+    }
+
+    protected function setup(): void
+    {
+        // Ignore constraints on tables that block import.
+        $this->ignoreOutputDuplicates('users');
+        $this->ignoreOutputDuplicates('membership');
+        Log::comment('Agorakit supports only 1 reaction per user on each post; only the first will migrate.');
+        $this->ignoreOutputDuplicates('reactions');
     }
 
     protected function users(): Component
@@ -40,8 +51,7 @@ class Agorakit extends Target
                 data: 'User',
                 map: [
                     'UserID' => 'id',
-                    'Name' => 'username',
-                    'FullName' => 'name',
+                    'Name' => ['username', 'name'],
                     'Email' => 'email',
                     'Password' => 'password',
                     'Confirmed' => 'verified',
@@ -61,9 +71,10 @@ class Agorakit extends Target
                 outputSchemaName: 'groups',
                 data: 'Role',
                 map: [
-                    'RoleID' => 'id',
+                    'RoleID' => ['id', 'slug'],
                     'Name' => 'name',
                     'Description' => 'body',
+                    // 'group_type', 'settings', 'status', 'color', 'user_id', 'location', 'latitude', 'longitude',
                 ],
                 filters: [],
             ),
@@ -152,8 +163,8 @@ class Agorakit extends Target
         return new Component([
             new Transformation(
                 outputSchemaName: 'reactions',
-                data: $this->selectFrom('UserTag ut')
-                    ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
+                data: $this->selectFrom('UserTag', 'ut')
+                    ->leftJoin('Tag', 'Tag.TagID', '=', 'ut.TagID')
                     ->whereIn('ut.RecordType', ['Discussion', 'Comment']),
                 map: [
                     'UserID' => 'user_id',
@@ -177,15 +188,15 @@ class Agorakit extends Target
                 map: [
                     'MediaID' => 'id',
                     'ForeignID' => 'parent_id',
+                    //'ForeignTable' => 'item_type',
                     'InsertUserID' => 'user_id',
-                    'ForeignTable' => 'item_type',
+                    'DateInserted' => 'created_at',
                     'Size' => 'filesize',
-                    //'Active' => 'status', // filter required?
                     'Name' =>  'name',
                     'Type' => 'mime',
                     'Path' => 'path',
-                    'DateInserted' => 'created_at',
-                    //'original_extension', 'original_filename', 'group_id',
+                    //'Active' => 'status', // filter required?
+                    'group_id=1', // @todo Requires a double join in data or derive in cleanup.
                 ],
                 filters: [],
             )

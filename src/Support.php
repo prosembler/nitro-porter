@@ -59,7 +59,7 @@ class Support
     /**
      * Retrieve an array from manifest.php.
      */
-    public static function list(?string $name = null): array
+    public static function list(): array
     {
         return include(ROOT_DIR . '/manifest.php');
     }

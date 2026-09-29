@@ -66,7 +66,7 @@ class Discord extends Source
             'new_role_id' => 'RoleID',
         ];
         $query = $this->sourceQB()->from('discord_user_roles')
-            ->join('discord_roles', 'discord_roles.id', '=', 'discord_user_roles.role_id')
+            ->leftJoin('discord_roles', 'discord_roles.id', '=', 'discord_user_roles.role_id')
             ->select(['discord_user_roles.*', 'discord_roles.new_id as new_role_id']);
         $this->export('UserRole', $query, $map);
     }
@@ -83,7 +83,7 @@ class Discord extends Source
         ];
         $query = $this->sourceQB()->from('discord_channels')
             ->select(['discord_channels.*', 'dc.new_id as new_parent_id'])
-            ->join('discord_channels as dc', 'discord_channels.parent_id', '=', 'dc.id')
+            ->leftJoin('discord_channels as dc', 'discord_channels.parent_id', '=', 'dc.id')
             ->whereIn('discord_channels.type', [
                 self::CHANNEL_TYPE['GUILD_CATEGORY'],
                 self::CHANNEL_TYPE['GUILD_FORUM'],
@@ -108,8 +108,8 @@ class Discord extends Source
             'derived_timestamp' => \Porter\Filter\SnowflakeToTimestamp::class,
         ];
         $query = $this->sourceQB()->from('discord_channels')
-            ->join('discord_users', 'discord_users.id', '=', 'discord_channels.owner_id')
-            ->join('discord_channels as dcparent', 'discord_channels.parent_id', '=', 'dcparent.id')
+            ->leftJoin('discord_users', 'discord_users.id', '=', 'discord_channels.owner_id')
+            ->leftJoin('discord_channels as dcparent', 'discord_channels.parent_id', '=', 'dcparent.id')
             ->select(['discord_channels.*',
                 'discord_users.new_id as new_owner_id',
                 'discord_channels.id as derived_timestamp',
@@ -134,8 +134,8 @@ class Discord extends Source
                 // [{"type":"link","url":"http:\/\/www.example.com","description":"Your source for video game news..."}]
         ];
         $query = $this->sourceQB()->from('discord_messages')
-            ->join('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
-            ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
+            ->leftJoin('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
+            ->leftJoin('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
             ->select(['discord_messages.*',
                 'discord_channels.new_id as new_channel_id',
                 'discord_users.new_id as new_authorid'])
@@ -158,7 +158,7 @@ class Discord extends Source
             'download_path' => 'SourceFullPath',
         ];
         $query = $this->sourceQB()->from('discord_attachments')
-            ->join('discord_messages', 'discord_messages.id', '=', 'discord_attachments.message_id')
+            ->leftJoin('discord_messages', 'discord_messages.id', '=', 'discord_attachments.message_id')
             ->select(['discord_attachments.*', 'discord_messages.new_id as new_message_id']);
         $this->export('Media', $query, $map);
     }
@@ -200,11 +200,12 @@ class Discord extends Source
             'new_user_id' => 'UserID',
             'new_message_id' => 'RecordID',
             'new_emoji_id' => 'TagID',
+            'RecordType=Comment',
         ];
         $query = $this->sourceQB()->from('discord_user_reactions')
-            ->join('discord_users', 'discord_users.id', '=', 'discord_user_reactions.user_id')
-            ->join('discord_messages', 'discord_messages.id', '=', 'discord_user_reactions.message_id')
-            ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_user_reactions.emoji_id')
+            ->leftJoin('discord_users', 'discord_users.id', '=', 'discord_user_reactions.user_id')
+            ->leftJoin('discord_messages', 'discord_messages.id', '=', 'discord_user_reactions.message_id')
+            ->leftJoin('discord_emojis', 'discord_emojis.id', '=', 'discord_user_reactions.emoji_id')
             ->select(['discord_users.new_id as new_user_id',
                 'discord_messages.new_id as new_message_id',
                 'discord_emojis.new_id as new_emoji_id']);
@@ -217,8 +218,8 @@ class Discord extends Source
             'count' => 'Total',
         ];
         $query = $this->sourceQB()->from('discord_reactions')
-            ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_reactions.emoji_id')
-            ->join('discord_messages', 'discord_messages.id', '=', 'discord_reactions.message_id')
+            ->leftJoin('discord_emojis', 'discord_emojis.id', '=', 'discord_reactions.emoji_id')
+            ->leftJoin('discord_messages', 'discord_messages.id', '=', 'discord_reactions.message_id')
             ->select(['discord_reactions.*',
                 'discord_emojis.new_id as new_emoji_id',
                 'discord_messages.new_id as new_message_id'])
@@ -238,9 +239,9 @@ class Discord extends Source
             'edited_timestamp' => 'DateUpdated',
         ];
         $query = $this->sourceQB()->from('discord_polls')
-            ->join('discord_messages', 'discord_messages.id', '=', 'discord_polls.id')
-            ->join('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
-            ->join('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
+            ->leftJoin('discord_messages', 'discord_messages.id', '=', 'discord_polls.id')
+            ->leftJoin('discord_channels', 'discord_channels.id', '=', 'discord_messages.channel_id')
+            ->leftJoin('discord_users', 'discord_users.id', '=', 'discord_messages.authorid')
             ->select(['discord_polls.expiry', 'discord_polls.allow_multiselect', 'discord_polls.question',
                 'discord_polls.new_id', 'discord_messages.timestamp', 'discord_messages.edited_timestamp',
                 'discord_messages.new_id as CommentID',
@@ -255,8 +256,8 @@ class Discord extends Source
             'count' => 'CountVotes',
         ];
         $query = $this->sourceQB()->from('discord_poll_answers')
-            ->join('discord_polls', 'discord_polls.id', '=', 'discord_poll_answers.poll_id')
-            ->join('discord_emojis', 'discord_emojis.id', '=', 'discord_poll_answers.emoji_id')
+            ->leftJoin('discord_polls', 'discord_polls.id', '=', 'discord_poll_answers.poll_id')
+            ->leftJoin('discord_emojis', 'discord_emojis.id', '=', 'discord_poll_answers.emoji_id')
             ->select(['discord_poll_answers.text', 'discord_poll_answers.count', 'discord_poll_answers.new_id',
                 'discord_polls.new_id as PollID',
                 'discord_emojis.new_id as EmojiID']);
@@ -269,9 +270,9 @@ class Discord extends Source
             'new_answer_id' => 'PollOptionID',  // answer_is non-unique in Discord
         ];
         $query = $this->sourceQB()->from('discord_poll_user_answers as ua')
-            ->join('discord_users', 'discord_users.id', '=', 'ua.user_id')
-            ->join('discord_polls', 'discord_polls.id', '=', 'ua.poll_id')
-            ->join('discord_poll_answers', function ($join) {
+            ->leftJoin('discord_users', 'discord_users.id', '=', 'ua.user_id')
+            ->leftJoin('discord_polls', 'discord_polls.id', '=', 'ua.poll_id')
+            ->leftJoin('discord_poll_answers', function ($join) {
                 $join->on('discord_poll_answers.poll_id', '=', 'ua.poll_id')
                     ->where('discord_poll_answers.answer_id', '=', 'ua.answer_id');
             })

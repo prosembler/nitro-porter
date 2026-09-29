@@ -41,6 +41,9 @@ class Config
      */
     public function setAll(array $config): void
     {
+        if (empty($config['offsets'])) {
+            Log::comment('INFO: No offsets specified in config.');
+        }
         $this->config = $config;
     }
 
@@ -94,6 +97,9 @@ class Config
      */
     public function getOffset(string $name): int
     {
+        if (empty($this->config['offsets']) || !is_array($this->config['offsets'])) {
+            return 0;
+        }
         $valid = ['users', 'roles', 'categories', 'discussions', 'comments',
             'attachments','polls', 'polloptions', 'tags', 'badges'];
         if (!in_array($name, $valid)) {

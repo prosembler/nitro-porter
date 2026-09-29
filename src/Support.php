@@ -67,7 +67,7 @@ class Support
     /**
      * Accepts the contents of packages.php.
      */
-    public function set(array $packages): void
+    public function setAll(array $packages): void
     {
         foreach (Package::TYPES as $type) {
             if (!empty($packages[$type])) {
@@ -77,7 +77,7 @@ class Support
         }
     }
 
-    /** @see self::set() */
+    /** @see self::setAll() */
     private function setOrigins(array $origins): void
     {
         foreach ($origins as $name) {
@@ -88,7 +88,7 @@ class Support
         }
     }
 
-    /** @see self::set() */
+    /** @see self::setAll() */
     private function setSources(array $sources): void
     {
         foreach ($sources as $name) {
@@ -99,7 +99,7 @@ class Support
         }
     }
 
-    /** @see self::set() */
+    /** @see self::setAll() */
     private function setTargets(array $targets): void
     {
         foreach ($targets as $name) {

@@ -22,5 +22,5 @@ require_once($autoloader);
 unset($autoloader);
 
 // Load data.
-\Porter\Config::getInstance()->set(\Porter\Config::loadFile());
-\Porter\Support::getInstance()->set(\Porter\Package::list());
+\Porter\Config::getInstance()->setAll(\Porter\Config::loadFile());
+\Porter\Support::getInstance()->setAll(\Porter\Package::list());

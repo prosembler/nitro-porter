@@ -68,7 +68,7 @@ class NodeBbTargetTest extends TestCase
 
         // `getPath()` reads this to build an absolute destination.
         // Config::set() replaces wholesale, so put the loaded config back alongside it.
-        Config::getInstance()->set(array_merge($config, ['target_root' => self::TARGET_ROOT]));
+        Config::getInstance()->set('target_root', self::TARGET_ROOT);
     }
 
     protected function setUp(): void

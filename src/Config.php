@@ -37,12 +37,21 @@ class Config
     }
 
     /**
-     * Set a config value (in memory).
+     * Set all config values (in memory).
      */
-    public function set(array $config): void
+    public function setAll(array $config): void
     {
         $this->config = $config;
     }
+
+    /**
+     * Set a config value (in memory).
+     */
+    public function set(string $key, mixed $value): void
+    {
+        $this->config[$key] = $value;
+    }
+
 
     /**
      * Get all connections available.

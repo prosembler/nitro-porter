@@ -44,7 +44,7 @@ class AttachmentsTest extends TestCase
 
         // `getPath('attachment', 'full')` reads this to build an absolute destination.
         // Config::set() replaces wholesale, so put the loaded config back alongside it.
-        Config::getInstance()->set(array_merge($config, ['target_root' => self::TARGET_ROOT]));
+        Config::getInstance()->set('target_root', self::TARGET_ROOT);
 
         $storage = Factory::storage(self::$alias, 'PORT_');
         if ($storage instanceof Database) {

@@ -205,6 +205,9 @@ abstract class Source extends Package
 
         // Pre-run the export query if it's raw SQL from a legacy Source.
         if (is_string($query)) { // @todo remove this support after Sources are updated
+            if (defined('PORTER_STORAGE_DUMPSQL')) {
+                Log::comment("\n[SQL] " . $query);
+            }
             $query = $this->query($query);
             if (empty($query)) {
                 Log::comment("Error: No data found in $tableName.");

@@ -41,6 +41,9 @@ class Storage
             }
         } elseif (is_a($data, '\Illuminate\Database\Query\Builder')) {
             // Use the Builder to process results one at a time.
+            if (defined('PORTER_STORAGE_DUMPSQL')) {
+                Log::comment("\n[SQL] " . $data->toSql());
+            }
             foreach ($data->cursor() as $row) { // Using `chunk()` takes MUCH longer to process.
                 $row = Schema::normalizeRow((array)$row, $structure, $map, $filters);
                 $info = $this->stream($row, $info);

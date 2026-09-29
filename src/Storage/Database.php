@@ -100,7 +100,7 @@ class Database extends Storage
         // Measure highest memory usage before potential send.
         $memory = max(memory_get_usage(), $info->memory);
 
-        $size = (defined('PORTER_UNBATCH_STORAGE')) ? 1 : self::INSERT_BATCH;
+        $size = (defined('PORTER_STORAGE_UNBATCH')) ? 1 : self::INSERT_BATCH;
         if ($size === count($batch) || $final) {
             $this->sendBatch($batch);
             $batch = [];

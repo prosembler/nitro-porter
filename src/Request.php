@@ -54,6 +54,7 @@ final readonly class Request
         ?string $cdnPrefix = null,
         ?string $dataTypes = null,
         ?bool $unbatch = false,
+        ?bool $dumpsql = false,
     ) {
         $this->originName = $originPackage ?? Config::getInstance()->get('origin');
         $this->sourceName = $sourcePackage ?? Config::getInstance()->get('source');
@@ -86,7 +87,10 @@ final readonly class Request
         }
 
         if ($unbatch) { /** @see \Porter\Storage\Database */
-            define('PORTER_UNBATCH_STORAGE', true);
+            define('PORTER_STORAGE_UNBATCH', true);
+        }
+        if ($dumpsql) { /** @see \Porter\Storage\Database::store(), \Porter\Source::export() */
+            define('PORTER_STORAGE_DUMPSQL', true);
         }
     }
 

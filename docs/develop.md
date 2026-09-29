@@ -123,3 +123,10 @@ You need a second, separate database connection to do other queries while unbuff
 ### MSSQL conversions
 
 If you need to migrate from MSSQL with a `.bak` file (e.g. from AspPlayground) and you're working on an M1 Macbook Pro, [this guide will help](https://lincolnwebs.com/mssql-macos/).
+
+
+## Troubleshooting
+
+* What query is actually being executed to retrieve the data? Add `-q` to output SQL dumps in the terminal just before they run.
+* Need to re-run only certain features to save time? Add `-c steps,in,manifest` to limit the run to only those components.
+* "Operation not permitted" or other vague SQL error: Add `-u` to unbatch (1 row per insert) data, which usually will give a better error.

@@ -191,11 +191,6 @@ abstract class Source extends Package
      */
     public function export(string $tableName, string|Builder $query, array $map = [], array $filters = []): void
     {
-        if (!empty($this->limitedTables) && !in_array(strtolower($tableName), $this->limitedTables)) {
-            Log::comment("Skipping table: $tableName");
-            return;
-        }
-
         // Validate table structure exists.
         if (!array_key_exists($tableName, $this->porterStructure)) {
             Log::comment("Error: Table `$tableName` not present in Porter's schema.");
@@ -340,24 +335,6 @@ abstract class Source extends Package
             'cp1250' => 'cp1250', // Windows, Western Europe
             default => 'UTF-8', // utf8mb4, utf8mb3, utf8
         };
-    }
-
-    /**
-     * Selective exports.
-     *
-     * 1. Get the comma-separated list of tables and turn it into an array
-     * 2. Trim off the whitespace
-     * 3. Normalize case to lower
-     * 4. Save to the Migration instance
-     */
-    public function limitTables(?string $tables): void
-    {
-        if (!empty($tables)) {
-            $tables = explode(',', $tables);
-            $tables = array_map('trim', $tables);
-            $tables = array_map('strtolower', $tables);
-            $this->limitedTables = $tables;
-        }
     }
 
     /**

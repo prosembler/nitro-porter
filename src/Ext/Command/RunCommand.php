@@ -21,7 +21,7 @@ class RunCommand extends Command
             ->option('--srcpre', 'Source table prefix (override package default)')
             ->option('--tarpre', 'Target table prefix (override package default)')
             ->option('--cdnpre', 'CDN file path prefix')
-            ->option('-d --data', 'Limit to specified data types (CSV)')
+            ->option('-c --components', 'Only migrate named components & steps (use CSV) (for debugging)')
             ->option('-u --unbatch', 'Insert records one at a time (for debugging)')
             ->option('-q --dumpsql', 'Output the SQL used for each transformation (for debugging)')
             ->usage(
@@ -69,8 +69,7 @@ class RunCommand extends Command
             porterStorage: $this->porterstore,
             inputTablePrefix: $this->sp,
             outputTablePrefix: $this->tp,
-            cdnPrefix: $this->cdn,
-            dataTypes: $this->data,
+            components: $this->components,
             unbatch: (bool)$this->unbatch,
             dumpsql: (bool)$this->dumpsql,
         ));

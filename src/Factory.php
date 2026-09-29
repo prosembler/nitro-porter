@@ -57,13 +57,9 @@ class Factory
         string $sourceName,
         ?Storage $input = null,
         ?Storage $porter = null,
-        string $dataTypes = '',
         string $inputName = ''
     ): ?Source {
         $source = Factory::package('Source', $sourceName, $input, $porter);
-
-        // Set constraints.
-        $source->limitTables($dataTypes);
 
         // Add legacy database support to Sources.
         $connection = new StorageConnection($inputName);

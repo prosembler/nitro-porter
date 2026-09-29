@@ -58,10 +58,16 @@ abstract class Package
     /** Main process. Run the MANIFEST methods if not overridden. */
     public function run(): void
     {
-        foreach (Support::list() as $step) { // @todo Add to packages via Factory::package().
+        $limit = (defined('PORTER_COMPONENTS')) ? PORTER_COMPONENTS : [];
+        foreach (Support::list() as $step) {
             if (method_exists($this, $step)) { // @todo Check $this::FEATURE_REQUIREMENTS[$feature]['schema']
+                if (!empty($limit) && !in_array($step, $limit) && 'setup' !== $step) {
+                    // Skip non-setup steps not in PORTER_COMPONENTS if it was set and log steps that WOULD have run.
+                    Log::comment('Skipped step: ' . $step);
+                    continue;
+                }
                 $component = $this->$step();
-                if (!empty($component)) {
+                if (!empty($component)) { // Backwards compatibility.
                     $this->runComponent($component);
                 }
             }

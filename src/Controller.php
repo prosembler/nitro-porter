@@ -114,7 +114,6 @@ class Controller
         $porterName = $request->getPorter();
         $sourcePrefix = $request->getInputTablePrefix();
         $targetPrefix = $request->getOutputTablePrefix();
-        $dataTypes = $request->getDatatypes();
 
         // Report request.
         Log::comment("NITRO PORTER RUNNING...");
@@ -129,7 +128,7 @@ class Controller
         $porterStorage = Factory::storage($porterName, 'PORT_');
         $outputStorage = Factory::storage($outputName, $targetPrefix);
         $postscriptStorage = Factory::storage($outputName, $targetPrefix); // Postscript names must match target names.
-        $source = Factory::source($sourceName, $inputStorage, $porterStorage, $dataTypes, $inputName);
+        $source = Factory::source($sourceName, $inputStorage, $porterStorage, $inputName);
         $target = Factory::target($targetName, $porterStorage, $outputStorage);
         $postscript = Factory::postscript($targetName, $outputStorage, $postscriptStorage);
         $fileTransfer = Factory::fileTransfer($source, $target, $porterName);

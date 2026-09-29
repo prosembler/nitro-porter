@@ -4,18 +4,6 @@ namespace Porter;
 
 final readonly class Request
 {
-    private const array VALID_DATA_TYPES = [
-        'all',
-        'users',
-        'roles',
-        'categories',
-        'discussions',
-        'comments',
-        'attachments',
-        'privateMessages',
-        'badges',
-    ];
-
     private ?string $originName;
     private ?string $sourceName;
     private ?string $targetName;
@@ -24,8 +12,6 @@ final readonly class Request
     private ?string $porterStorage;
     private ?string $inputTablePrefix;
     private ?string $outputTablePrefix;
-    private ?string $cdnPrefix;
-    private ?string $dataTypes;
 
     /**
      * Build a valid Porter request.
@@ -38,8 +24,9 @@ final readonly class Request
      * @param ?string $porterStorage Storage alias in config.php
      * @param ?string $inputTablePrefix If the input is a database, override source package with this table prefix.
      * @param ?string $outputTablePrefix If the output is a database, override target package with this table prefix.
-     * @param ?string $cdnPrefix Text to prepend to attachment URIs.
-     * @param ?string $dataTypes CSV of types or 'all' (ex: `users,categories,discussions`)
+     * @param ?string $components CSV of components (ex: `users,categories,discussions`)
+     * @param ?bool $unbatch Whether to limit batches to a size of 1.
+     * @param ?bool $dumpsql Whether to echo the SQL of $data to be transferred.
      * @throws \Exception
      */
     public function __construct(
@@ -51,8 +38,7 @@ final readonly class Request
         ?string $porterStorage = null,
         ?string $inputTablePrefix = null,
         ?string $outputTablePrefix = null,
-        ?string $cdnPrefix = null,
-        ?string $dataTypes = null,
+        ?string $components = null,
         ?bool $unbatch = false,
         ?bool $dumpsql = false,
     ) {
@@ -76,16 +62,15 @@ final readonly class Request
             $o = Factory::target($this->targetName)->getPrefix();
         }
         $this->outputTablePrefix = $o;
-        $this->cdnPrefix = $cdnPrefix ?? Config::getInstance()->get('option_cdn_prefix');
 
-        if (!empty($dataTypes) && !count(array_diff(explode(',', $dataTypes), self::VALID_DATA_TYPES))) {
-            $this->dataTypes = $dataTypes;
-        } elseif (!empty($dataTypes)) {
-            throw new \Exception('Invalid data types in request.');
-        } else {
-            $this->dataTypes = Config::getInstance()->get('option_data_types');
+        // Debug settings.
+        if (!empty($components)) { /** @see /manifest.php $components */
+            $components = explode(',', $components);
+            if (count(array_diff($components, Support::list()))) {
+                throw new \Exception('Invalid components requested that are not in manifest.');
+            }
+            define('PORTER_COMPONENTS', $components);
         }
-
         if ($unbatch) { /** @see \Porter\Storage\Database */
             define('PORTER_STORAGE_UNBATCH', true);
         }
@@ -132,15 +117,5 @@ final readonly class Request
     public function getOutputTablePrefix(): ?string
     {
         return $this->outputTablePrefix;
-    }
-
-    public function getCdnPrefix(): ?string
-    {
-        return $this->cdnPrefix;
-    }
-
-    public function getDataTypes(): ?string
-    {
-        return $this->dataTypes;
     }
 }

@@ -98,9 +98,7 @@ return [
         ],
     ],
 
-    // Advanced options.
-    'option_cdn_prefix' => '',
-    'option_data_types' => '',
+    // Developer options.
     'debug' => false,
     'test_alias' => 'test',
 ];

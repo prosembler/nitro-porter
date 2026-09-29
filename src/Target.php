@@ -118,10 +118,10 @@ abstract class Target extends Package
             unset($map['RecordID']);
         }
 
-        // Remove ineligible $map fields.
+        // Remove non-key $map fields.
         $map = array_filter($map, fn ($key) => in_array($key, self::MERGE_KEYS), ARRAY_FILTER_USE_KEY);
 
-        // Evaluate remaining $map fields for required filters.
+        // Evaluate keys in $map for required filters.
         foreach ($map as $portName => $targetName) {
             // Don't set a filter if offset=0.
             if (!$offset = Config::getInstance()->getOffset(self::MERGE_KEYS[$portName])) {
@@ -129,16 +129,16 @@ abstract class Target extends Package
             }
 
             if ('users' === self::MERGE_KEYS[$portName]) {
+                // Add a filter to offset userID or merge user accounts.
                 $targetUsers = $this->getUserMergeList($tableName, $map['UserID'], $map['Email']);
-                // Attach a special filter for merging user accounts.
                 $filters[$portName] = function ($value, $name, $row) use ($offset, $targetUsers) {
                     if ($foundUser = array_search($row['Email'], $targetUsers)) {
                         return $foundUser; // Merge users.
                     }
-                    return $value + $offset; // Add new user with offset ID.
+                    return $value + $offset; // Add new user with an offset ID.
                 };
             } else {
-                // Create a single-use filter with exactly the correct offset addition.
+                // Add a filter that adds the offset per schema.
                 $filters[$portName] = function ($value) use ($offset) {
                     return $value + $offset;
                 };

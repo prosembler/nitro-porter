@@ -7,7 +7,7 @@ use Porter\Filter;
 class SnowflakeToTimestamp extends Filter
 {
     /** @var int Milliseconds from Unix Epoch. */
-    public const int DISCORD_EPOCH_DIFF = 1288834974657;
+    public const int DISCORD_EPOCH_DIFF = 1420070400000;
 
     public function __invoke(): mixed
     {
@@ -18,3 +18,4 @@ class SnowflakeToTimestamp extends Filter
         return gmdate("Y-m-d H:i:s", (int)$timestamp); // FROM_UNIXTIME() equivalent.
     }
 }
+

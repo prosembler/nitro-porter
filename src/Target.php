@@ -328,7 +328,7 @@ abstract class Target extends Package
     }
 
     /** Import data to the Target. */
-    public function import(string $tableName, Builder $exp, array $map = [], array $filters = []): void
+    public function import(string $tableName, Builder|array $data, array $map = [], array $filters = []): void
     {
         // Automate merge offsets. (Keys must be in the $map or auto-offset will fail.)
         $filters = $this->addKeyFilters($tableName, $map, $filters);
@@ -341,7 +341,7 @@ abstract class Target extends Package
         $this->outputStorage->prepare($tableName, $schema);
 
         // Store the data.
-        $info = $this->outputStorage->store($tableName, $map, $schema, $exp, $filters);
+        $info = $this->outputStorage->store($tableName, $map, $schema, $data, $filters);
 
         // Report.
         Log::storage('import', $info);

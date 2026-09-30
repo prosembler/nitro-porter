@@ -172,7 +172,7 @@ abstract class Target extends Package
                 $filters[$portColumnName] = match (true) {
                         str_contains($column['name'], 'email') => \Porter\Filter\BlankEmails::class,
                         str_contains($column['type'], 'char'),
-                        str_contains($column['type'], 'text') => \Porter\Filter\EmptyToStringEmpty::class,
+                        str_contains($column['type'], 'text') => \Porter\Filter\EmptyToSpace::class,
                         str_contains($column['type'], 'date') => \Porter\Filter\EmptyToDate::class,
                         default => \Porter\Filter\EmptyToZero::class, // int, float, catch-all
                 };

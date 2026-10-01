@@ -31,10 +31,8 @@ class Schema
             // One table's schema.
             $schema = include($src);
             return $schema[$tableName];
-        } else {
-            Log::comment('Invalid schema: ' . $name);
-            return [];
         }
+        return [];
     }
 
     /**

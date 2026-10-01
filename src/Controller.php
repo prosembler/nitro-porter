@@ -136,7 +136,9 @@ class Controller
         // Main workflow.
         $start = microtime(true); // Start the timer.
         $this->setFlags($source, $target);
-        $this->doExport($source, ($outputName === 'sql'));
+        if (!defined('PORTER_SKIP_EXPORT')) {
+            $this->doExport($source, ($outputName === 'sql'));
+        }
         $this->doImport($target);
         $this->doPostscript($postscript);
         $this->doFileTransfer($fileTransfer);

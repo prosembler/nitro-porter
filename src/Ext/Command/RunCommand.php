@@ -24,6 +24,7 @@ class RunCommand extends Command
             ->option('-c --components', 'Only migrate named components & steps (use CSV) (for debugging)')
             ->option('-u --unbatch', 'Insert records one at a time (for debugging)')
             ->option('-q --dumpsql', 'Output the SQL used for each transformation (for debugging)')
+            ->option('-x --skipexport', 'Skip export step (for debugging)')
             ->usage(
                 '<bold>  run -s xenforo -t flarum -i xf25 -o test --sp xf_ </end><eol/>' .
                     '<comment>  Migrate from Xenforo in database with alias `xf25` (in config.php) ' .
@@ -72,6 +73,7 @@ class RunCommand extends Command
             components: $this->components,
             unbatch: (bool)$this->unbatch,
             dumpsql: (bool)$this->dumpsql,
+            skipexport: (bool)$this->skipexport,
         ));
 
         (new \Porter\Controller())->run($request);

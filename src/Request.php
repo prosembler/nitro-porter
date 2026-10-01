@@ -27,6 +27,7 @@ final readonly class Request
      * @param ?string $components CSV of components (ex: `users,categories,discussions`)
      * @param ?bool $unbatch Whether to limit batches to a size of 1.
      * @param ?bool $dumpsql Whether to echo the SQL of $data to be transferred.
+     * @param ?bool $skipexport Whether to skip the export step (Source).
      * @throws \Exception
      */
     public function __construct(
@@ -41,6 +42,7 @@ final readonly class Request
         ?string $components = null,
         ?bool $unbatch = false,
         ?bool $dumpsql = false,
+        ?bool $skipexport = false,
     ) {
         $this->originName = $originPackage ?? Config::getInstance()->get('origin');
         $this->sourceName = $sourcePackage ?? Config::getInstance()->get('source');
@@ -76,6 +78,9 @@ final readonly class Request
         }
         if ($dumpsql) { /** @see \Porter\Storage\Database::store(), \Porter\Source::export() */
             define('PORTER_STORAGE_DUMPSQL', true);
+        }
+        if ($skipexport) {
+            define('PORTER_SKIP_EXPORT', true);
         }
     }
 

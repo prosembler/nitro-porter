@@ -61,11 +61,19 @@ abstract class Package
         $limit = (defined('PORTER_COMPONENTS')) ? PORTER_COMPONENTS : [];
         foreach (Support::list() as $step) {
             if (method_exists($this, $step)) { // @todo Check $this::FEATURE_REQUIREMENTS[$feature]['schema']
-                if (!empty($limit) && !in_array($step, $limit) && 'setup' !== $step) {
-                    // Skip non-setup steps not in PORTER_COMPONENTS if it was set and log steps that WOULD have run.
+                // If PORTER_COMPONENTS was set (-c), ONLY run those steps and log steps that WOULD have run.
+                if (!empty($limit) && !in_array($step, $limit) && 'setup' !== $step) { // Always run setup step.
                     Log::comment('Skipped step: ' . $step);
                     continue;
                 }
+
+                // Before running Target steps, check for the required Porter schema.
+                if (method_exists($this, 'schemaExists') && false === $this->schemaExists($step)) {
+                    Log::comment("Skipping import: $step (Source lacks support)");
+                    continue;
+                }
+
+                // Do the step.
                 $component = $this->$step();
                 if (!empty($component)) { // Backwards compatibility.
                     $this->runComponent($component);

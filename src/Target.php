@@ -45,6 +45,16 @@ abstract class Target extends Package
         'BadgeID' => 'badges',
     ];
 
+    /** @var array Component => Required Porter schema tables. */
+    public const array PORTER_SCHEMA_REQUIREMENTS = [
+        'attachments' => 'Media',
+        'badges' => 'Badge',
+        'bookmarks' => 'UserDiscussion',
+        'conversations' => 'Conversation',
+        'polls' => 'Poll',
+        'reactions' => 'ReactionType',
+    ];
+
     /** @var StorageConnection  */
     public StorageConnection $connection;
 
@@ -79,6 +89,19 @@ abstract class Target extends Package
 
     /** Enforce data constraints required by the target platform. */
     abstract public function validate(): void;
+
+    /**
+     * Verify schema support exists for the component.
+     */
+    public function schemaExists(string $componentName): bool
+    {
+        if (array_key_exists($componentName, self::PORTER_SCHEMA_REQUIREMENTS)) {
+            if (!$this->hasPortSchema(self::PORTER_SCHEMA_REQUIREMENTS[$componentName])) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     /**
      * Get current max value of a column on a table in output (target).

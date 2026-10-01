@@ -11,8 +11,8 @@ class EncodingTest extends TestCase
      */
     public function testEncodingDetection(): void
     {
-        $alias = Config::getInstance()->get('test_alias');
-        $source = Factory::source($alias, Factory::storage($alias), Factory::storage($alias));
+        $alias = Config::getInstance()->getTestConnection()['alias'];
+        $source = Factory::source('ExampleSource', Factory::storage($alias), Factory::storage($alias));
 
         // Create sample tables with various collations.
         $structure = [
@@ -23,10 +23,10 @@ class EncodingTest extends TestCase
             'DateInserted' => 'datetime',
         ];
         $tables = [
-            'EncodingA' => array_merge(['collation' => 'utf8mb4_unicode_ci'], $structure),
-            'EncodingB' => array_merge(['collation' => 'latin1_swedish_ci'], $structure),
-            'EncodingC' => array_merge(['collation' => 'utf8mb3_general_ci'], $structure),
-            'EncodingD' => array_merge(['collation' => 'cp1250_general_ci'], $structure),
+            'EncodingA' => array_merge(['collation' => 'utf8mb4_unicode_ci', 'charset' => 'utf8mb4'], $structure),
+            'EncodingB' => array_merge(['collation' => 'latin1_swedish_ci', 'charset' => 'latin1'], $structure),
+            'EncodingC' => array_merge(['collation' => 'utf8mb3_general_ci', 'charset' => 'utf8mb3'], $structure),
+            'EncodingD' => array_merge(['collation' => 'cp1250_general_ci', 'charset' => 'cp1250'], $structure),
         ];
         foreach ($tables as $tableName => $tableInfo) {
             $source->porterStorage->prepare($tableName, $tableInfo);

@@ -1,22 +1,18 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
+use Porter\Config;
 use Porter\Factory;
 
 class EncodingTest extends TestCase
 {
-    public const string ENV_ALIAS = 'test';
-
     /**
      * @throws Exception
      */
     public function testEncodingDetection(): void
     {
-        $source = Factory::source(
-            self::ENV_ALIAS,
-            Factory::storage(self::ENV_ALIAS),
-            Factory::storage(self::ENV_ALIAS)
-        );
+        $alias = Config::getInstance()->get('test_alias');
+        $source = Factory::source($alias, Factory::storage($alias), Factory::storage($alias));
 
         // Create sample tables with various collations.
         $structure = [

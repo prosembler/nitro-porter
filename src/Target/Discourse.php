@@ -24,9 +24,7 @@ class Discourse extends Target
         'hasDiscussionBody' => false,
     ];
 
-    /**
-     * Check for issues that will break the import.
-     */
+    /** Check for issues that will break the import. */
     public function validate(): void
     {
         //
@@ -47,14 +45,11 @@ class Discourse extends Target
             'DateFirstVisit' => 'first_seen_at',
         ];
         $filters = [];
-        $query = $this->porterQB()->from('User')
-            ->select();
+        $query = $this->porterQB()->from('User')->select();
         $this->import('users', $query, $map, $filters);
     }
 
-    /**
-     * 'Groups' in Discourse.
-     */
+    /** 'Groups' in Discourse. */
     protected function roles(): void
     {
         // Roles.
@@ -73,8 +68,7 @@ class Discourse extends Target
             'UserID' => 'user_id',
             'RoleID' => 'group_id',
         ];
-        $query = $this->porterQB()->from('UserRole')
-            ->select();
+        $query = $this->porterQB()->from('UserRole')->select();
         $this->import('group_users', $query, $map);
     }
 
@@ -93,17 +87,14 @@ class Discourse extends Target
             'CountComments' => 'post_count',
         ];
         $filters = [
-            'CountDiscussions' => 'emptyToZero',
+            'CountDiscussions' => \Porter\Filter\EmptyToZero::class,
         ];
-        $query = $this->porterQB()->from('Category')
-            ->select()
+        $query = $this->porterQB()->from('Category')->select()
             ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
         $this->import('categories', $query, $map, $filters);
     }
 
-    /**
-     * 'Topics' in Discourse.
-     */
+    /** 'Topics' in Discourse. */
     protected function discussions(): void
     {
         $map = [
@@ -122,14 +113,11 @@ class Discourse extends Target
             //'archived',
             //'Announce' => 'pinned_globally', //=2
         ];
-        $query = $this->porterQB()->from('Discussion')
-            ->select();
+        $query = $this->porterQB()->from('Discussion')->select();
         $this->import('topics', $query, $map);
     }
 
-    /**
-     * 'Posts' in Discourse.
-     */
+    /** 'Posts' in Discourse. */
     protected function comments(): void
     {
         $map = [
@@ -142,8 +130,7 @@ class Discourse extends Target
             'DateDeleted' => 'deleted_at',
             'Score' => 'score',
         ];
-        $query = $this->porterQB()->from('Comment')
-            ->select();
+        $query = $this->porterQB()->from('Comment')->select();
         $this->import('posts', $query, $map);
     }
 
@@ -153,23 +140,16 @@ class Discourse extends Target
             'UserID' => 'user_id',
             'RecordID' => 'post_id',
             'RecordType' => 'reaction_type',
-            //reaction_value',
-            //reaction_users_count',
+            //reaction_value', reaction_users_count',
             'DateInserted' => 'created_at',
         ];
-        $query = $this->porterQB()->from('UserTag ut')
-            ->leftJoin('Tag t', 't.TagID', '=', 'ut.TagID')
-            ->select()
+        $query = $this->porterQB()->from('UserTag', 'ut')->select()
+            ->leftJoin('Tag', 'Tag.TagID', '=', 'ut.TagID')
             ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
         $this->import('discourse_reactions_reactions', $query, $map);
-
-
-        //$this->import('discourse_reactions_reaction_users', $query, self::SCHEMA_REACTION_USER, $map);
     }
 
-    /**
-     * 'Uploads' in Discourse.
-     */
+    /** 'Uploads' in Discourse. */
     protected function attachments(): void
     {
         $map = [
@@ -215,7 +195,6 @@ class Discourse extends Target
                 set TargetFullPath = " . $this->dbOutput()->escape($attachment->TargetFullPath) . "
                 where MediaID = {$attachment->MediaID}");
         }
-
         return $rows;
     }
 
@@ -238,7 +217,6 @@ class Discourse extends Target
                 set TargetAvatarFullPath = " . $this->dbOutput()->escape($avatar->TargetAvatarFullPath) . "
                 where UserID = {$avatar->UserID}");
         }
-
         return $rows;
     }
 }

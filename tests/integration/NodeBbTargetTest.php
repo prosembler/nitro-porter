@@ -312,7 +312,7 @@ class NodeBbTargetTest extends TestCase
      * Restates the rule rather than calling the Target: NodeBB keys uploads on this exact string.
      *
      * @param int $mediaID
-     * @return string
+     * @return non-empty-string
      */
     protected function getUploadPath(int $mediaID): string
     {

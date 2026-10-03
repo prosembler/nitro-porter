@@ -59,7 +59,7 @@ final class ParserTest extends TestCase
         $this->assertEquals($expected, $html);
     }
 
-    public function getParseRenderTests(): array
+    public static function getParseRenderTests(): array
     {
         return [
             [   // Allow headings
@@ -104,7 +104,7 @@ final class ParserTest extends TestCase
         $this->assertEquals($expected, Formatter::instance()->toHtml($format, $text));
     }
 
-    public function getToHtmlTests(): array
+    public static function getToHtmlTests(): array
     {
         return [
             [   // BBCode is rendered, not left as markup.

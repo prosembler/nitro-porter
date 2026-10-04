@@ -534,12 +534,17 @@ class Formatter
         foreach ($mentions as $mention) {
             // Remove the optional double quote if present & guarantee we have a userid.
             $slug = strtolower(trim($mention, "\""));
-            if (!isset($this->userMap[$slug])) {
-                continue; // Username wasn't in the map, abort.
+            if (isset($this->userMap[$slug])) {
+                $id = $this->userMap[$slug]; // @name -> found ID
+            } elseif ($name = array_search($slug, $this->userMap)) {
+                $mention = $name; // @user_id -> found name.
+                $id = $slug;
+            } else {
+                continue;
             }
 
             // Do the content substitution per found mention.
-            $newMention = '<USERMENTION id="' . $this->userMap[$slug] . '">@' . $mention . '</USERMENTION>';
+            $newMention = '<USERMENTION id="' . $id . '">@' . $mention . '</USERMENTION>';
             $text = str_replace('@' . $mention, $newMention, $text);
         }
 

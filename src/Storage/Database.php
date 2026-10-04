@@ -72,26 +72,6 @@ class Database extends Storage
      */
     public function stream(array $row, ?StorageInfo $info = null, bool $final = false): StorageInfo
     {
-        $info = $this->batchInsert($row, $info, $final);
-        return new StorageInfo(
-            name: $info->name,
-            memory: $info->memory,
-            rows: $info->rows + 1,
-            startTime: $info->startTime
-        );
-    }
-
-    /**
-     * Accept rows one at a time and batch them together for more efficient inserts.
-     *
-     * @param array $row Row of data to insert.
-     * @param ?StorageInfo $info
-     * @param bool $final Force an insert with existing batch.
-     * @return StorageInfo Meta info.
-     *   - memory = Bytes currently being used by the app.
-     */
-    private function batchInsert(array $row, ?StorageInfo $info, bool $final = false): StorageInfo
-    {
         static $batch = [];
         if (!empty($row)) {
             $batch[] = $row;
@@ -100,21 +80,20 @@ class Database extends Storage
         // Measure highest memory usage before potential send.
         $memory = max(memory_get_usage(), $info->memory);
 
-        $size = (defined('PORTER_STORAGE_UNBATCH')) ? 1 : self::INSERT_BATCH;
-        if ($size === count($batch) || $final) {
-            $this->sendBatch($batch);
+        if ($this->batchSize() === count($batch) || $final) {
+            $this->insertBatch($batch);
             $batch = [];
         }
 
         // Log count.
         if (isset($info->name)) {
-            $this->logBatchProgress($info->name, $info->rows);
+            $this->logBatchProgress($info->name, $info->rows + 1);
         }
 
         return new StorageInfo(
             name: $info->name,
             memory: $memory,
-            rows: $info->rows,
+            rows: $info->rows + 1,
             startTime: $info->startTime
         );
     }
@@ -124,14 +103,14 @@ class Database extends Storage
      *
      * Ignore errors if table is in `ignoreErrorsTables` list.
      */
-    private function sendBatch(array $batch): void
+    private function insertBatch(array $batch): void
     {
         static $errors = [];
         $tableName = $this->getBatchTable();
         if (isset($errors[$tableName])) {
             return;
         }
-        $action = (in_array($tableName, $this->ignoreErrorsTables)) ? 'insertOrIgnore' : 'insert';
+        $action = $this->isIgnored($tableName) ? 'insertOrIgnore' : 'insert';
         try {
             $this->porterConnection->dbConnection()->table($tableName)->$action($batch);
         } catch (\Illuminate\Database\QueryException $e) {
@@ -139,6 +118,17 @@ class Database extends Storage
             echo "\n\nBatch insert error: " . substr($e->getMessage(), 0, 500);
             echo "\n[...]\n" . substr($e->getMessage(), -300) . "\n";
         }
+    }
+
+    private function isIgnored(string $tableName): bool
+    {
+        return in_array($tableName, $this->ignoreErrorsTables);
+    }
+
+    /** Set batch size to `1` if `-u` flag was sent OR we are using `insertOrIgnore`. */
+    private function batchSize(): int
+    {
+        return (defined('PORTER_STORAGE_UNBATCH') || $this->isIgnored($this->getBatchTable())) ? 1 : self::INSERT_BATCH;
     }
 
     /**

@@ -8,9 +8,11 @@
 
 namespace Porter\Target;
 
+use Porter\Component;
 use Porter\Formatter;
 use Porter\Log;
 use Porter\Target;
+use Porter\Transformation;
 
 class Waterhole extends Target
 {
@@ -43,7 +45,7 @@ class Waterhole extends Target
     {
         $dupes = array_diff($this->findDuplicates('User', 'Name'), Formatter::DELETED_USERNAMES);
         if (!empty($dupes)) {
-            Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+            Log::comment('[DATA LOSS] Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
     }
 
@@ -57,7 +59,7 @@ class Waterhole extends Target
     {
         $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
-            Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+            Log::comment('[DATA LOSS] Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
     }
 
@@ -67,100 +69,112 @@ class Waterhole extends Target
     public function setup(): void
     {
         $this->ignoreOutputDuplicates('users');
-    }
-
-    protected function users(): void
-    {
-        $map = [
-            'UserID' => 'id',
-            'Name' => 'name',
-            'Email' => 'email',
-            'Password' => 'password',
-            'Photo' => 'avatar',
-            'DateInserted' => 'created_at',
-            'DateLastActive' => 'last_seen_at',
-            'Confirmed' => 'email_verified_at',
-        ];
-        $filters = [
-            'Name' => 'DeletedNameDuplicates',
-            'Email' => 'BlankEmails',
-        ];
-        $query = $this->porterQB()->from('User')->select();
-        $this->import('users', $query, $map, $filters);
-    }
-
-    /**
-     * Waterhole handles role assignment in a magic way.
-     *
-     * This compensates by shifting all RoleIDs +4, rendering any old 'Member' or 'Guest' role useless & deprecated.
-     *
-     */
-    protected function roles(): void
-    {
         // Delete orphaned user role associations (deleted users).
         $this->pruneOrphanedRecords('UserRole', 'UserID', 'User', 'UserID');
-
-        $map = [
-            'RoleID' => 'id',
-            'Name' => 'name',
-            'is_public=0',
-        ];
-        $query = $this->porterQB()->from('Role')->select();
-        $this->import('groups', $query, $map);
-
-        // User Role.
-        $map = [
-            'UserID' => 'user_id',
-            'RoleID' => 'group_id',
-        ];
-        $query = $this->porterQB()->from('UserRole')->select();
-        $this->import('group_user', $query, $map);
     }
 
-    protected function categories(): void
+    protected function users(): Component
     {
-        $map = [
-            'CategoryID' => 'id',
-            'Name' => 'name',
-            'UrlCode' => 'slug',
-            'Description' => 'description',
-        ];
-        $query = $this->porterQB()->from('Category')->select()
-            ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('channels', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'users',
+                data: 'User',
+                map: [
+                    'UserID' => 'id',
+                    'Name' => 'name',
+                    'Email' => 'email',
+                    'Password' => 'password',
+                    'Photo' => 'avatar',
+                    'DateInserted' => 'created_at',
+                    'DateLastActive' => 'last_seen_at',
+                    'Confirmed' => 'email_verified_at',
+                ],
+                filters: [
+                    'Name' => 'DeletedNameDuplicates',
+                    'Email' => 'BlankEmails',
+                ],
+            ),
+        ]);
     }
 
-    protected function discussions(): void
+    /** 'Groups' in Waterhole. */
+    protected function roles(): Component
     {
-        $map = [
-            'DiscussionID' => 'id',
-            'CategoryID' => 'channel_id',
-            'InsertUserID' => 'user_id',
-            'Name' => 'title',
-            'DateInserted' => 'created_at',
-            'DateLastComment' => 'last_activity_at',
-            'Closed' => 'is_locked',
-            'Body' => 'body',
-        ];
-        $filters = [
-            'slug' => 'FormatUrl',
-        ];
-        // CountComments needs to be double-mapped so it's included as an alias also.
-        $query = $this->porterQB()->from('Discussion')->select()->selectRaw('DiscussionID as slug');
-        $this->import('posts', $query, $map, $filters);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'groups',
+                data: 'Role',
+                map: [
+                    'RoleID' => 'id',
+                    'Name' => 'name',
+                    'is_public=0',
+                ],
+            ),
+            new Transformation(
+                outputSchemaName: 'group_user',
+                data: 'UserRole',
+                map: [
+                    'UserID' => 'user_id',
+                    'RoleID' => 'group_id',
+                ],
+            ),
+        ]);
     }
 
-    protected function comments(): void
+    /** 'Channels' in Waterhole. */
+    protected function categories(): Component
     {
-        $map = [
-            'CommentID' => 'id',
-            'DiscussionID' => 'post_id',
-            'InsertUserID' => 'user_id',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'edited_at',
-            'Body' => 'body'
-        ];
-        $query = $this->porterQB()->from('Comment')->select();
-        $this->import('comments', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'channels',
+                data: $this->porterQB()->from('Category')->select()
+                    ->where('CategoryID', '!=', -1), // Ignore Vanilla's root category.
+                map: [
+                    'CategoryID' => 'id',
+                    'Name' => 'name',
+                    'UrlCode' => 'slug',
+                    'Description' => 'description',
+                ],
+            ),
+        ]);
+    }
+
+    /** 'Posts' in Waterhole. */
+    protected function discussions(): Component
+    {
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'posts',
+                data: 'Discussion',
+                map: [
+                    'DiscussionID' => ['id', 'slug'],
+                    'CategoryID' => 'channel_id',
+                    'InsertUserID' => 'user_id',
+                    'Name' => 'title',
+                    'DateInserted' => 'created_at',
+                    'DateLastComment' => 'last_activity_at',
+                    'Closed' => 'is_locked',
+                    'Body' => 'body',
+                ],
+            ),
+        ]);
+    }
+
+    protected function comments(): Component
+    {
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'Comment',
+                data: 'Comment',
+                map: [
+                    'CommentID' => 'id',
+                    'DiscussionID' => 'post_id',
+                    'InsertUserID' => 'user_id',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'edited_at',
+                    'Body' => 'body'
+                ],
+            ),
+        ]);
     }
 }

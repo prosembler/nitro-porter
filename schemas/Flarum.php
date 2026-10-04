@@ -123,6 +123,11 @@ return [
         'created_at' => 'datetime',
         'is_visible' => 'tinyint',
     ],
+    'badge_category' => [
+        'id' => 'int',
+        'name' => 'varchar(200)',
+        'created_at' => 'datetime',
+    ],
     'badge_user' => [
         'badge_id' => 'int',
         'user_id' => 'int',

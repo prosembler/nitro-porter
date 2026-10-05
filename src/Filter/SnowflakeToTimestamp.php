@@ -18,4 +18,3 @@ class SnowflakeToTimestamp extends Filter
         return gmdate("Y-m-d H:i:s", (int)$timestamp); // FROM_UNIXTIME() equivalent.
     }
 }
-

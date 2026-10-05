@@ -51,16 +51,6 @@ class Database extends Storage
     }
 
     /**
-     * Report incremental storage for large datasets.
-     */
-    public function logBatchProgress(string $name, int $rows): void
-    {
-        if ($rows >= self::LOG_THRESHOLD && ($rows % self::LOG_INCREMENT) === 0) {
-            Log::comment("inserting '" . $name . "': " . number_format($rows) . ' done...', false);
-        }
-    }
-
-    /**
      * Lower-level single record insert access.
      *
      * While `store()` takes a batch and processes it, this takes 1 row at a time.
@@ -86,14 +76,15 @@ class Database extends Storage
         }
 
         // Log count.
-        if (isset($info->name)) {
-            $this->logBatchProgress($info->name, $info->rows + 1);
+        $rows = $info->rows + 1;
+        if (isset($info->name) && $rows >= self::LOG_THRESHOLD && ($rows % self::LOG_INCREMENT) === 0) {
+            Log::comment("inserting '" . $info->name . "': " . number_format($rows) . ' done...', false);
         }
 
         return new StorageInfo(
             name: $info->name,
             memory: $memory,
-            rows: $info->rows + 1,
+            rows: $rows,
             startTime: $info->startTime
         );
     }

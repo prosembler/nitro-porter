@@ -239,7 +239,7 @@ abstract class Target extends Package
     {
         $dupes = array_diff($this->findDuplicates('User', 'Name'), Formatter::DELETED_USERNAMES);
         if (!empty($dupes)) {
-            Log::comment('DATA LOSS! Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+            Log::comment('! DATA LOSS: Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
     }
 
@@ -251,7 +251,7 @@ abstract class Target extends Package
     {
         $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
-            Log::comment('DATA LOSS! Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+            Log::comment('! DATA LOSS: Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
     }
 

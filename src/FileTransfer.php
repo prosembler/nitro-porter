@@ -35,32 +35,32 @@ class FileTransfer
         // Valid source root.
         $sourceRoot = Config::getInstance()->get('source_root');
         if (empty($sourceRoot)) {
-            Log::comment("Skipping file transfer: source_root not set in config.");
+            Log::comment("? File Transfer = Off: source_root not set in config.");
             $support = false;
         } elseif (!file_exists($sourceRoot)) {
-            Log::comment("Skipping file transfer: source_root '{$sourceRoot}' does not exist.");
+            Log::comment("? File Transfer = Off: source_root '{$sourceRoot}' does not exist.");
             $support = false;
         }
 
         // Source support.
         if (!$source->getFlag('fileTransferSupport')) {
-            Log::comment("Skipping file transfer: Source package has no support.");
+            Log::comment("? File Transfer = Off: Source package has no support.");
             $support = false;
         }
 
         // Valid target root.
         $targetRoot = Config::getInstance()->get('target_root');
         if (empty($targetRoot)) {
-            Log::comment("Skipping file transfer: target_root not set in config.");
+            Log::comment("? File Transfer = Off: target_root not set in config.");
             $support = false;
         } elseif (!file_exists($targetRoot)) {
-            Log::comment("Skipping file transfer: target_root '{$targetRoot}' does not exist.");
+            Log::comment("? File Transfer = Off: target_root '{$targetRoot}' does not exist.");
             $support = false;
         }
 
         // Target support.
         if (!$target->getFlag('fileTransferSupport')) {
-            Log::comment("Skipping file transfer: Target package has no support.");
+            Log::comment("? File Transfer = Off: Target package has no support.");
             $support = false;
         }
 

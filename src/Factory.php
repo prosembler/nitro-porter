@@ -26,7 +26,7 @@ class Factory
             Log::comment("Invalid package type.");
         }
         $class = "\Porter\\" . $type . "\\" . ucwords($packageName);
-        if (!class_exists($class)) {
+        if (!class_exists($class) && $type !== 'Postscript') {
             Log::comment("No {$type} package found for {$packageName}");
         }
 

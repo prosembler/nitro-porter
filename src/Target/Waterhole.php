@@ -45,7 +45,7 @@ class Waterhole extends Target
     {
         $dupes = array_diff($this->findDuplicates('User', 'Name'), Formatter::DELETED_USERNAMES);
         if (!empty($dupes)) {
-            Log::comment('[DATA LOSS] Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+            Log::comment('! DATA LOSS: Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
     }
 
@@ -59,7 +59,7 @@ class Waterhole extends Target
     {
         $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
-            Log::comment('[DATA LOSS] Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+            Log::comment('! DATA LOSS: Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
     }
 

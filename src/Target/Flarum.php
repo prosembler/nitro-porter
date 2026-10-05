@@ -57,13 +57,13 @@ class Flarum extends Target
         // Would need to find data attached & possibly merge. Would need IDs etc from findDuplicates().
         $dupes = array_diff($this->findDuplicates('User', 'Name'), Formatter::DELETED_USERNAMES);
         if (!empty($dupes)) {
-            Log::comment('[DATA LOSS] Users skipped for duplicate user.name: ' . implode(', ', $dupes));
+            Log::comment('! DATA LOSS: Users skipped for duplicate user.name: ' . implode(', ', $dupes));
         }
 
         // Flarum must have unique emails. Report users skipped (because of `insert ignore`).
         $dupes = $this->findDuplicates('User', 'Email');
         if (!empty($dupes)) {
-            Log::comment('[DATA LOSS] Users skipped for duplicate user.email: ' . implode(', ', $dupes));
+            Log::comment('! DATA LOSS: Users skipped for duplicate user.email: ' . implode(', ', $dupes));
         }
     }
 

@@ -78,7 +78,7 @@ class Storage
         $delta = floor(microtime(true) - $start);
         // Start progress output after 6 seconds, adding a dot every ~2 thereafter.
         if (!isset($timeCheck[$name][$delta]) && $delta % 2 === 0 && $delta > 5) {
-            $output = isset($timeCheck[$name]) ? ' .' : "\n[$name in progress]";
+            $output = isset($timeCheck[$name]) ? ' .' : "\n[ $name in progress ]";
             $timeCheck[$name][$delta] = 1;
             echo $output;
         }

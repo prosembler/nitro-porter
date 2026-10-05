@@ -228,7 +228,7 @@ class NodeBb extends Target
             ->whereNull('Comment.CommentID')
             ->count();
         if ($orphans) {
-            Log::comment("DATA LOSS! Discussions with no posts, so no NodeBB mainPid: $orphans");
+            Log::comment("! DATA LOSS: Discussions with no posts, so no NodeBB mainPid: $orphans");
         }
     }
 
@@ -328,7 +328,7 @@ class NodeBb extends Target
         foreach ($roles as $role) {
             $name = (string)$role->Name;
             if ($name === '' || isset($seenGroup[strtolower($name)])) {
-                Log::comment("DATA LOSS! Role skipped for duplicate or reserved group name: $name");
+                Log::comment("! DATA LOSS: Role skipped for duplicate or reserved group name: $name");
                 continue;
             }
             $seenGroup[strtolower($name)] = true;

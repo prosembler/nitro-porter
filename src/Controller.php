@@ -86,7 +86,14 @@ class Controller
             $source->disableDiscussionBody();
             $target->disableDiscussionBody();
         }
-        Log::comment("? 'Use Discussion Body' = " . ($target->useDiscussionBody() ? 'On' : 'Off'));
+        $explainer = 'Off: Left empty to optimize performance';
+        if ($target->useDiscussionBody()) {
+            $explainer = 'On: Used by ' . (($source::getFlag('hasDiscussionBody')) ?
+                (($target::getFlag('hasDiscussionBody')) ? 'both packages' :
+                    'Source only (expect slower comments import)') :
+                    'Target only (expect slower comments export)');
+        }
+        Log::comment("? PORT_Discussion.Body = " . $explainer . "\n");
 
         // Evaluate if both packages have file transfer support and sync them.
         if (
@@ -116,12 +123,12 @@ class Controller
         $targetPrefix = $request->getOutputTablePrefix();
 
         // Report request.
-        Log::comment("NITRO PORTER RUNNING...");
-        Log::comment("Porting " . $sourceName . " to " . $targetName);
-        Log::comment("Input: " . $inputName . ' (' . (empty($sourcePrefix) ? 'no prefix' : $sourcePrefix) . ')');
-        Log::comment("Porter: " . $porterName . ' (PORT_)');
-        Log::comment("Output: " . $outputName . ' (' . (empty($targetPrefix) ? 'no prefix' : $targetPrefix) . ')');
-        Log::comment("\n" . sprintf('[ STARTED at %s ]', date('H:i:s e')) . "\n");
+        Log::comment("NITRO PORTER STARTED at " . date('H:i:s e'));
+        Log::comment("Porting from " . $sourceName . " to " . $targetName);
+        Log::comment("Data flow: " .
+            $inputName . '.' . (empty($sourcePrefix) ? '' : $sourcePrefix) . '*' . " -> " .
+            $porterName . '.PORT_*' . " -> " .
+            $outputName . '.' . (empty($targetPrefix) ? '' : $targetPrefix) . '*');
 
         // Build artifacts.
         $inputStorage = Factory::storage($inputName, $sourcePrefix);
@@ -144,13 +151,13 @@ class Controller
         $this->doFileTransfer($fileTransfer);
 
         // Report finished.
+        Log::comment('! Porter never migrates user permissions. Remember to reset permissions.');
+        Log::comment('! You may delete `PORT_` database tables if not needed for troubleshooting.');
         Log::comment("\n" . sprintf(
             '[ FINISHED at %s after running for %s ]',
             date('H:i:s e'),
             Log::formatElapsed(microtime(true) - $start)
-        ));
-        Log::comment("[ After testing, you may delete any `PORT_` database tables. ]");
-        Log::comment('[ Porter never migrates user permissions! Reset user permissions afterward. ]' . "\n\n");
+        ) . "\n\n");
     }
 
     /**

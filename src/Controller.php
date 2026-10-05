@@ -83,10 +83,10 @@ class Controller
             $source::getFlag('hasDiscussionBody') === false &&
             $target::getFlag('hasDiscussionBody') === false
         ) {
-            $source->skipDiscussionBody();
-            $target->skipDiscussionBody();
+            $source->disableDiscussionBody();
+            $target->disableDiscussionBody();
         }
-        Log::comment("? 'Use Discussion Body' = " . ($target->getDiscussionBodyMode() ? 'On' : 'Off'));
+        Log::comment("? 'Use Discussion Body' = " . ($target->useDiscussionBody() ? 'On' : 'Off'));
 
         // Evaluate if both packages have file transfer support and sync them.
         if (

@@ -279,7 +279,7 @@ class NodeBbTargetTest extends TestCase
         // Deliberately no enableFileTransfer(): a Vanilla source has none, and attachments must
         // migrate anyway. The one test that needs a mapping runs filemap() itself.
         if (!$useDiscussionBody) {
-            $target->skipDiscussionBody();
+            $target->disableDiscussionBody();
         }
 
         // Buffered because Log::comment() echoes its progress, which PHPUnit counts as risky.

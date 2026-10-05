@@ -111,7 +111,7 @@ class AspPlayground extends Source
 
         // Avoid adding OP redundantly.
         $skipOP = '';
-        if ($this->getDiscussionBodyMode()) {
+        if ($this->useDiscussionBody()) {
             $skipOP = "where parent != 0";
         }
         $this->export(

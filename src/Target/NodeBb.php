@@ -194,7 +194,7 @@ class NodeBb extends Target
      */
     protected function opPid(int $discussionID): int
     {
-        if (!$this->getDiscussionBodyMode()) {
+        if (!$this->useDiscussionBody()) {
             $mainPid = $this->mainPids()[$discussionID] ?? 0;
             return $mainPid ? $this->pid($mainPid) : 0;
         }
@@ -218,7 +218,7 @@ class NodeBb extends Target
      */
     protected function topicsHaveFirstPost(): void
     {
-        if ($this->getDiscussionBodyMode()) {
+        if ($this->useDiscussionBody()) {
             return; // The body is on the discussion record, so every topic has one.
         }
         // Joined rather than `whereNotIn(...)`: that binds a placeholder per discussion and MySQL
@@ -467,11 +467,11 @@ class NodeBb extends Target
      * With 'Use Discussion Body' on, the OP is `Discussion.Body`, synthesized as a post.
      * With it off the OP is already a `Comment` row, so just point `mainPid` at it and let
      * comments() write it.
-     * @see Package::getDiscussionBodyMode()
+     * @see Package::useDiscussionBody()
      */
     protected function discussions(): void
     {
-        $useBody = $this->getDiscussionBodyMode();
+        $useBody = $this->useDiscussionBody();
         // Resolve before the first chunk: both are memoized & used inside the loop.
         $mainPids = $useBody ? [] : $this->mainPids();
         $this->attachmentsByPid(); // Primed here; writePost() appends the links.
@@ -554,7 +554,7 @@ class NodeBb extends Target
         // Resolve before opening the cursor: the porter connection is unbuffered,
         // so no other query may run while a cursor is active.
         $this->pidOffset();
-        $useBody = $this->getDiscussionBodyMode();
+        $useBody = $this->useDiscussionBody();
         $mainPids = $useBody ? [] : $this->mainPids();
         $this->attachmentsByPid(); // Primed here; writePost() appends the links.
         // Chunk rather than cursor: a single cursor over every comment grows the heap past the
@@ -820,7 +820,7 @@ class NodeBb extends Target
      */
     protected function firstPostCount(): int
     {
-        return $this->getDiscussionBodyMode() ? 1 : 0;
+        return $this->useDiscussionBody() ? 1 : 0;
     }
 
     /**
@@ -975,7 +975,7 @@ class NodeBb extends Target
 
         return max(
             $maxComment ? $this->pid($maxComment) : 0,
-            $this->getDiscussionBodyMode() ? $this->offset('pid') + $maxDiscussion : 0,
+            $this->useDiscussionBody() ? $this->offset('pid') + $maxDiscussion : 0,
             $this->offset('pid')
         );
     }
@@ -1150,7 +1150,7 @@ class NodeBb extends Target
     protected function pidOffset(): int
     {
         if ($this->pidOffset === null) {
-            $this->pidOffset = $this->offset('pid') + ($this->getDiscussionBodyMode()
+            $this->pidOffset = $this->offset('pid') + ($this->useDiscussionBody()
                 ? (int)$this->porterQB()->from('Discussion')->max('DiscussionID')
                 : 0);
         }

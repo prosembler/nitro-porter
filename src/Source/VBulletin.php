@@ -939,7 +939,7 @@ class VBulletin extends Source
     {
         $excludeFirstPost = '';
         $joinThreads = '';
-        if ($this->getDiscussionBodyMode()) {
+        if ($this->useDiscussionBody()) {
             // Don't export the OP, it would be redundant.
             $excludeFirstPost = 'p.postid <> t.firstpostid and';
             $joinThreads = 'inner join :_thread as t on p.threadid = t.threadid';

@@ -106,7 +106,7 @@ class Flarum extends Source
         // Put the OP in the body.
         $getBody = '';
         $joinPosts = '';
-        if ($this->getDiscussionBodyMode()) {
+        if ($this->useDiscussionBody()) {
             $getBody = 'p.content as Body,';
             $joinPosts = 'join :_posts p on p.id = d.first_post_id';
         }
@@ -151,7 +151,7 @@ class Flarum extends Source
 
         // Skip the OP.
         $skipOP = '';
-        if ($this->getDiscussionBodyMode()) {
+        if ($this->useDiscussionBody()) {
             $skipOP = 'and `number` > 1';
         }
         $this->export(

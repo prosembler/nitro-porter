@@ -42,10 +42,10 @@ abstract class Package
      *
      * Do not change this default in child Sources.
      * Use `'hasDiscussionBody' => false` in FLAGS to declare your Source can skip this step.
-     * @see Source::getDiscussionBodyMode()
-     * @see Source::skipDiscussionBody()
+     * @see Source::useDiscussionBody()
+     * @see Source::disableDiscussionBody()
      */
-    protected bool $useDiscussionBody = true;
+    protected bool $hasDiscussionBody = true;
 
     protected bool $transferFiles = false;
 
@@ -182,17 +182,17 @@ abstract class Package
     /**
      * Whether to connect the OP to the discussion record.
      */
-    public function getDiscussionBodyMode(): bool
+    public function useDiscussionBody(): bool
     {
-        return $this->useDiscussionBody;
+        return $this->hasDiscussionBody;
     }
 
     /**
      * Set `useDiscussionBody` to false.
      */
-    public function skipDiscussionBody(): void
+    public function disableDiscussionBody(): void
     {
-        $this->useDiscussionBody = false;
+        $this->hasDiscussionBody = false;
     }
 
     /**

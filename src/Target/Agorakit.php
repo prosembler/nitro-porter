@@ -7,6 +7,8 @@
 namespace Porter\Target;
 
 use Porter\Component;
+use Porter\Config;
+use Porter\Formatter;
 use Porter\Log;
 use Porter\Target;
 use Porter\Transformation;
@@ -56,36 +58,45 @@ class Agorakit extends Target
                     'Password' => 'password',
                     'Confirmed' => 'verified',
                     'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
                     'Admin' => 'admin',
+                    'verified=1',
                 ],
-                filters: [],
+                filters: [
+                    'DateInserted' => \Porter\Filter\EmptyToDate::class,
+                    'DateUpdated' => \Porter\Filter\EmptyToDate::class,
+                ],
             )
         ]);
     }
 
-    /** 'Groups' in Agorakit. */
+    /** Create 1 imported group in Agorakit. */
     protected function roles(): Component
     {
+        Log::comment('Agorakit lacks roles separate from group memberships and therefore roles do not migrate.');
+        $id = Config::getInstance()->getOffset('roles') + 1;
         return new Component([
             new Transformation(
                 outputSchemaName: 'groups',
-                data: 'Role',
-                map: [
-                    'RoleID' => ['id', 'slug'],
-                    'Name' => 'name',
-                    'Description' => 'body',
-                    // 'group_type', 'settings', 'status', 'color', 'user_id', 'location', 'latitude', 'longitude',
+                data: [
+                    [
+                        'id' => $id,
+                        'slug' => 'imported',
+                        'name' => 'Imported',
+                        'body' => 'Imported to Agorakit by Nitro Porter',
+                        'status' => 0,
+                        'created_at' => gmdate('Y-m-d H:i:s'), // Agorakit currently crashes without this.
+                        'uodated_at' => gmdate('Y-m-d H:i:s'), // Agorakit currently crashes without this.
+                    ]
                 ],
-                filters: [],
             ),
             new Transformation(
                 outputSchemaName: 'membership',
-                data: 'UserRole',
+                data: 'User',
                 map: [
                     'UserID' => 'user_id',
-                    'RoleID' => 'group_id',
+                    'group_id=' . $id,
                 ],
-                filters: [],
             )
         ]);
     }
@@ -113,6 +124,7 @@ class Agorakit extends Target
 
     protected function discussions(): Component
     {
+        $id = Config::getInstance()->getOffset('roles') + 1;
         return new Component([
             new Transformation(
                 outputSchemaName: 'discussions',
@@ -120,7 +132,7 @@ class Agorakit extends Target
                 map: [
                     'DiscussionID' => 'id',
                     'InsertUserID' => 'user_id',
-                    'CategoryID' => 'group_id',
+                    'group_id=' . $id,
                     'Name' => 'name',
                     'Body' => 'body',
                     'DateInserted' => 'created_at',
@@ -128,17 +140,20 @@ class Agorakit extends Target
                     'CountComments' => 'total_comments',
                     //'Announce'/'Closed' => 'status',
                 ],
-                filters: [],
+                filters: [
+                    'DateInserted' => \Porter\Filter\EmptyToDate::class,
+                    'DateUpdated' => \Porter\Filter\EmptyToDate::class,
+                    'Body' => \Porter\Filter\FormatToHtml::class,
+                ],
             )
         ]);
     }
 
-    /** 'Posts' in Agorakit. */
     protected function comments(): Component
     {
         return new Component([
             new Transformation(
-                outputSchemaName: 'posts',
+                outputSchemaName: 'comments',
                 data: 'Comment',
                 map: [
                     'CommentID' => 'id',
@@ -148,7 +163,9 @@ class Agorakit extends Target
                     'DateUpdated' => 'updated_at',
                     'Body' => 'body'
                 ],
-                filters: [],
+                filters: [
+                    'Body' => \Porter\Filter\FormatToHtml::class,
+                ],
             )
         ]);
     }
@@ -173,7 +190,6 @@ class Agorakit extends Target
                     'Name' => 'type', // Expects /images/reactions/{filename}.png.
                     'DateInserted' => 'created_at',
                 ],
-                filters: [],
             )
         ]);
     }
@@ -181,6 +197,7 @@ class Agorakit extends Target
     /** 'Files' in Agorakit. */
     protected function attachments(): Component
     {
+        $id = Config::getInstance()->getOffset('roles') + 1;
         return new Component([
             new Transformation(
                 outputSchemaName: 'files',
@@ -196,9 +213,8 @@ class Agorakit extends Target
                     'Type' => 'mime',
                     'Path' => 'path',
                     //'Active' => 'status', // filter required?
-                    'group_id=1', // @todo Requires a double join in data or derive in cleanup.
+                    'group_id=' . $id,
                 ],
-                filters: [],
             )
         ]);
     }

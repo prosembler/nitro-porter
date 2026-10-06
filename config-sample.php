@@ -6,9 +6,9 @@ return [
     'source' => '',
     'target' => '',
 
-    // Relational database table prefixes (leave blank for package default; not used for non-relational storage).
-    'source_prefix' => '',
-    'target_prefix' => '',
+    // Relational database table prefixes (leave 'default' to use package default; not used for non-relational storage).
+    'source_prefix' => 'default',
+    'target_prefix' => 'default',
 
     // Paths to local install folders (optional, for files that need renaming).
     // If it's not installed locally, you can still mock its file structure for media file storage.
@@ -95,6 +95,21 @@ return [
             'database' => 'nodebb',
             'username' => '',
             'password' => '',
+        ],
+        [
+            // Example test connection.
+            'alias' => 'test',
+            'type' => 'database',
+            'driver' => 'mysql',
+            'host' => 'localhost',
+            'port' => '3306',
+            'database' => 'some_test_database', // set to 'porter' to run tests in Docker database.
+            'username' => 'porter',
+            'password' => 'porter',
+            'charset' => 'utf8mb4',
+            'options' => [
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => false,
+            ],
         ],
     ],
 

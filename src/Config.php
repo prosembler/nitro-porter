@@ -90,6 +90,23 @@ class Config
     }
 
     /**
+     * Check config for a prefix, defaulting to the prefix set in the Target or Source class's INFO.
+     */
+    public function getPrefix(string $type, string $name): ?string
+    {
+        if (!in_array($type, ['source', 'target'])) {
+            exit('Invalid prefix search type.');
+        }
+
+        $i = $this->get($type . '_prefix');
+        if (!empty($name) && $i === 'default') {
+            $class = "\Porter\\" . ucfirst($type) . "\\" . ucwords($name);
+            $i = is_callable($class . '::getPrefix') ? call_user_func($class . '::getPrefix') : null;
+        }
+        return $i;
+    }
+
+    /**
      * Get the configured offset value for starting IDs per key.
      */
     public function getOffset(string $name): int
@@ -113,7 +130,8 @@ class Config
     public function getTestConnection(): array
     {
         if (!isset($this->config['test_alias'])) {
-            trigger_error('Config must include `test_alias` key to run tests.');
+            Log::comment('Config must include `test_alias` key to run integration tests.');
+            exit();
         }
         return $this->getConnectionAlias($this->config['test_alias']);
     }

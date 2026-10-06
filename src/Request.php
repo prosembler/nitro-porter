@@ -52,18 +52,9 @@ final readonly class Request
         $this->outputStorage = $outputStorage ?? Config::getInstance()->get('output_alias');
         // `PORT_` intermediary MUST be relational; fallback to the output storage.
         $this->porterStorage = $porterStorage ?? Config::getInstance()->get('porter_alias') ?: $this->outputStorage;
-
         // Table prefixes: CLI > Config > Package defaults
-        $i = $inputTablePrefix ?? Config::getInstance()->get('source_prefix');
-        if (!empty($this->sourceName) && empty($i)) {
-            $i = Factory::source($this->sourceName)->getPrefix();
-        }
-        $this->inputTablePrefix = $i;
-        $o = $outputTablePrefix ?? Config::getInstance()->get('target_prefix');
-        if (!empty($this->targetName) && empty($o)) {
-            $o = Factory::target($this->targetName)->getPrefix();
-        }
-        $this->outputTablePrefix = $o;
+        $this->inputTablePrefix = $inputTablePrefix ?? Config::getInstance()->getPrefix('source', $this->sourceName);
+        $this->outputTablePrefix = $outputTablePrefix ?? Config::getInstance()->getPrefix('target', $this->targetName);
 
         // Debug settings.
         if (!empty($components)) { /** @see /manifest.php $components */
@@ -114,13 +105,13 @@ final readonly class Request
         return $this->porterStorage;
     }
 
-    public function getInputTablePrefix(): ?string
+    public function getInputTablePrefix(): string
     {
-        return $this->inputTablePrefix;
+        return $this->inputTablePrefix ?? '';
     }
 
-    public function getOutputTablePrefix(): ?string
+    public function getOutputTablePrefix(): string
     {
-        return $this->outputTablePrefix;
+        return $this->outputTablePrefix ?? '';
     }
 }

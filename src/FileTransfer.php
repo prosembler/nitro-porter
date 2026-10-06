@@ -25,43 +25,40 @@ class FileTransfer
 
     /**
      * Determine whether we can initiate a file transfer.
-     *
-     * @return bool
      */
     protected function evaluateSupport(Source $source, Target $target): bool
     {
         $support = true;
-
-        // Valid source root.
-        $sourceRoot = Config::getInstance()->get('source_root');
-        if (empty($sourceRoot)) {
-            Log::comment("? File Transfer = Off: source_root not set in config.");
-            $support = false;
-        } elseif (!file_exists($sourceRoot)) {
-            Log::comment("? File Transfer = Off: source_root '{$sourceRoot}' does not exist.");
-            $support = false;
-        }
+        $reasons = [];
 
         // Source support.
+        $sourceRoot = Config::getInstance()->get('source_root');
         if (!$source->getFlag('fileTransferSupport')) {
-            Log::comment("? File Transfer = Off: Source package has no support.");
+            $reasons[] = "Source package lacks support";
             $support = false;
-        }
-
-        // Valid target root.
-        $targetRoot = Config::getInstance()->get('target_root');
-        if (empty($targetRoot)) {
-            Log::comment("? File Transfer = Off: target_root not set in config.");
+        } elseif (empty($sourceRoot)) {  // Any source root.
+            $reasons[] = "source_root not set in config";
             $support = false;
-        } elseif (!file_exists($targetRoot)) {
-            Log::comment("? File Transfer = Off: target_root '{$targetRoot}' does not exist.");
+        } elseif (!file_exists($sourceRoot)) { // Valid source root.
+            $reasons[] = "source_root '{$sourceRoot}' does not exist";
             $support = false;
         }
 
         // Target support.
+        $targetRoot = Config::getInstance()->get('target_root');
         if (!$target->getFlag('fileTransferSupport')) {
-            Log::comment("? File Transfer = Off: Target package has no support.");
+            $reasons[] = "Target package lack support";
             $support = false;
+        } elseif (empty($targetRoot)) { // Any target root.
+            $reasons[] = "target_root not set in config";
+            $support = false;
+        } elseif (!file_exists($targetRoot)) { // Valid target root.
+            $reasons[] = "target_root '{$targetRoot}' does not exist";
+            $support = false;
+        }
+
+        if (false === $support) {
+            Log::comment("? File Transfer = Off: " . implode(' and ', $reasons) . ".");
         }
 
         return $support;

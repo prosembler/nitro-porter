@@ -66,9 +66,6 @@ abstract class Source extends Package
     /** @var array Table structures that define the format of the intermediary export tables. */
     protected array $porterStructure = [];
 
-    /** @var array Table names to limit the export to. Full export is an empty array. */
-    public array $limitedTables = [];
-
     /**
      * @var DbFactory Instance DbFactory
      * @deprecated

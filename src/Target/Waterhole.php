@@ -164,7 +164,7 @@ class Waterhole extends Target
     {
         return new Component([
             new Transformation(
-                outputSchemaName: 'Comment',
+                outputSchemaName: 'comments',
                 data: 'Comment',
                 map: [
                     'CommentID' => 'id',

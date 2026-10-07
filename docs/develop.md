@@ -94,21 +94,25 @@ For all others, check if the table exists before using it.
 
 Generally tables come in bundles. For instance, there's little use for `PORT_Role` if `PORT_UserRole` is not also present. Checking for one is usually sufficient.
 
-## Writing integration tests
+## Testing strategy
 
-### Create a schema migration
+Nitro Porter's automated tests attempt to validate:
 
-Refer to the [Phinx docs](https://book.cakephp.org/phinx/0/en/index.html) for creating schema migrations for integration tests.
+1. Each Source package can run without error using a provided Source schema and Porter schema.
+2. Each Target package can run without error using data seeded into the Porter schema AND produce valid output.
 
-To create a schema migration from an existing database (rather than hand-coding it from scratch), you need to also use Cake.
-(This works because Phinx is a spin-off project from Cake, so the framework creates compatible migrations in this scenario.)
+This purposefully creates a higher bar for Targets than Sources, because while Sources simply need to export what they can, the Target is intended to create stored data compatible with an application.
 
-1. Create a new Cake project: `composer create-project --prefer-dist cakephp/app:~4.0 some_folder`
-1. Add the database creds in: `path_to/some_folder/config/app_local.php`
-1. Run a Cake snapshot: `path_to/some_folder/bin/cake bake migration_snapshot SomeName`
-1. Copy the new file created in `path_to/some_folder/config/Migrations` to Porter's test folder structure in `tests/integration/migrations/{PackageName}`.
+### Defining schemas and requirements for tests
 
-From there, you can edit it and refer to it like other integration tests.
+For all Sources & Targets powered by a relational database, add a file `schema/{Name}.php` that contains an array defining the platform's database schema.
+It does NOT need to be a complete schema. It MUST contain all tables & columns required in any Source or Target for the platform.
+For Targets, this is ALSO the schema that will auto-generate if Porter is pointed at an empty output database (versus a pre-installed application's existing database).
+
+To test OPTIONAL schema (e.g. a plugin is enabled that creates optional tables or columns), put the COMPLETE schema in the above file.
+Then, add a list of MINIMUM required tables & columns in `schema/min/{Name}.php`.
+If you list a TABLE with NO columns, it will require ALL columns from the schema.
+Tests will now run for both "minimum" and "complete" schemas for the source.
 
 ## Working with database connections
 

@@ -1,0 +1,41 @@
+/* Feature table */
+table.Features td {
+    padding: 2px 12px;
+    border-right: 1px dashed #E2F4FF;
+    border-bottom: 1px solid #E2F4FF;
+}
+.Platform {
+    text-align: left;
+    min-width: 180px;
+}
+.No {
+    color: #A17E61;
+    font-size: 50%;
+}
+.Yes {
+    color: darkgreen;
+    text-shadow: 0px 1px #555;
+    font-weight: bold;
+}
+
+/* Feature table column headings */
+th.FeatureName {
+    /* Something you can count on */
+    height: 100px;
+    white-space: nowrap;
+    font-weight: normal;
+}
+th.FeatureName > div {
+    transform:
+        /* Magic Numbers */
+        translate(25px, 51px)
+            /* 45 is really 360 - 45 */
+        rotate(315deg);
+    width: 30px;
+    margin-left: -20px;
+    margin-top: -25px;
+}
+th.FeatureName > div > span {
+    /*border-bottom: 1px dashed #E2F4FF;
+    padding: 3px 0px 5px;*/
+}

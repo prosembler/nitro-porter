@@ -1,5 +1,7 @@
 <?php
 
+/** Defines database schema for Source\Discord and Origin\Discord. */
+
 return [
     'users' => [
         'new_id' => 'increments',

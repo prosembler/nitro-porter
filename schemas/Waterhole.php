@@ -1,5 +1,7 @@
 <?php
 
+/** Defines database schema for Target\Waterhole. */
+
 return [
     'comments' => [
         'id' => 'bigint',

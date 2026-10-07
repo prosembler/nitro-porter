@@ -1,5 +1,7 @@
 <?php
 
+/** Defines database schema for Target\Discourse. */
+
 return [
     'users' => [
         'id' => 'int4',

@@ -1,12 +1,7 @@
 <?php
 
-/**
- *
- */
+/** Defines schema for the intermediary data map. */
 
-/**
- * Defines acceptable data fields for the intermediary data map.
- */
 return [
     'Activity' => [
         'ActivityID' => 'int',
@@ -23,7 +18,6 @@ return [
         'RecordID' => 'int',
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
-        //'InsertIPAddress' => 'varbinary',
         'DateUpdated' => 'datetime',
         'Notified' => 'tinyint',
         'Emailed' => 'tinyint',
@@ -36,7 +30,6 @@ return [
         'Format' => 'varchar(20)',
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
-        //'InsertIPAddress' => 'varchar(100)'
     ],
     'ActivityType' => [
         'ActivityTypeID' => 'int',
@@ -49,11 +42,6 @@ return [
         'Notify' => 'tinyint',
         'Public' => 'tinyint'
     ],
-    /*'AnalyticsLocal' => array(
-        'TimeSlot' => 'varchar(8)',
-        'Views' => 'int',
-        'EmbedViews' => 'int'
-    ),*/
     'Attachment' => [
         'AttachmentID' => 'int',
         'Type' => 'varchar(64)',
@@ -65,7 +53,6 @@ return [
         'Attributes' => 'text',
         'DateInserted' => 'datetime',
         'InsertUserID' => 'int',
-        //'InsertIPAddress' => 'varchar(100)',
         'DateUpdated' => 'datetime',
         'UpdateUserID' => 'int',
         'UpdateIPAddress' => 'varchar(100)'
@@ -92,20 +79,6 @@ return [
         'Level' => 'smallint',
         'Attributes' => 'text'
     ],
-    /*'Ban' => array(
-        'BanID' => 'int',
-        //'BanType' => array('IPAddress','Name','Email'),
-        'BanValue' => 'varchar(50)',
-        'Notes' => 'varchar(255)',
-        'CountUsers' => 'int',
-        'CountBlockedRegistrations' => 'int',
-        'InsertUserID' => 'int',
-        'DateInserted' => 'datetime',
-        'InsertIPAddress' => 'varchar(100)',
-        'UpdateUserID' => 'int',
-        'DateUpdated' => 'datetime',
-        'UpdateIPAddress' => 'varchar(100)'
-    ),*/
     'Category' => [
         'CategoryID' => 'int',
         'ParentCategoryID' => 'int',
@@ -154,8 +127,6 @@ return [
         'DateInserted' => 'datetime',
         'DateDeleted' => 'datetime',
         'DateUpdated' => 'datetime',
-        //'InsertIPAddress' => 'varbinary',
-        //'UpdateIPAddress' => 'varbinary',
         'Flag' => 'tinyint',
         'Score' => 'float',
         'Attributes' => 'text', // Vanilla serialized Reactions here for point-in-time reference. See: UserTag.
@@ -170,7 +141,6 @@ return [
         'FirstMessageID' => 'int',
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
-        //'InsertIPAddress' => 'varbinary',
         'UpdateUserID' => 'int',
         'DateUpdated' => 'datetime',
         'UpdateIPAddress' => 'varbinary',
@@ -186,7 +156,6 @@ return [
         'Format' => 'varchar(20)',
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
-        //'InsertIPAddress' => 'varbinary'
     ],
     'Discussion' => [
         'DiscussionID' => 'int',
@@ -210,8 +179,6 @@ return [
         'Sink' => 'tinyint',
         'DateInserted' => 'datetime',
         'DateUpdated' => 'datetime',
-        //'InsertIPAddress' => 'varbinary',
-        //'UpdateIPAddress' => 'varbinary',
         'DateLastComment' => 'datetime',
         'LastCommentUserID' => 'int',
         'Score' => 'float',
@@ -220,22 +187,6 @@ return [
         'GroupID' => 'int',
         'QnA' => 'varchar(255)', // 'Accepted', 'Answered', 'Rejected', 'Unanswered',
     ],
-    /*'Draft' => array(
-        'DraftID' => 'int',
-        'DiscussionID' => 'int',
-        'CategoryID' => 'int',
-        'InsertUserID' => 'int',
-        'UpdateUserID' => 'int',
-        'Name' => 'varchar(100)',
-        'Tags' => 'varchar(255)',
-        'Closed' => 'tinyint',
-        'Announce' => 'tinyint',
-        'Sink' => 'tinyint',
-        'Body' => 'text',
-        'Format' => 'varchar(20)',
-        'DateInserted' => 'datetime',
-        'DateUpdated' => 'datetime'
-    ),*/
     'Emoji' => [
         'EmojiID' => 'int',
         'Name' => 'varchar(100)',
@@ -282,28 +233,6 @@ return [
         'UpdateUserID' => 'int',
         'Attributes' => 'text'
     ],
-    'GroupApplicant' => [
-        'GroupApplicantID' => 'int',
-        'GroupID' => 'int',
-        'UserID' => 'int',
-        'Type' => 'varchar(255)', // 'Application', 'Invitation', 'Denied', 'Banned'
-        'Reason' => 'varchar(200)',
-        'DateInserted' => 'datetime',
-        'InsertUserID' => 'int',
-        'DateUpdated' => 'datetime',
-        'UpdateUserID' => 'int'
-    ],
-    /*'Invitation' => array(
-        'InvitationID' => 'int',
-        'Email' => 'varchar(200)',
-        'Name' => 'varchar(50)',
-        'RoleIDs' => 'text',
-        'Code' => 'varchar(50)',
-        'InsertUserID' => 'int',
-        'DateInserted' => 'datetime',
-        'AcceptedUserID' => 'int',
-        'DateExpires' => 'datetime'
-    ),*/
     'Log' => [
         'LogID' => 'int',
         //'Operation' => array('Delete','Edit','Spam','Moderate','Pending','Ban','Error'),
@@ -313,10 +242,8 @@ return [
         'RecordID' => 'int',
         'RecordUserID' => 'int',
         'RecordDate' => 'datetime',
-        //'RecordIPAddress' => 'varbinary',
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
-        //'InsertIPAddress' => 'varbinary',
         'OtherUserIDs' => 'varchar(255)',
         'DateUpdated' => 'datetime',
         'ParentRecordID' => 'int',
@@ -346,21 +273,6 @@ return [
         'TargetFullPath' => 'varchar(255)',
         'TargetThumbFullPath' => 'varchar(255)',
     ],
-    /*'Message' => array( // Static text boxes, not what you think.
-        'MessageID' => 'int',
-        'Content' => 'text',
-        'Format' => 'varchar(20)',
-        'AllowDismiss' => 'tinyint',
-        'Enabled' => 'tinyint',
-        'Application' => 'varchar(255)',
-        'Controller' => 'varchar(255)',
-        'Method' => 'varchar(255)',
-        'CategoryID' => 'int',
-        'IncludeSubcategories' => 'tinyint',
-        'AssetTarget' => 'varchar(20)',
-        'CssClass' => 'varchar(20)',
-        'Sort' => 'int'
-    ),*/
     'Poll' => [
         'PollID' => 'int',
         'Name' => 'text',
@@ -472,7 +384,6 @@ return [
         'About' => 'text',
         'Email' => 'varchar(200)',
         'ShowEmail' => 'tinyint',
-        //'Gender' => array('u','m','f'),
         'CountVisits' => 'int',
         'CountInvitations' => 'int',
         'CountNotifications' => 'int',
@@ -480,18 +391,13 @@ return [
         'InviteUserID' => 'int',
         'DiscoveryText' => 'text',
         'Preferences' => 'text',
-        //'Permissions' => 'text',
         'Attributes' => 'text',
         'DateSetInvitations' => 'datetime',
         'DateOfBirth' => 'datetime',
         'DateFirstVisit' => 'datetime',
         'DateLastActive' => 'datetime',
-        'LastIPAddress' => 'varbinary',
-        //'AllIPAddresses' => 'varchar(100)',
         'DateInserted' => 'datetime',
-        //'InsertIPAddress' => 'varbinary',
         'DateUpdated' => 'datetime',
-        //'UpdateIPAddress' => 'varbinary',
         'HourOffset' => 'int',
         'Score' => 'float',
         'Admin' => 'tinyint',
@@ -514,28 +420,6 @@ return [
         'TargetAvatarFullPath' => 'varchar(255)',
         'TargetAvatarThumbFullPath' => 'varchar(255)',
     ],
-    /*'UserAuthentication' => array(
-        'ForeignUserKey' => 'varchar(255)',
-        'ProviderKey' => 'varchar(64)',
-        'UserID' => 'int'
-    ),
-    'UserAuthenticationProvider' => array(
-        'AuthenticationKey' => 'varchar(64)',
-        'AuthenticationSchemeAlias' => 'varchar(32)',
-        'Name' => 'varchar(50)',
-        'URL' => 'varchar(255)',
-        'AssociationSecret' => 'text',
-        'AssociationHashMethod' => 'varchar(20)',
-        'AuthenticateUrl' => 'varchar(255)',
-        'RegisterUrl' => 'varchar(255)',
-        'SignInUrl' => 'varchar(255)',
-        'SignOutUrl' => 'varchar(255)',
-        'PasswordUrl' => 'varchar(255)',
-        'ProfileUrl' => 'varchar(255)',
-        'Attributes' => 'text',
-        'Active' => 'tinyint',
-        'IsDefault' => 'tinyint'
-    ),*/
     'UserBadge' => [
         'UserID' => 'int',
         'BadgeID' => 'int',
@@ -615,10 +499,8 @@ return [
         'RecordID' => 'int',
         'InsertUserID' => 'int',
         'DateInserted' => 'datetime',
-        //'InsertIPAddress' => 'varbinary',
         'UpdateUserID' => 'int',
         'DateUpdated' => 'datetime',
-        //'UpdateIPAddress' => 'varbinary',
         'Attributes' => 'text'
     ],
     'UserPoints' => [

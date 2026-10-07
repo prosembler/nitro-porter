@@ -1,0 +1,127 @@
+<?php
+
+/** Defines database schema for Source\PhpBb3. */
+
+return [
+    'users' => [
+        'user_id' => 'int',
+        'group_id' => 'int',
+        'username' => 'varchar(200)',
+        'user_password' => 'varchar(200)',
+        'user_email' => 'varchar(200)',
+        'user_timezone' => 'varchar(200)',
+        'user_posts' => 'int',
+        'user_regdate' => 'datetime',
+        'user_lastvisit' => 'datetime',
+        'user_avatar' => 'varchar(200)',
+        'user_avatar_type' => 'varchar(200)',
+        'user_sig' => 'text',
+        'user_sig_bbcode_uid' => 'varchar(200)',
+    ],
+    'groups' => [
+        'group_id' => 'int',
+        'group_name' => 'varchar(200)',
+        'group_desc' => 'text',
+    ],
+    'user_group' => [
+        'user_id' => 'int',
+        'group_id' => 'int',
+    ],
+    'forums' => [
+        'forum_id' => 'int',
+        'forum_name' => 'varchar(200)',
+        'forum_desc' => 'text',
+        'left_id' => 'int',
+        'parent_id' => 'int',
+    ],
+    'topics' => [
+        'topic_id' => 'int',
+        'forum_id' => 'int',
+        'topic_poster' => 'int',
+        'topic_title' => 'text',
+        'topic_views' => 'int',
+        'topic_first_post_id' => 'int',
+        'topic_status' => 'varchar(200)',
+        'topic_type' => 'varchar(200)',
+        'topic_time' => 'datetime',
+        'topic_last_post_time' => 'datetime',
+    ],
+    'posts' => [
+        'post_id' => 'int',
+        'topic_id' => 'int',
+        'post_text' => 'text',
+        'poster_id' => 'int',
+        'post_edit_user' => 'int',
+        'post_time' => 'datetime',
+        'post_edit_time' => 'datetime',
+    ],
+    'attachments' => [
+        'attach_id' => 'int',
+        'topic_id' => 'int',
+        'post_msg_id' => 'int',
+        'real_filename' => 'text',
+        'poster_id' => 'int',
+        'mimetype' => 'varchar(200)',
+        'filesize' => 'varchar(200)', // @todo ?
+        'filetime' => 'datetime',
+        'extension' => 'varchar(20)',
+        'physical_filename' => 'text',
+    ],
+    'privmsgs' => [
+        'msg_id' => 'int',
+        'author_id' => 'int',
+        'message_subject' => 'text',
+    ],
+    'privmsgs_to' => [
+        'msg_id' => 'int',
+        'author_id' => 'int',
+        'user_id' => 'int',
+    ],
+    'poll_options' => [
+        'poll_id' => 'int',
+        'poll_title' => 'varchar(200)',
+        'topic_id' => 'int',
+        'topic_time' => 'datetime',
+        'topic_poster' => 'int',
+        'poll_option_id' => 'int',
+    ],
+    'poll_votes' => [
+        'vote_user_id' => 'int',
+        'id' => 'int',
+        'poll_option_id' => 'int',
+        'topic_id' => 'int',
+    ],
+    'ranks' => [
+        'rank_id' => 'int',
+        'level' => 'varchar(200)',
+        'rank_title' => 'varchar(200)',
+        'rank_special' => 'text',
+        'rank_min' => 'text',
+    ],
+    'bookmarks' => [
+        'user_id' => 'int',
+        'topic_id' => 'int',
+    ],
+    'topics_track' => [
+        'forum_id' => 'int',
+        'topic_id' => 'int',
+        'user_id' => 'int',
+        'mark_time' => 'datetime',
+    ],
+    'config' => [
+        'config_name' => 'varchar(200)',
+        'config_value' => 'varchar(200)',
+    ],
+    'banlist' => [
+        'ban_userid' => 'int',
+    ],
+    'log' => [
+        'log_id' => 'int',
+        'user_id' => 'int',
+        'reportee_id' => 'int',
+        'log_ip' => 'varchar(200)',
+        'log_time' => 'datetime',
+        'log_operation' => 'varchar(200)',
+        'log_data' => 'text',
+    ],
+];

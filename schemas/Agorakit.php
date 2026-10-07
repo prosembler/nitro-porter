@@ -1,5 +1,7 @@
 <?php
 
+/** Defines database schema for Target\Agorakit. */
+
 return [
     'users' => [
         'id' => 'int',

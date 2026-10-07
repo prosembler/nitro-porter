@@ -1,12 +1,7 @@
 <?php
 
-/**
- *
- */
+/** Defines database schema for Source\Vanilla and Target\Vanilla. */
 
-/**
- * Defines acceptable data fields for the intermediary data map.
- */
 return [
     'Activity' => [
         'ActivityID' => 'int',

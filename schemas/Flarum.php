@@ -1,5 +1,7 @@
 <?php
 
+/** Defines database schema for Source\Flarum and Target\Flarum. */
+
 return [
     'users' => [
         'id' => 'int',

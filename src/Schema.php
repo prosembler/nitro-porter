@@ -54,12 +54,10 @@ class Schema
      */
     private static function diff(string $schemaName, ?string $tableName, array $schema): array
     {
-        $minPath = ROOT_DIR . '/schemas/min/' . $schemaName . '.php';
-        if (!file_exists($minPath)) {
+        $minList = self::loadMinList($schemaName);
+        if (empty($minList)) {
             return $schema;
         }
-
-        $minList = include($minPath);
 
         // Compare a single table schema.
         if (!empty($tableName)) {
@@ -77,6 +75,16 @@ class Schema
             }
         }
         return $schema;
+    }
+
+    public static function loadMinList(string $schemaName): array
+    {
+        $minPath = ROOT_DIR . '/schemas/min/' . $schemaName . '.php';
+        if (!file_exists($minPath)) {
+            return [];
+        }
+
+        return include($minPath);
     }
 
     /**

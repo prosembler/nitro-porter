@@ -153,7 +153,7 @@ class Agorakit extends Target
     {
         return new Component([
             new Transformation(
-                outputSchemaName: 'comments',
+                outputSchemaName: 'posts',
                 data: 'Comment',
                 map: [
                     'CommentID' => 'id',

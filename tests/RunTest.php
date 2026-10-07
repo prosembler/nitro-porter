@@ -1,5 +1,6 @@
 <?php
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Porter\Config;
 use Porter\Factory;
@@ -9,7 +10,7 @@ use Porter\Schema;
 
 class RunTest extends TestCase
 {
-    public const array NONSCHEMA_TARGETS = ['Discourse', 'NodeBb'];
+    public const array SKIP_TARGETS = ['Discourse', 'NodeBb'];
 
     public static function allPackageRuns(): Generator
     {
@@ -31,8 +32,11 @@ class RunTest extends TestCase
 
             // Run a request PER TARGET.
             foreach ($targets as $target) {
-                if (in_array($target, self::NONSCHEMA_TARGETS, true)) {
-                    continue; // Skip non-schema targets (Mongo).
+                if (in_array($target, self::SKIP_TARGETS, true)) {
+                    continue; // Skip non-MySQL targets for now.
+                }
+                if ($source === $target) {
+                    continue; // Skip self-imports, that's just silly.
                 }
                 yield [new Request(
                     sourcePackage: $source,
@@ -46,9 +50,12 @@ class RunTest extends TestCase
         }
     }
 
-    /** @dataProvider allPackageRuns */
+    #[DataProvider('allPackageRuns')]
     public function testRun(Request $request): void
     {
+        // Uncomment the next line to report each dry run combo.
+        //fwrite(STDERR, print_r($request->getSource() . '->' . $request->getTarget() . "\n", true));
+
         ob_start();
         try {
             new \Porter\Controller()->run($request);

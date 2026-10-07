@@ -4,35 +4,79 @@ namespace Porter;
 
 class Schema
 {
-    /** @var array|string[] Files with schema arrays in /schemas. */
-    public const array VALID_SCHEMAS = [
-        'Agorakit',
-        'Discord',
-        'Discourse',
-        'Flarum',
-        'Porter',
-        'Waterhole',
-    ];
+    public static function getValidSchemas(): array
+    {
+        return array_merge(Package::list('sources'), Package::list('targets'), ['Porter']);
+    }
 
     /**
-     * Retrieve an array from named file in `/schemas`.
+     * Retrieve an array-formatted schema from named file in `/schemas`.
+     *
+     * @param string $name Name of schema, optionally with dot syntax to also specify a table, ex: `Agorakit.users`.
+     * @param bool $min Whether to pull the *MVP* schema by removing table & columns not listed in `min` subfolder.
      */
-    public static function load(string $name): array
+    public static function load(string $name, bool $min = false): array
     {
         $namePieces = explode('.', $name);
         $schemaName = $namePieces[0];
         $tableName = $namePieces[1] ?? null;
+        $schemaPath = ROOT_DIR . '/schemas/' . $schemaName . '.php';
 
-        if (in_array($schemaName, self::VALID_SCHEMAS, true)) {
-            $src = ROOT_DIR . '/schemas/' . $schemaName . '.php';
-            if (empty($tableName)) {
-                return include($src);
-            }
-            // One table's schema.
-            $schema = include($src);
-            return $schema[$tableName];
+        if (!in_array($schemaName, self::getValidSchemas(), true)) {
+            //Log::comment('Invalid schema requested: ' . $schemaName);
+            return [];
         }
-        return [];
+
+        if (!file_exists($schemaPath)) {
+            //Log::comment('No schema found: ' . $schemaPath);
+            return [];
+        }
+
+        $schema = include($schemaPath);
+
+        if (!empty($tableName)) {
+            $schema = $schema[$tableName]; // One table's schema.
+        }
+
+        if ($min) {
+            $schema = self::diff($schemaName, $tableName, $schema);
+        }
+
+        return $schema; // Full table.
+    }
+
+    /**
+     * Get the values of $schema that are listed in the minimum requirements.
+     *
+     * Compares schema to a LIST of allowed tables & column names (ex: `[tableName => [colName, colName]]`),
+     *    not a complete schema (ex: `[tableName => [colName => colType]]`).
+     * This is why you need array_flip() before using array_intersect_key() between them.
+     */
+    private static function diff(string $schemaName, ?string $tableName, array $schema): array
+    {
+        $minPath = ROOT_DIR . '/schemas/min/' . $schemaName . '.php';
+        if (!file_exists($minPath)) {
+            return $schema;
+        }
+
+        $minList = include($minPath);
+
+        // Compare a single table schema.
+        if (!empty($tableName)) {
+            if (isset($minList[$tableName])) {
+                return array_intersect_key($schema, array_flip($minList[$tableName]));
+            }
+            return $schema;
+        }
+
+        // Compare all tables.
+        $schema = array_intersect_key($schema, $minList);
+        foreach ($schema as $tableName => $columns) {
+            if (!empty($minList[$tableName])) { // Empty = use full table.
+                $schema[$tableName] = array_intersect_key($columns, array_flip($minList[$tableName]));
+            }
+        }
+        return $schema;
     }
 
     /**

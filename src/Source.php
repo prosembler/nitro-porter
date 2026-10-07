@@ -78,6 +78,10 @@ abstract class Source extends Package
         public string $packageName = '',
     ) {
         $this->porterStructure = Schema::load('Porter');
+        // Auto-load minimal schema required if not defined locally & it exists.
+        if (empty($this->sourceTables)) {
+            $this->sourceTables = Schema::loadMinList($packageName);
+        }
     }
 
     public function sourceQB(): Builder

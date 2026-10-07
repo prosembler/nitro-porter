@@ -20,46 +20,6 @@ class PhpBb3 extends Source
         'passwordHashMethod' => 'phpBB',
     ];
 
-    public array $sourceTables = [
-        'users' => [
-            'user_id',
-            'username',
-            'user_password',
-            'user_email',
-            'user_timezone',
-            'user_posts',
-            'user_regdate',
-            'user_lastvisit',
-            'user_regdate'
-        ],
-        'groups' => ['group_id', 'group_name', 'group_desc'],
-        'user_group' => ['user_id', 'group_id'],
-        'forums' => ['forum_id', 'forum_name', 'forum_desc', 'left_id', 'parent_id'],
-        'topics' => [
-            'topic_id',
-            'forum_id',
-            'topic_poster',
-            'topic_title',
-            'topic_views',
-            'topic_first_post_id',
-            'topic_status',
-            'topic_type',
-            'topic_time',
-            'topic_last_post_time',
-            'topic_last_post_time'
-        ],
-        'posts' => [
-            'post_id',
-            'topic_id',
-            'post_text',
-            'poster_id',
-            'post_edit_user',
-            'post_time',
-            'post_edit_time'
-        ],
-        'bookmarks' => ['user_id', 'topic_id']
-    ];
-
     protected function usernotes(): void
     {
         $corruptedRecords = [];
@@ -120,7 +80,6 @@ class PhpBb3 extends Source
             'user_email' => 'Email',
             'user_posts' => 'CountComments',
             'user_rank' => 'RankID',
-            'user_ip' => 'LastIPAddress',
             'user_regdate' => 'DateInserted',
             'user_lastvisit' => 'DateLastVisit',
         ];
@@ -153,8 +112,7 @@ class PhpBb3 extends Source
         $map = [
             'rank_id' => 'RankID',
             'level' => 'Level',
-            'rank_title' => 'Name',
-            'title2' => 'Label',
+            'rank_title' => ['Name', 'Label'],
             'rank_min' => 'Attributes',
         ];
         $filters = [
@@ -174,14 +132,7 @@ class PhpBb3 extends Source
                 return serialize($result);
             }
         ];
-        $this->export(
-            'Rank',
-            "select r.*, r.rank_title as title2, 0 as level
-                from :_ranks r
-                order by rank_special, rank_min;",
-            $map,
-            $filters
-        );
+        $this->export('Rank', "select r.* from :_ranks r order by rank_special, rank_min;", $map, $filters);
     }
 
     protected function roles(): void
@@ -194,41 +145,34 @@ class PhpBb3 extends Source
         $this->export('Role', 'select * from :_groups', $role_Map);
 
         // UserRoles
-        $userRole_Map = [
+        $map = [
             'user_id' => 'UserID',
             'group_id' => 'RoleID'
         ];
-        $this->export(
-            'UserRole',
-            'select user_id, group_id from :_users
-                union
-                select user_id, group_id from :_user_group',
-            $userRole_Map
-        );
+        $this->export('UserRole', 'select user_id, group_id from :_users', $map);
+        $this->export('UserRole', 'select user_id, group_id from :_user_group', $map);
     }
 
     protected function signatures(): void
     {
         $map = [
             'user_id' => 'UserID',
-            'name' => 'Name',
+            'Name=Plugin.Signatures.Sig',
             'user_sig' => 'Value',
         ];
         $filters = [
             'user_sig' => \Porter\Filter\RemoveBbCodeUids::class,
         ];
-        $this->export(
-            'UserMeta',
-            "select user_id, 'Plugin.Signatures.Sig' as name, user_sig, user_sig_bbcode_uid as bbcode_uid
-                from :_users
-                where length(user_sig) > 1
-                union
-                select user_id, 'Plugin.Signatures.Format', 'BBCode', null
-                from :_users
-                where length(user_sig) > 1",
-            $map,
-            $filters
-        );
+        $this->export('UserMeta', "select user_id, user_sig, user_sig_bbcode_uid as bbcode_uid
+                from :_users where length(user_sig) > 1", $map, $filters);
+
+        // Fill format info.
+        $map = [
+            'user_id' => 'UserID',
+            'Name=Plugin.Signatures.Format',
+            'Value=BBCode',
+        ];
+        $this->export('UserMeta', "select user_id from :_users where length(user_sig) > 1", $map);
     }
 
     protected function categories(): void
@@ -237,12 +181,14 @@ class PhpBb3 extends Source
             'forum_id' => 'CategoryID',
             'forum_name' => 'Name',
             'forum_desc' => 'Description',
-            'left_id' => 'Sort'
+            'left_id' => 'Sort',
+            'parent_id' => 'ParentCategoryID',
         ];
         $filters = [
             'forum_name' => \Porter\Filter\DecodeHtml::class,
+            'parent_id' => fn($val, $col, $row) => (0 === $val) ? null : $val,
         ];
-        $this->export('Category', "select *, nullif(parent_id,0) as ParentCategoryID from :_forums", $map, $filters);
+        $this->export('Category', "select * from :_forums", $map, $filters);
     }
 
     protected function discussions(): void
@@ -257,24 +203,19 @@ class PhpBb3 extends Source
             'topic_first_post_id' => 'FirstCommentID',
             'type' => 'Type',
             'topic_time' => 'DateInserted',
-            'topic_last_post_time' => 'DateUpdated',
+            'topic_last_post_time' => ['DateUpdated', 'DateLastComment'],
             'Format=BBCode',
+            'topic_status' => 'Closed',
+            'topic_type' => 'Announce',
         ];
         $filters = [
             'topic_time' => \Porter\Filter\UnixtimeToDate::class,
             'topic_last_post_time' => \Porter\Filter\UnixtimeToDate::class,
-            'DateLastComment' => \Porter\Filter\UnixtimeToDate::class,
+            'topic_status' => fn($val, $col, $row) => (1 === $val) ? 1 : 0,
+            'topic_type' => fn($val, $col, $row) => (1 === $val || 2 === $val) ? 2 : 0,
+            'type' => fn($val, $col, $row) => (($row['poll_start'] ?? 0) > 0) ? 'poll' : null,
         ];
-        $this->export(
-            'Discussion',
-            "select t.*, t.topic_last_post_time as DateLastComment
-                    case t.topic_status when 1 then 1 else 0 end as Closed,
-                    case t.topic_type when 1 then 2 when 2 then 2 else 0 end as Announce,
-                    case when t.poll_start > 0 then 'poll' else null end as type
-                from :_topics t",
-            $map,
-            $filters
-        );
+        $this->export('Discussion', "select * from :_topics", $map, $filters);
     }
 
     protected function comments(): void
@@ -320,6 +261,7 @@ class PhpBb3 extends Source
 
     protected function conversations(): void
     {
+        $px = $this->dbInput()->getTablePrefix();
         $this->dbInput()->unprepared("drop table if exists z_pmto;");
         $this->dbInput()->unprepared("create table z_pmto(
                 id int unsigned,
@@ -327,13 +269,13 @@ class PhpBb3 extends Source
                 primary key(id, userid) );");
         $this->dbInput()->unprepared("insert ignore into z_pmto(id, userid)
                 select msg_id, author_id
-                from :_privmsgs");
+                from {$px}privmsgs");
         $this->dbInput()->unprepared("insert ignore into z_pmto(id, userid)
                 select msg_id, user_id
-                from :_privmsgs_to;");
+                from {$px}privmsgs_to;");
         $this->dbInput()->unprepared("insert ignore into z_pmto(id, userid)
                 select msg_id, author_id
-                from :_privmsgs_to");
+                from {$px}privmsgs_to");
         $this->dbInput()->unprepared("drop table if exists z_pmto2;");
         $this->dbInput()->unprepared("create table z_pmto2 (
                 id int unsigned,
@@ -351,12 +293,12 @@ class PhpBb3 extends Source
                 userids varchar(250),
                 groupid int unsigned );");
         $this->dbInput()->unprepared("insert into z_pm(id, subject, subject2, userids)
-                select  pm.msg_id, pm.message_subject, t.userids
+                select  pm.msg_id, pm.message_subject, t.userids,
                     case
                         when pm.message_subject like 'Re: %' then trim(substring(pm.message_subject, 4))
                         else pm.message_subject
                     end as subject2
-                from :_privmsgs pm
+                from {$px}privmsgs pm
                 join z_pmto2 t on t.id = pm.msg_id;");
         $this->dbInput()->unprepared("create index z_idx_pm on z_pm(id);");
         $this->dbInput()->unprepared("drop table if exists z_pmgroup;");
@@ -428,7 +370,10 @@ class PhpBb3 extends Source
                 join z_pmgroup g on g.groupid = t.id;",
             $userConversation_Map
         );
+    }
 
+    protected function cleanup(): void
+    {
         $this->dbInput()->unprepared('drop table if exists z_pmto');
         $this->dbInput()->unprepared('drop table if exists z_pmto2;');
         $this->dbInput()->unprepared('drop table if exists z_pm;');

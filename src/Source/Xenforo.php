@@ -157,10 +157,8 @@ class Xenforo extends Source
         ];
         $this->export(
             'Discussion',
-            "select t.*, p.message
-                from :_thread t
-                join :_post p on t.first_post_id = p.post_id
-                left join :_ip ip on p.ip_id = ip.ip_id",
+            "select t.*, p.message from :_thread t
+                join :_post p on t.first_post_id = p.post_id",
             $map,
             $filters
         );
@@ -181,10 +179,8 @@ class Xenforo extends Source
         ];
         $this->export(
             'Comment',
-            "select p.*
-                from :_post p
+            "select p.* from :_post p
                 join :_thread t on p.thread_id = t.thread_id
-                left join :_ip ip on p.ip_id = ip.ip_id
                 where p.post_id <> t.first_post_id and message_state = 'visible'",
             $map,
             $filters
@@ -229,18 +225,19 @@ class Xenforo extends Source
         $prx = $this->dbInput()->getTablePrefix();
         $query = $this->sourceQB()
             ->from('attachment', 'a')
-            ->join('attachment_data as ad', 'ad.data_id', '=', 'a.data_id')
-            ->select(['a.attachment_id', 'ap.ForeignID', 'ap.ForeignTable', 'ad.filename as Type',
-                'ad.filename', 'ad.file_size', 'ad.user_id', 'ad.width', 'ad.height', 'ad.upload_date',
+            ->join('attachment_data', 'attachment_data.data_id', '=', 'a.data_id')
+            ->select(['a.attachment_id', 'ap.ForeignID', 'ap.ForeignTable', 'attachment_data.filename as Type',
+                'attachment_data.filename', 'attachment_data.file_size', 'attachment_data.user_id',
+                'attachment_data.width', 'attachment_data.height', 'attachment_data.upload_date',
             ])
             // Paths for platform relative to uploads root (flat, in this case).
-            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as Path")
-            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}ad.filename, ' ', '_')) as ThumbPath")
+            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}attachment_data.filename, ' ', '_')) as Path")
+            ->selectRaw("concat({$prx}a.data_id, '-', replace({$prx}attachment_data.filename, ' ', '_')) as ThumbPath")
             // Paths for FileTransfer.
             ->selectRaw("concat('{$this->getPath('attachment', true)}', '/',
-                {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceFullPath")
+                {$prx}attachment_data.data_id, '-', {$prx}attachment_data.file_key, '.data') as SourceFullPath")
             ->selectRaw("concat('{$this->getPath('attachmentThumb', true)}', '/',
-                {$prx}ad.data_id, '-', {$prx}ad.file_key, '.data') as SourceThumbFullPath")
+                {$prx}attachment_data.data_id, '-', {$prx}attachment_data.file_key, '.data') as SourceThumbFullPath")
             // Build a CET of attached post data & join it.
             ->withExpression('ap', function (Builder $query) {
                 $prx = $query->connection->getTablePrefix(); // @phpstan-ignore method.notFound
@@ -297,7 +294,7 @@ class Xenforo extends Source
         $map = [
             'conversation_id' => 'ConversationID',
             'user_id' => 'UserID',
-            'Deleted' => 'Deleted'
+            'Deleted' => 'Deleted',
         ];
         $this->export(
             'UserConversation',

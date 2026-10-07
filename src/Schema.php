@@ -269,7 +269,7 @@ class Schema
     {
         $filter = [];
         foreach ($dataMap as $source => $dest) {
-            if (is_array($dest)) {
+            if (is_array($dest) && !array_is_list($dest)) {
                 // Collapse the value to a string.
                 // This key had better be present, so letting it error if not is fine tbh.
                 $dataMap[$source] = $dest['Column'];

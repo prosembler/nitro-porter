@@ -6,11 +6,10 @@
 
 namespace Porter\Target;
 
+use Porter\Component;
 use Porter\Target;
+use Porter\Transformation;
 
-/**
- *
- */
 class Discourse extends Target
 {
     public const array INFO = [
@@ -30,143 +29,176 @@ class Discourse extends Target
         //
     }
 
-    protected function users(): void
+    protected function users(): Component
     {
-        $map = [
-            'UserID' => 'id',
-            'Name' => 'username',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-            //'last_posted_at', //not in Porter
-            //'Deleted' => 'active',
-            //'username_lower',
-            'DateLastActive' => 'last_seen_at',
-            //'Confirmed' => 'approved',
-            'DateFirstVisit' => 'first_seen_at',
-        ];
-        $filters = [];
-        $query = $this->porterQB()->from('User')->select();
-        $this->import('users', $query, $map, $filters);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'users',
+                data: 'User',
+                map: [
+                    'UserID' => 'id',
+                    'Name' => 'username',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                    //'last_posted_at', //not in Porter
+                    //'Deleted' => 'active',
+                    //'username_lower',
+                    'DateLastActive' => 'last_seen_at',
+                    //'Confirmed' => 'approved',
+                    'DateFirstVisit' => 'first_seen_at',
+                ],
+                filters: [
+                    //'field' => \Porter\Filter\EmptyToZero::class,
+                ],
+            ),
+        ]);
     }
 
     /** 'Groups' in Discourse. */
-    protected function roles(): void
+    protected function roles(): Component
     {
-        // Roles.
-        $map = [
-            'RoleID' => 'id',
-            'Name' => 'name',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-        ];
-        $query = $this->porterQB()->from('Role')
-            ->select();
-        $this->import('groups', $query, $map);
-
-        // User Role.
-        $map = [
-            'UserID' => 'user_id',
-            'RoleID' => 'group_id',
-        ];
-        $query = $this->porterQB()->from('UserRole')->select();
-        $this->import('group_users', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'groups',
+                data: 'Role',
+                map: [
+                    'RoleID' => 'id',
+                    'Name' => 'name',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                ],
+            ),
+            new Transformation(
+                outputSchemaName: 'group_users',
+                data: 'UserRole',
+                map: [
+                    'UserID' => 'user_id',
+                    'RoleID' => 'group_id',
+                ],
+            ),
+        ]);
     }
 
-    protected function categories(): void
+    protected function categories(): Component
     {
-        $map = [
-            'CategoryID' => 'id',
-            'Name' => 'name',
-            'ParentCategoryID' => 'parent_category_id',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-            'InsertUserID' => 'user_id',
-            'UrlCode' => 'slug',
-            'Description' => 'description',
-            'CountDiscussions' => 'topic_count',
-            'CountComments' => 'post_count',
-        ];
-        $filters = [
-            'CountDiscussions' => \Porter\Filter\EmptyToZero::class,
-        ];
-        $query = $this->porterQB()->from('Category')->select()
-            ->where('CategoryID', '!=', -1); // Ignore Vanilla's root category.
-        $this->import('categories', $query, $map, $filters);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'categories',
+                data: $this->porterQB()->from('Category')->select()
+                    ->where('CategoryID', '!=', -1), // Ignore Vanilla's root category.
+                map: [
+                    'CategoryID' => 'id',
+                    'Name' => 'name',
+                    'ParentCategoryID' => 'parent_category_id',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                    'InsertUserID' => 'user_id',
+                    'UrlCode' => 'slug',
+                    'Description' => 'description',
+                    'CountDiscussions' => 'topic_count',
+                    'CountComments' => 'post_count',
+                ],
+                filters: [
+                    'CountDiscussions' => \Porter\Filter\EmptyToZero::class,
+                ],
+            ),
+        ]);
     }
 
     /** 'Topics' in Discourse. */
-    protected function discussions(): void
+    protected function discussions(): Component
     {
-        $map = [
-            'DiscussionID' => 'id',
-            'Name' => 'title',
-            'InsertUserID' => 'user_id',
-            'CategoryID' => 'category_id',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-            'CountViews' => 'views',
-            'CountComments' => 'posts_count',
-            'DateLastComment' => 'last_posted_at',
-            'LastCommentUserID' => 'last_post_user_id',
-            //'LastCommentID' => 'highest_post_number', //not necessarily the same thing
-            //'Closed' => 'closed', tinyint->bool
-            //'archived',
-            //'Announce' => 'pinned_globally', //=2
-        ];
-        $query = $this->porterQB()->from('Discussion')->select();
-        $this->import('topics', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'topics',
+                data: 'Discussion',
+                map: [
+                    'DiscussionID' => 'id',
+                    'Name' => 'title',
+                    'InsertUserID' => 'user_id',
+                    'CategoryID' => 'category_id',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                    'CountViews' => 'views',
+                    'CountComments' => 'posts_count',
+                    'DateLastComment' => 'last_posted_at',
+                    'LastCommentUserID' => 'last_post_user_id',
+                    //'LastCommentID' => 'highest_post_number', //not necessarily the same thing
+                    //'Closed' => 'closed', tinyint->bool
+                    //'archived',
+                    //'Announce' => 'pinned_globally', //=2
+                ],
+            ),
+        ]);
     }
 
     /** 'Posts' in Discourse. */
-    protected function comments(): void
+    protected function comments(): Component
     {
-        $map = [
-            'CommentID' => 'id',
-            'InsertUserID' => 'user_id',
-            'DiscussionID' => 'topic_id',
-            'Body' => 'raw',  // -> 'cooked',
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-            'DateDeleted' => 'deleted_at',
-            'Score' => 'score',
-        ];
-        $query = $this->porterQB()->from('Comment')->select();
-        $this->import('posts', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'posts',
+                data: 'Comment',
+                map: [
+                    'CommentID' => 'id',
+                    'InsertUserID' => 'user_id',
+                    'DiscussionID' => 'topic_id',
+                    'Body' => 'raw',  // -> 'cooked',
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                    'DateDeleted' => 'deleted_at',
+                    'Score' => 'score',
+                ],
+                filters: [
+                    //'field' => \Porter\Filter\EmptyToZero::class,
+                ],
+            ),
+        ]);
     }
 
-    protected function reactions(): void
+    protected function reactions(): Component
     {
-        $map = [
-            'UserID' => 'user_id',
-            'RecordID' => 'post_id',
-            'RecordType' => 'reaction_type',
-            //reaction_value', reaction_users_count',
-            'DateInserted' => 'created_at',
-        ];
-        $query = $this->porterQB()->from('UserTag', 'ut')->select()
-            ->leftJoin('Tag', 'Tag.TagID', '=', 'ut.TagID')
-            ->whereIn('ut.RecordType', ['Discussion', 'Comment']);
-        $this->import('discourse_reactions_reactions', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'discourse_reactions_reactions',
+                data: $this->porterQB()->from('UserTag', 'ut')->select()
+                    ->leftJoin('Tag', 'Tag.TagID', '=', 'ut.TagID')
+                    ->whereIn('ut.RecordType', ['Discussion', 'Comment']),
+                map: [
+                    'UserID' => 'user_id',
+                    'RecordID' => 'post_id',
+                    'RecordType' => 'reaction_type',
+                    //reaction_value', reaction_users_count',
+                    'DateInserted' => 'created_at',
+                ],
+                filters: [
+                    'field' => \Porter\Filter\EmptyToZero::class,
+                ],
+            ),
+        ]);
     }
 
     /** 'Uploads' in Discourse. */
-    protected function attachments(): void
+    protected function attachments(): Component
     {
-        $map = [
-            'MediaID' => 'id',
-            'InsertUserID' => 'user_id,',
-            'Name' => 'original_filename',
-            'Filesize' => 'filesize',
-            'Width' => 'width',
-            'Height' => 'height',
-            'Path' => 'url', //='/uploads/default/original/1X/b75c33ea141d3a8d82fda3117d09fe33a664fec9.png'
-            'DateInserted' => 'created_at',
-            'DateUpdated' => 'updated_at',
-            //'Type' => 'extension',
-            //'animated',
-        ];
-        $query = $this->porterQB()->from('Media')->select();
-        $this->import('uploads', $query, $map);
+        return new Component([
+            new Transformation(
+                outputSchemaName: 'uploads',
+                data: 'Media',
+                map: [
+                    'MediaID' => 'id',
+                    'InsertUserID' => 'user_id,',
+                    'Name' => 'original_filename',
+                    'Filesize' => 'filesize',
+                    'Width' => 'width',
+                    'Height' => 'height',
+                    'Path' => 'url', //='/uploads/default/original/1X/b75c33ea141d3a8d82fda3117d09fe33a664fec9.png'
+                    'DateInserted' => 'created_at',
+                    'DateUpdated' => 'updated_at',
+                    //'Type' => 'extension',
+                ],
+            ),
+        ]);
     }
 
     protected function avatars(): void

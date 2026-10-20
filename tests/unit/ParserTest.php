@@ -1,6 +1,7 @@
 <?php
 
 use nadar\quill\Lexer as Quill;
+use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\TestCase;
 use Porter\Ext\Bundle\Vanilla as Vanilla;
 use Porter\Ext\Parser\Flarum\ImageEmbed;
@@ -31,6 +32,7 @@ final class ParserTest extends TestCase
     /**
      * @covers Formatter::toTextFormatter
      */
+    #[IgnoreDeprecations]
     public function testFatdownCanParseHtml(): void
     {
         $stored = '<b>Avant </b>de poster dans le forum la présentation est <b><u>obligatoire</u> </b>ici :&nbsp;

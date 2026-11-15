@@ -8,6 +8,7 @@
 namespace Porter\Target;
 
 use Porter\Component;
+use Porter\Config;
 use Porter\Filter;
 use Porter\Log;
 use Porter\Formatter;
@@ -21,6 +22,11 @@ use Porter\Transformation;
  */
 class Flarum extends Target
 {
+    private const DISCUSSION_LINK_PATTERN =
+        '~(?<![A-Za-z0-9_])(?:https?://[^/\s<>"\']+)?/'
+        . '(?:index\.php\?thread/|thread/)(\d+)(?:-[^/?#\s<>"\']*)?/?'
+        . '(?:\?[^\s<>"\']*)?(?:\#[^\s<>"\']*)?~i';
+
     public const array INFO = [
         'name' => 'Flarum',
         'defaultTablePrefix' => 'FLA_',
@@ -51,6 +57,9 @@ class Flarum extends Target
 
     /** @var int Offset for source tags so they do not collide with forum tags. */
     protected int $tagIdOffset = 0;
+
+    /** @var array<int, string>|null Source discussion ID => Flarum route. */
+    private ?array $discussionLinkMap = null;
 
     protected bool $importSourceTags = false;
 
@@ -370,8 +379,12 @@ class Flarum extends Target
             'type=comment',
         ];
         $filters = [
-            'Body' => \Porter\Filter\FlarumBody::class,
+            'Body' => function ($value, $name, $row) {
+                $value = $this->rewriteDiscussionLinks($value);
+                return (new Filter\FlarumBody($value, $name, $row))();
+            },
         ];
+        $this->getDiscussionLinkMap();
         $query = $this->porterQB()->from('Comment')->select();
         $this->import('posts', $query, $map, $filters);
 
@@ -386,6 +399,53 @@ class Flarum extends Target
             $query = $this->porterQB()->from('Discussion')->select();
             $this->import('posts', $query, $map, $filters);
         }
+    }
+
+    private function rewriteDiscussionLinks(?string $body): ?string
+    {
+        if ($body === null || !preg_match(self::DISCUSSION_LINK_PATTERN, $body)) {
+            return $body;
+        }
+
+        return self::replaceDiscussionLinks($body, $this->getDiscussionLinkMap());
+    }
+
+    /**
+     * Rewrite links only when the referenced discussion is part of this migration.
+     *
+     * @param array<int, string> $discussionLinks
+     */
+    protected static function replaceDiscussionLinks(string $body, array $discussionLinks): string
+    {
+        $result = preg_replace_callback(
+            self::DISCUSSION_LINK_PATTERN,
+            static fn(array $match): string => $discussionLinks[(int) $match[1]] ?? $match[0],
+            $body
+        );
+        if ($result === null) {
+            throw new \RuntimeException('Failed to rewrite WoltLab discussion links.');
+        }
+        return $result;
+    }
+
+    /** Build the routes using the same slug rule as the Flarum discussion import. */
+    private function getDiscussionLinkMap(): array
+    {
+        if ($this->discussionLinkMap !== null) {
+            return $this->discussionLinkMap;
+        }
+
+        $webroot = trim(Config::getInstance()->get('target_webroot') ?? '', '/');
+        $routePrefix = ($webroot === '' ? '' : '/' . $webroot) . '/d/';
+        $discussionOffset = Config::getInstance()->getOffset('discussions');
+        $links = [];
+        foreach ($this->porterQB()->from('Discussion')->select(['DiscussionID', 'Name'])->cursor() as $row) {
+            $sourceID = (int) $row->DiscussionID;
+            $slug = Formatter::instance()->toUrl($sourceID . '-' . $row->Name);
+            $links[$sourceID] = $routePrefix . ($sourceID + $discussionOffset) . '-' . $slug;
+        }
+
+        return $this->discussionLinkMap = $links;
     }
 
     /**

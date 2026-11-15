@@ -5,7 +5,9 @@ use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\TestCase;
 use Porter\Ext\Bundle\Vanilla as Vanilla;
 use Porter\Ext\Parser\Flarum\ImageEmbed;
+use Porter\Filter\FlarumBody;
 use Porter\Formatter;
+use Porter\Target\Flarum;
 use s9e\TextFormatter\Bundles\Fatdown as Markdown;
 
 final class ParserTest extends TestCase
@@ -140,5 +142,35 @@ final class ParserTest extends TestCase
                 '',
             ],
         ];
+    }
+
+    public function testFlarumBodyParsesHtmlEvenWhenSourceFormatIsBbcode(): void
+    {
+        $body = (new FlarumBody(
+            '<p><strong>HTML text</strong></p>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+
+        $this->assertStringContainsString('<p>', $body);
+        $this->assertStringContainsString('<STRONG>', $body);
+        $this->assertStringNotContainsString('&lt;p&gt;', $body);
+    }
+
+    public function testWoltLabDiscussionLinksBecomeFlarumRoutes(): void
+    {
+        $replaceLinks = new ReflectionMethod(Flarum::class, 'replaceDiscussionLinks');
+        $body = '<a href="https://autoit.de/thread/88563-old-title/">Link</a> '
+            . '[url=https://autoit.de/thread/88516-another-title/]Other[/url] '
+            . 'https://autoit.de/thread/99999-not-imported/';
+
+        $result = $replaceLinks->invoke(null, $body, [
+            88563 => '/d/88563-actual-flarum-title',
+            88516 => '/d/88516-another-flarum-title',
+        ]);
+
+        $this->assertStringContainsString('href="/d/88563-actual-flarum-title"', $result);
+        $this->assertStringContainsString('[url=/d/88516-another-flarum-title]', $result);
+        $this->assertStringContainsString('https://autoit.de/thread/99999-not-imported/', $result);
     }
 }

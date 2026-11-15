@@ -53,6 +53,7 @@
         "monolog/monolog": "^3",
         "adhocore/cli": "^1",
         "s9e/text-formatter": "2.15.*",
+        "league/html-to-markdown": "^5.1",
         "nadar/quill-delta-parser": "^3",
         "mongodb/mongodb": "^2"
     },

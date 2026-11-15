@@ -49,7 +49,7 @@ return [
         [
             'alias' => 'input',
             'type' => 'database',
-            'driver' => 'mysql',
+            'adapter' => 'mysql',
             'host' => 'localhost',
             'port' => '3306',
             'database' => 'porter',
@@ -63,7 +63,7 @@ return [
         [
             'alias' => 'output',
             'type' => 'database',
-            'driver' => 'mysql', // 'postgresql' for Discourse
+            'adapter' => 'mysql', // 'postgresql' for Discourse
             'host' => 'localhost',
             'port' => '3306', // '5432' for PostgresQL (usually)
             'database' => 'porter',
@@ -100,7 +100,7 @@ return [
             // Example test connection.
             'alias' => 'test',
             'type' => 'database',
-            'driver' => 'mysql',
+            'adapter' => 'mysql',
             'host' => 'localhost',
             'port' => '3306',
             'database' => 'some_test_database', // set to 'porter' to run tests in Docker database.

@@ -117,6 +117,9 @@ installation uses a custom `ATTACHMENT_STORAGE`, make that storage available at
 
 The importer retains WoltLab post bodies as BBCode for Nitro Porter's formatter, including ordinary
 quotes. Custom BBCode and embedded-object types should be checked on the Flarum test instance.
+HTML tags in post bodies are detected and parsed into Flarum-compatible text formatter content.
+Links to WoltLab `/thread/{id}-{slug}/` URLs are rewritten when that discussion was imported;
+links to discussions absent from the migration are left unchanged.
 Deleted or approval-pending posts are skipped so they are not made public by the import.
 Permissions are not migrated; review them in Flarum before opening the imported forum.
 

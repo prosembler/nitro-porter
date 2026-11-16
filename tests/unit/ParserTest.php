@@ -157,6 +157,71 @@ final class ParserTest extends TestCase
         $this->assertStringNotContainsString('&lt;p&gt;', $body);
     }
 
+    public function testFlarumBodyConvertsWoltLabMetacodeToAutoItCodeBlock(): void
+    {
+        $body = (new FlarumBody(
+            '<woltlab-metacode data-attributes="" data-name="autoit">'
+                . 'MsgBox(0, &quot;Title&quot;, &lt;value&gt;)'
+                . '</woltlab-metacode>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+
+        $this->assertStringContainsString('<CODE', strtoupper($body));
+        $this->assertStringContainsString('autoit', strtolower($body));
+        $this->assertStringContainsString('MsgBox(0, "Title", &lt;value&gt;)', $body);
+        $this->assertStringNotContainsString('woltlab-metacode', $body);
+    }
+
+    public function testFlarumBodyConvertsWoltLabQuoteWithAuthor(): void
+    {
+        $body = (new FlarumBody(
+            '<woltlab-quote data-author="Example &amp; User" data-link="https://example.com/thread/1-test/">'
+                . '<p>Quoted text</p></woltlab-quote>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+        $rendered = Markdown::render($body);
+
+        $this->assertStringContainsString('<blockquote>', $rendered);
+        $this->assertStringContainsString('Zitat von', $rendered);
+        $this->assertStringContainsString('Example &amp; User', $rendered);
+        $this->assertStringContainsString('Quoted text', $rendered);
+        $this->assertStringNotContainsString('woltlab-quote', $rendered);
+    }
+
+    public function testFlarumBodyPreservesWoltLabSpoilerAsLabeledQuote(): void
+    {
+        $body = (new FlarumBody(
+            '<woltlab-spoiler data-label="Details"><p>Hidden text</p></woltlab-spoiler>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+        $rendered = Markdown::render($body);
+
+        $this->assertStringContainsString('<blockquote>', $rendered);
+        $this->assertStringContainsString('Spoiler: Details', $rendered);
+        $this->assertStringContainsString('Hidden text', $rendered);
+        $this->assertStringNotContainsString('woltlab-spoiler', $rendered);
+    }
+
+    public function testFlarumBodyAvoidsAutolinkWarningForIncompleteFtpScheme(): void
+    {
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            $body = (new FlarumBody('The value ftp: is incomplete.', 'Body', ['Format' => 'Text']))();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $warnings);
+        $this->assertStringContainsString('ftp&#58;', $body);
+    }
+
     public function testWoltLabDiscussionLinksBecomeFlarumRoutes(): void
     {
         $replaceLinks = new ReflectionMethod(Flarum::class, 'replaceDiscussionLinks');

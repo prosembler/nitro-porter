@@ -118,7 +118,7 @@ installation uses a custom `ATTACHMENT_STORAGE`, make that storage available at
 The importer retains WoltLab post bodies as BBCode for Nitro Porter's formatter, including ordinary
 quotes. Custom BBCode and embedded-object types should be checked on the Flarum test instance.
 HTML tags in post bodies are detected and parsed into Flarum-compatible text formatter content.
-WoltLab AutoIt metacode is converted to a fenced AutoIt code block, and WoltLab quotes retain
+WoltLab metacode is converted to a fenced code block, and WoltLab quotes retain
 their author attribution as Flarum blockquotes. Spoilers are converted to labeled blockquotes;
 Flarum does not hide their contents unless a compatible spoiler extension is installed and used.
 Links to WoltLab `/thread/{id}-{slug}/` URLs are rewritten when that discussion was imported;

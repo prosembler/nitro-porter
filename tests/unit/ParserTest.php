@@ -157,10 +157,10 @@ final class ParserTest extends TestCase
         $this->assertStringNotContainsString('&lt;p&gt;', $body);
     }
 
-    public function testFlarumBodyConvertsWoltLabMetacodeToAutoItCodeBlock(): void
+    public function testFlarumBodyConvertsWoltLabMetacodeToFortranCodeBlock(): void
     {
         $body = (new FlarumBody(
-            '<woltlab-metacode data-attributes="" data-name="autoit">'
+            '<woltlab-metacode data-attributes="" data-name="fortran">'
                 . 'MsgBox(0, &quot;Title&quot;, &lt;value&gt;)'
                 . '</woltlab-metacode>',
             'Body',
@@ -168,7 +168,7 @@ final class ParserTest extends TestCase
         ))();
 
         $this->assertStringContainsString('<CODE', strtoupper($body));
-        $this->assertStringContainsString('autoit', strtolower($body));
+        $this->assertStringContainsString('fortran', strtolower($body));
         $this->assertStringContainsString('MsgBox(0, "Title", &lt;value&gt;)', $body);
         $this->assertStringNotContainsString('woltlab-metacode', $body);
     }
@@ -225,9 +225,9 @@ final class ParserTest extends TestCase
     public function testWoltLabDiscussionLinksBecomeFlarumRoutes(): void
     {
         $replaceLinks = new ReflectionMethod(Flarum::class, 'replaceDiscussionLinks');
-        $body = '<a href="https://autoit.de/thread/88563-old-title/">Link</a> '
-            . '[url=https://autoit.de/thread/88516-another-title/]Other[/url] '
-            . 'https://autoit.de/thread/99999-not-imported/';
+        $body = '<a href="https://example.com/thread/88563-old-title/">Link</a> '
+            . '[url=https://example.com/thread/88516-another-title/]Other[/url] '
+            . 'https://example.com/thread/99999-not-imported/';
 
         $result = $replaceLinks->invoke(null, $body, [
             88563 => '/d/88563-actual-flarum-title',
@@ -236,6 +236,6 @@ final class ParserTest extends TestCase
 
         $this->assertStringContainsString('href="/d/88563-actual-flarum-title"', $result);
         $this->assertStringContainsString('[url=/d/88516-another-flarum-title]', $result);
-        $this->assertStringContainsString('https://autoit.de/thread/99999-not-imported/', $result);
+        $this->assertStringContainsString('https://example.com/thread/99999-not-imported/', $result);
     }
 }

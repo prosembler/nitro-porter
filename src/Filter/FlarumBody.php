@@ -78,40 +78,15 @@ class FlarumBody extends Filter
 
     private function escapeIncompleteFtpSchemes(string $value): string
     {
-        $parts = preg_split('/(\r\n|\n|\r)/', $value, -1, PREG_SPLIT_DELIM_CAPTURE);
-        if ($parts === false) {
-            throw new \RuntimeException('Failed to split converted post content.');
+        $result = preg_replace_callback(
+            '~\bftp:(?!//)~i',
+            static fn(array $match): string => substr($match[0], 0, -1) . '&#58;',
+            $value
+        );
+        if ($result === null) {
+            throw new \RuntimeException('Failed to escape incomplete FTP links.');
         }
-
-        $inCodeBlock = false;
-        $fenceLength = 0;
-        for ($index = 0; $index < count($parts); $index += 2) {
-            $line = $parts[$index];
-            if (!$inCodeBlock) {
-                $escaped = preg_replace_callback(
-                    '~\bftp:(?!//)~i',
-                    static fn(array $match): string => substr($match[0], 0, -1) . '&#58;',
-                    $line
-                );
-                if ($escaped === null) {
-                    throw new \RuntimeException('Failed to escape incomplete FTP links.');
-                }
-                $line = $escaped;
-            }
-
-            if (preg_match('/^\s*(`{3,})/', $line, $match)) {
-                $foundFenceLength = strlen($match[1]);
-                if (!$inCodeBlock) {
-                    $inCodeBlock = true;
-                    $fenceLength = $foundFenceLength;
-                } elseif ($foundFenceLength >= $fenceLength) {
-                    $inCodeBlock = false;
-                }
-            }
-            $parts[$index] = $line;
-        }
-
-        return implode('', $parts);
+        return $result;
     }
 
     private function replaceWoltLabQuotes(string $value): string

@@ -222,6 +222,28 @@ final class ParserTest extends TestCase
         $this->assertStringContainsString('ftp&#58;', $body);
     }
 
+    public function testFlarumBodyAvoidsAutolinkWarningForFtpTextInPreformattedCode(): void
+    {
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            $body = (new FlarumBody(
+                '<pre data-file="" data-highlighter="" data-line="1">MsgBox(0, "FTP:", $Datei)</pre>',
+                'Body',
+                ['Format' => 'BBCode'],
+            ))();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $warnings);
+        $this->assertStringContainsString('FTP', $body);
+        $this->assertStringNotContainsString('woltlab-metacode', $body);
+    }
+
     public function testWoltLabDiscussionLinksBecomeFlarumRoutes(): void
     {
         $replaceLinks = new ReflectionMethod(Flarum::class, 'replaceDiscussionLinks');

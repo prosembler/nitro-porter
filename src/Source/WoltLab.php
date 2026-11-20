@@ -252,8 +252,11 @@ class WoltLab extends Source
 
     protected function tags(): void
     {
-        if (!$this->hasInputSchema('tag') || !$this->hasInputSchema('tag_to_object')
-            || !$this->hasInputSchema('object_type', ['objectTypeID', 'objectType'])) {
+        if (
+            !$this->hasInputSchema('tag')
+            || !$this->hasInputSchema('tag_to_object')
+            || !$this->hasInputSchema('object_type', ['objectTypeID', 'objectType'])
+        ) {
             return;
         }
 
@@ -299,8 +302,10 @@ class WoltLab extends Source
 
     protected function attachments(): void
     {
-        if (!$this->hasInputSchema('attachment')
-            || !$this->hasInputSchema('object_type', ['objectTypeID', 'objectType'])) {
+        if (
+            !$this->hasInputSchema('attachment')
+            || !$this->hasInputSchema('object_type', ['objectTypeID', 'objectType'])
+        ) {
             return;
         }
 
@@ -337,7 +342,9 @@ class WoltLab extends Source
                                 $query->selectRaw('1')
                                     ->fromRaw($this->forumTable('post') . ' as ' . $this->forumAlias('p'))
                                     ->join(
-                                        $this->dbInput()->raw($this->forumTable('thread') . ' as ' . $this->forumAlias('t')),
+                                        $this->dbInput()->raw(
+                                            $this->forumTable('thread') . ' as ' . $this->forumAlias('t')
+                                        ),
                                         't.threadID',
                                         '=',
                                         'p.threadID'
@@ -377,9 +384,18 @@ class WoltLab extends Source
                 'a.width',
                 'a.height',
             ])
-            ->selectRaw("case when $objectTypeAlias.objectType = 'com.woltlab.wbb.post' then 'Comment' else 'Message' end as foreignTable")
-            ->selectRaw("concat(left($attachmentAlias.fileHash, 2), '/', $attachmentAlias.attachmentID, '-', $attachmentAlias.fileHash) as relativePath")
-            ->selectRaw("concat(left($attachmentAlias.fileHash, 2), '/', $attachmentAlias.attachmentID, '-', $attachmentAlias.fileHash) as sourcePath");
+            ->selectRaw(
+                "case when $objectTypeAlias.objectType = 'com.woltlab.wbb.post' "
+                    . "then 'Comment' else 'Message' end as foreignTable"
+            )
+            ->selectRaw(
+                "concat(left($attachmentAlias.fileHash, 2), '/', $attachmentAlias.attachmentID, "
+                    . "'-', $attachmentAlias.fileHash) as relativePath"
+            )
+            ->selectRaw(
+                "concat(left($attachmentAlias.fileHash, 2), '/', $attachmentAlias.attachmentID, "
+                    . "'-', $attachmentAlias.fileHash) as sourcePath"
+            );
 
         $this->export(
             'Media',
@@ -428,8 +444,11 @@ class WoltLab extends Source
 
     protected function polls(): void
     {
-        if (!$this->hasInputSchema('poll') || !$this->hasInputSchema('poll_option')
-            || !$this->hasInputSchema('object_type', ['objectTypeID', 'objectType'])) {
+        if (
+            !$this->hasInputSchema('poll')
+            || !$this->hasInputSchema('poll_option')
+            || !$this->hasInputSchema('object_type', ['objectTypeID', 'objectType'])
+        ) {
             return;
         }
 
@@ -563,9 +582,11 @@ class WoltLab extends Source
 
     protected function conversations(): void
     {
-        if (!$this->hasInputSchema('conversation')
+        if (
+            !$this->hasInputSchema('conversation')
             || !$this->hasInputSchema('conversation_message')
-            || !$this->hasInputSchema('conversation_to_user')) {
+            || !$this->hasInputSchema('conversation_to_user')
+        ) {
             return;
         }
 

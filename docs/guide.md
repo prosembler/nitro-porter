@@ -97,6 +97,40 @@ porter run -s=Vanilla -i=example_db -t=Flarum -o=test_db
 porter run -s Xenforo -i example_db -t Flarum
 ```
 
+### WoltLab Suite 5.x to Flarum
+
+The WoltLab source migrates users and groups, forums and discussions, BBCode posts, WoltLab tags,
+polls, private conversations, and post/conversation attachments. Use a copy of the source database
+for test runs.
+
+WoltLab stores Core and Forum tables under separate prefixes (usually `wcf1_` and `wbb1_`).
+Set the input connection prefix to the Core prefix, for example `wcf1_`; Nitro Porter resolves the
+matching Forum prefix from it. The target Flarum installation should have the Tags extension and
+the FoF Polls, Byobu, and Uploads extensions installed for those optional data types.
+
+For attachment transfer, set `source_root` to the WoltLab installation directory and `target_root`
+to the Flarum installation directory. The source adapter checks the standard WoltLab `attachments/`
+store under `wcf/`, including its hash-sharded paths and `.bin` files. If `source_root` itself is the
+hash-sharded attachments directory, it is used directly when the standard path is absent. If the
+installation uses a custom `ATTACHMENT_STORAGE`, make that storage available at
+`source_root/wcf/attachments/` or set `source_root` to that directory.
+
+The importer retains WoltLab post bodies as BBCode for Nitro Porter's formatter, including ordinary
+quotes. Custom BBCode and embedded-object types should be checked on the Flarum test instance.
+HTML tags in post bodies are detected and parsed into Flarum-compatible text formatter content.
+WoltLab metacode is converted to a fenced code block, and WoltLab quotes retain
+their author attribution as Flarum blockquotes. Spoilers are converted to labeled blockquotes;
+Flarum does not hide their contents unless a compatible spoiler extension is installed and used.
+Links to WoltLab `/thread/{id}-{slug}/` URLs are rewritten when that discussion was imported;
+links to discussions absent from the migration are left unchanged.
+Deleted or approval-pending posts are skipped so they are not made public by the import.
+Permissions are not migrated; review them in Flarum before opening the imported forum.
+
+Run the full migration against disposable copies of both databases, for example:
+```
+porter run -s=WoltLab -i=wbb_copy -t=Flarum -o=flarum_test
+```
+
 ## Advanced Usage
 
 ### API data origin (Discord)
@@ -121,7 +155,10 @@ To use it, set the following fields in your `config.php`:
 * `target_webroot` is the folder under the webroot the platform is installed under when live (if any).
 
 If `source_root` & `target_root` are set, Nitro Porter will evaluate whether the source & target support file transfer.
-As of 4.0, only Xenforo -> Flarum is supported as a proof of concept.
+Supported source/target combinations are determined by the installed packages; currently Xenforo and
+WoltLab sources support file transfer to Flarum.
+Supported source/target combinations are determined by the installed packages; currently Xenforo and
+WoltLab sources support file transfer to Flarum.
 
 ### Document targets (NodeBB)
 

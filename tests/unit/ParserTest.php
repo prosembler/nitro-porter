@@ -5,7 +5,9 @@ use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\TestCase;
 use Porter\Ext\Bundle\Vanilla as Vanilla;
 use Porter\Ext\Parser\Flarum\ImageEmbed;
+use Porter\Filter\FlarumBody;
 use Porter\Formatter;
+use Porter\Target\Flarum;
 use s9e\TextFormatter\Bundles\Fatdown as Markdown;
 
 final class ParserTest extends TestCase
@@ -140,5 +142,122 @@ final class ParserTest extends TestCase
                 '',
             ],
         ];
+    }
+
+    public function testFlarumBodyParsesHtmlEvenWhenSourceFormatIsBbcode(): void
+    {
+        $body = (new FlarumBody(
+            '<p><strong>HTML text</strong></p>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+
+        $this->assertStringContainsString('<p>', $body);
+        $this->assertStringContainsString('<STRONG>', $body);
+        $this->assertStringNotContainsString('&lt;p&gt;', $body);
+    }
+
+    public function testFlarumBodyConvertsWoltLabMetacodeToFortranCodeBlock(): void
+    {
+        $body = (new FlarumBody(
+            '<woltlab-metacode data-attributes="" data-name="fortran">'
+                . 'MsgBox(0, &quot;Title&quot;, &lt;value&gt;)'
+                . '</woltlab-metacode>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+
+        $this->assertStringContainsString('<CODE', strtoupper($body));
+        $this->assertStringContainsString('fortran', strtolower($body));
+        $this->assertStringContainsString('MsgBox(0, "Title", &lt;value&gt;)', $body);
+        $this->assertStringNotContainsString('woltlab-metacode', $body);
+    }
+
+    public function testFlarumBodyConvertsWoltLabQuoteWithAuthor(): void
+    {
+        $body = (new FlarumBody(
+            '<woltlab-quote data-author="Example &amp; User" data-link="https://example.com/thread/1-test/">'
+                . '<p>Quoted text</p></woltlab-quote>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+        $rendered = Markdown::render($body);
+
+        $this->assertStringContainsString('<blockquote>', $rendered);
+        $this->assertStringContainsString('Zitat von', $rendered);
+        $this->assertStringContainsString('Example &amp; User', $rendered);
+        $this->assertStringContainsString('Quoted text', $rendered);
+        $this->assertStringNotContainsString('woltlab-quote', $rendered);
+    }
+
+    public function testFlarumBodyPreservesWoltLabSpoilerAsLabeledQuote(): void
+    {
+        $body = (new FlarumBody(
+            '<woltlab-spoiler data-label="Details"><p>Hidden text</p></woltlab-spoiler>',
+            'Body',
+            ['Format' => 'BBCode'],
+        ))();
+        $rendered = Markdown::render($body);
+
+        $this->assertStringContainsString('<blockquote>', $rendered);
+        $this->assertStringContainsString('Spoiler: Details', $rendered);
+        $this->assertStringContainsString('Hidden text', $rendered);
+        $this->assertStringNotContainsString('woltlab-spoiler', $rendered);
+    }
+
+    public function testFlarumBodyAvoidsAutolinkWarningForIncompleteFtpScheme(): void
+    {
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            $body = (new FlarumBody('The value ftp: is incomplete.', 'Body', ['Format' => 'Text']))();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $warnings);
+        $this->assertStringContainsString('ftp&#58;', $body);
+    }
+
+    public function testFlarumBodyAvoidsAutolinkWarningForFtpTextInPreformattedCode(): void
+    {
+        $warnings = [];
+        set_error_handler(static function (int $severity, string $message) use (&$warnings): bool {
+            $warnings[] = $message;
+            return true;
+        });
+        try {
+            $body = (new FlarumBody(
+                '<pre data-file="" data-highlighter="" data-line="1">MsgBox(0, "FTP:", $Datei)</pre>',
+                'Body',
+                ['Format' => 'BBCode'],
+            ))();
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame([], $warnings);
+        $this->assertStringContainsString('FTP', $body);
+        $this->assertStringNotContainsString('woltlab-metacode', $body);
+    }
+
+    public function testWoltLabDiscussionLinksBecomeFlarumRoutes(): void
+    {
+        $replaceLinks = new ReflectionMethod(Flarum::class, 'replaceDiscussionLinks');
+        $body = '<a href="https://example.com/thread/88563-old-title/">Link</a> '
+            . '[url=https://example.com/thread/88516-another-title/]Other[/url] '
+            . 'https://example.com/thread/99999-not-imported/';
+
+        $result = $replaceLinks->invoke(null, $body, [
+            88563 => '/d/88563-actual-flarum-title',
+            88516 => '/d/88516-another-flarum-title',
+        ]);
+
+        $this->assertStringContainsString('href="/d/88563-actual-flarum-title"', $result);
+        $this->assertStringContainsString('[url=/d/88516-another-flarum-title]', $result);
+        $this->assertStringContainsString('https://example.com/thread/99999-not-imported/', $result);
     }
 }

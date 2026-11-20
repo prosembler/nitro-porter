@@ -30,6 +30,7 @@ class Flarum extends Postscript
     public function run(): void
     {
         $this->numberPosts();
+        $this->numberUserComments();
         $this->buildUserMentions();
         $this->buildPostMentions(); // Must be AFTER `numberPosts()`
         $this->setLastRead();
@@ -106,25 +107,77 @@ class Flarum extends Postscript
 
         $rows = 0;
         foreach ($posts as $post) {
-            // Update posts with their number, per discussion.
             $prx = $this->dbPostscript()->getTablePrefix();
+            $discussionPosts = $this->postQB()->from('posts')
+                ->where('discussion_id', '=', $post->discussion_id);
+            $numberInfo = $discussionPosts->selectRaw(
+                'count(*) as post_count, coalesce(max(`number`), 0) as max_number'
+            )->first();
+            $offset = (int)$numberInfo->max_number + (int)$numberInfo->post_count + 1;
+            if ((int)$numberInfo->max_number + $offset > 4294967295) {
+                throw new \OverflowException(
+                    'Cannot safely renumber posts in discussion ' . $post->discussion_id . '.'
+                );
+            }
+
+            // Move existing numbers aside so reruns cannot collide with numbers being reassigned.
+            $this->dbPostscript()->table('posts')
+                ->where('discussion_id', '=', $post->discussion_id)
+                ->update(['number' => $this->dbPostscript()->raw('`number` + ' . $offset)]);
+
+            // Update posts with their number, per discussion.
             $this->dbPostscript()->statement("set @num := 0");
             $count = $this->dbPostscript()->affectingStatement("update `" . "{$prx}posts`
                     set `number` = (@num := @num + 1)
                     where `discussion_id` = " . $post->discussion_id . "
-                    order by `created_at` asc");
+                    order by `created_at` asc, `id` asc");
             $rows += $count;
 
-            // Set discussions.post_number_index
+            // Flarum's comment_count excludes the opening post.
             $this->dbPostscript()->table('discussions')
                 ->where('id', '=', $post->discussion_id)
-                ->update(['post_number_index' => ($count + 1)]);
+                ->update([
+                    'comment_count' => max(0, $count - 1),
+                    'post_number_index' => ($count + 1),
+                ]);
         }
 
         // Report.
         Log::storage('build', new StorageInfo(
             name: 'discussions.post_number_index',
             memory: $memory,
+            rows: $rows,
+            startTime: $start,
+        ));
+    }
+
+    /**
+     * Rebuild user comment counters from imported Flarum comment posts.
+     */
+    protected function numberUserComments(): void
+    {
+        $start = microtime(true);
+        Log::comment("Building 'user comment count' info...");
+
+        $counts = $this->postQB()->from('posts')
+            ->where('type', '=', 'comment')
+            ->where('is_private', '=', 0)
+            ->whereNotNull('user_id')
+            ->select('user_id')
+            ->selectRaw('count(*) as comment_count')
+            ->groupBy('user_id')
+            ->get();
+
+        $rows = 0;
+        foreach ($counts as $user) {
+            $rows += $this->dbPostscript()->table('users')
+                ->where('id', '=', $user->user_id)
+                ->update(['comment_count' => $user->comment_count]);
+        }
+
+        Log::storage('build', new StorageInfo(
+            name: 'users.comment_count',
+            memory: memory_get_usage(),
             rows: $rows,
             startTime: $start,
         ));

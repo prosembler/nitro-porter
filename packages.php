@@ -43,6 +43,7 @@ return [
         'VBulletin',
         'VBulletin5',
         'WebWiz',
+        'WoltLab',
         'Xenforo',
         'Yaf',
     ],
